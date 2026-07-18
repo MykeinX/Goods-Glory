@@ -1,0 +1,202 @@
+[
+  {
+    "cityID": "us_new_york",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_los_angeles",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_chicago",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_dallas",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_houston",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_atlanta",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_washington",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_miami",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_philadelphia",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_phoenix",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_boston",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_san_francisco",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_detroit",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_seattle",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_minneapolis",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_tampa",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_san_diego",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_denver",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_orlando",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_charlotte",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_st_louis",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_san_antonio",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_portland",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_sacramento",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_pittsburgh",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_las_vegas",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_cincinnati",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_kansas_city",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_indianapolis",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_nashville",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_cleveland",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_virginia_beach",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_jacksonville",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_oklahoma_city",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_memphis",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_salt_lake_city",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_omaha",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_new_orleans",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_albuquerque",
+    "supply": [],
+    "demand": []
+  },
+  {
+    "cityID": "us_el_paso",
+    "supply": [],
+    "demand": []
+  }
+]

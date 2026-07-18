@@ -1,0 +1,11 @@
+{
+  "startingCash": 50000,
+  "loadingMinutes": 45,
+  "unloadingMinutes": 45,
+  "offerGenerationIntervalMinutes": 240,
+  "offerLifetimeMinutes": 720,
+  "offerChancePercent": 60,
+  "maxOpenOffersPerCity": 3,
+  "offerMinimumProfit": 120,
+  "offerProfitMarginPercent": 20
+}

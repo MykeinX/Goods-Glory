@@ -1,0 +1,34 @@
+[
+  {
+    "id": "consumer_goods",
+    "name": "Consumer Goods",
+    "symbol": "shippingbox",
+    "densityM3PerTon": 3.5,
+    "minimumShipmentMassKg": 400,
+    "maximumShipmentMassKg": 12000
+  },
+  {
+    "id": "processed_food",
+    "name": "Processed Food",
+    "symbol": "basket",
+    "densityM3PerTon": 2.5,
+    "minimumShipmentMassKg": 600,
+    "maximumShipmentMassKg": 15000
+  },
+  {
+    "id": "construction_materials",
+    "name": "Construction Materials",
+    "symbol": "hammer",
+    "densityM3PerTon": 0.8,
+    "minimumShipmentMassKg": 1500,
+    "maximumShipmentMassKg": 20000
+  },
+  {
+    "id": "consumer_electronics",
+    "name": "Consumer Electronics",
+    "symbol": "tv",
+    "densityM3PerTon": 4.0,
+    "minimumShipmentMassKg": 300,
+    "maximumShipmentMassKg": 5000
+  }
+]

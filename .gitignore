@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Xcode
+**/xcuserdata/
+**/DerivedData/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+timeline.xctimeline
+playground.xcworkspace
+
+# SwiftPM / build
+.build/
+.swiftpm/
+
+# Natural Earth download cache (regenerate via scripts)
+Goods&Glory/scripts/.cache/
+
+# Secrets / local env
+.env
+.env.*
+*.pem
+Credentials.xcconfig
+
+# Obsidian local UI state
+**/.obsidian/
