@@ -19,9 +19,9 @@ Pinned inputs (downloaded into `scripts/.cache/natural_earth/` on first run):
 Processing notes:
 
 - Antarctica is omitted (Mercator distortion; not used by gameplay).
-- Antimeridian-crossing rings/lines are split; NE Asia (Chukotka) remnants that
-  would appear on the far-left are shifted by +360° so Siberia completes on the
-  right. Alaska stays on the left.
+- Antimeridian rings are split only when coordinates actually jump ±180°.
+- NE Asia (Chukotka) remnants are stitched into the Eurasian land ring at
+  lon>180 so Siberia completes continuously on the right (no seam).
 - Country borders use 50m source + ~2 km simplify (closer to reality than land).
 - Runtime draws all borders as one static `SKShapeNode` (no zoom rebuild).
 - Cities and roads are unchanged; regenerate only geography:

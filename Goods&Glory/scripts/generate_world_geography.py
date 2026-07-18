@@ -119,10 +119,25 @@ def normalize_longitude(lon: float) -> float:
 def split_ring_at_antimeridian(
     points: list[tuple[float, float]],
 ) -> list[list[tuple[float, float]]]:
-    """Split an unwrapped ring into closed rings in [-180, 180]."""
+    """Split only rings that actually jump across ±180°.
+
+    Wide continents (e.g. Eurasia from -17° to +180°) must NOT be band-split —
+    that destroys the Natural Earth dateline cut needed to stitch Chukotka.
+    """
     if len(points) < 3:
         return []
-    unwrapped = unwrap_ring(points)
+    ring = list(points)
+    if ring[0] != ring[-1]:
+        ring = ring + [ring[0]]
+
+    has_jump = any(
+        abs(ring[index][0] - ring[index + 1][0]) > 180.0
+        for index in range(len(ring) - 1)
+    )
+    if not has_jump:
+        return [ring]
+
+    unwrapped = unwrap_ring(ring)
     if unwrapped[0] != unwrapped[-1]:
         unwrapped = unwrapped + [unwrapped[0]]
 
@@ -131,8 +146,6 @@ def split_ring_at_antimeridian(
     if max_lon - min_lon <= 180.0 and -180.0 <= min_lon and max_lon <= 180.0:
         return [[(normalize_longitude(lon), lat) for lon, lat in unwrapped]]
 
-    # Group vertices by 360° band, then normalize each piece into [-180, 180].
-    # Natural Earth 110m rarely needs this; Russia/Fiji-style spans are covered.
     bands: dict[int, list[tuple[float, float]]] = {}
     for lon, lat in unwrapped[:-1]:
         display = normalize_longitude(lon)
@@ -280,14 +293,21 @@ def process_land(geojson: dict) -> list[list[tuple[float, float]]]:
             for piece in split_ring_at_antimeridian(outer):
                 if is_antarctica_ring(piece):
                     continue
-                simplified = simplified_closed_ring(piece, SIMPLIFY_TOLERANCE_KM)
-                if simplified is None or len(simplified) < MIN_RING_POINTS:
+                if len(_open_ring(piece)) < 3:
                     continue
-                if is_antarctica_ring(simplified):
-                    continue
-                rings.append(simplified)
-    rings.sort(key=bbox_area, reverse=True)
-    return rings
+                rings.append(piece if piece[0] == piece[-1] else piece + [piece[0]])
+    # Stitch NE Asia dateline wraps before DP so ±180 cut vertices survive.
+    rings = merge_dateline_wraps_into_land(rings)
+    simplified_rings: list[list[tuple[float, float]]] = []
+    for ring in rings:
+        simplified = simplified_closed_ring(ring, SIMPLIFY_TOLERANCE_KM)
+        if simplified is None or len(simplified) < MIN_RING_POINTS:
+            continue
+        if is_antarctica_ring(simplified):
+            continue
+        simplified_rings.append(simplified)
+    simplified_rings.sort(key=bbox_area, reverse=True)
+    return simplified_rings
 
 
 def process_lakes(geojson: dict) -> list[list[tuple[float, float]]]:
@@ -346,25 +366,187 @@ def process_boundaries(geojson: dict) -> list[list[tuple[float, float]]]:
 def is_east_asia_dateline_wrap(points: list[tuple[float, float]]) -> bool:
     """True for Chukotka-style remnants that appear on the far-left after ±180 split.
 
-    Those belong east of Asia: shift them by +360° so Siberia completes on the
-    right. Alaska / Canada stay put (further east than ~-168° or lower latitude).
+    Those belong east of Asia. Alaska / Canada stay put (further east than ~-168°
+    or lower latitude).
     """
     min_lon, min_lat, max_lon, max_lat = ring_bounds(points)
     if min_lat < 55.0:
         return False
     if max_lon > -168.0:
         return False
-    # Dateline pocket: touches -180 or sits in the Russian Far East wrap band.
     return min_lon <= -170.0
+
+
+def _open_ring(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    ring = list(points)
+    if len(ring) >= 2 and ring[0] == ring[-1]:
+        ring = ring[:-1]
+    return ring
+
+
+def _on_dateline(lon: float, eps: float = 0.05) -> bool:
+    return abs(abs(lon) - 180.0) <= eps
+
+
+def _find_dateline_cut(
+    ring: list[tuple[float, float]],
+) -> tuple[int, tuple[float, float], tuple[float, float]] | None:
+    """Index i where ring[i]→ring[i+1] is the artificial ±180 cut (lat span)."""
+    r = _open_ring(ring)
+    n = len(r)
+    if n < 3:
+        return None
+    best = None
+    for i in range(n):
+        a = r[i]
+        b = r[(i + 1) % n]
+        if not (_on_dateline(a[0]) and _on_dateline(b[0])):
+            continue
+        lat_span = abs(a[1] - b[1])
+        if lat_span < 0.4:
+            continue
+        if best is None or lat_span > best[0]:
+            best = (lat_span, i, a, b)
+    if best is None:
+        return None
+    _, index, a, b = best
+    return index, a, b
+
+
+def _shift_lon_east(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Move western dateline remnant into lon > 180."""
+    return [(lon + 360.0 if lon < 0.0 else lon, lat) for lon, lat in points]
+
+
+def _exterior_path_from_cut(
+    ring: list[tuple[float, float]], cut_index: int
+) -> list[tuple[float, float]]:
+    """Vertices from cut end → around exterior → cut start (inclusive)."""
+    r = _open_ring(ring)
+    n = len(r)
+    start = (cut_index + 1) % n
+    end = cut_index
+    path = [r[start]]
+    j = (start + 1) % n
+    while j != end:
+        path.append(r[j])
+        j = (j + 1) % n
+    path.append(r[end])
+    return path
+
+
+def try_stitch_wrap_into_host(
+    host: list[tuple[float, float]],
+    wrap: list[tuple[float, float]],
+) -> list[tuple[float, float]] | None:
+    """Replace host's ±180 cut with wrap's eastern coastline (lon shifted +360)."""
+    host_cut = _find_dateline_cut(host)
+    wrap_cut = _find_dateline_cut(wrap)
+    if host_cut is None or wrap_cut is None:
+        return None
+    host_i, host_a, host_b = host_cut
+    wrap_i, wrap_a, wrap_b = wrap_cut
+
+    # Host cut host_a→host_b should match wrap cut endpoints (same latitudes).
+    host_lats = sorted((host_a[1], host_b[1]))
+    wrap_lats = sorted((wrap_a[1], wrap_b[1]))
+    if abs(host_lats[0] - wrap_lats[0]) > 0.15 or abs(host_lats[1] - wrap_lats[1]) > 0.15:
+        return None
+
+    exterior = _exterior_path_from_cut(wrap, wrap_i)
+    # exterior starts at wrap_b and ends at wrap_a (cut direction wrap_a→wrap_b).
+    # Host wants path host_a→host_b. Align orientation.
+    exterior_shifted = _shift_lon_east(exterior)
+
+    def lat_key(point: tuple[float, float]) -> float:
+        return point[1]
+
+    start_lat, end_lat = host_a[1], host_b[1]
+    if abs(exterior_shifted[0][1] - start_lat) > abs(exterior_shifted[-1][1] - start_lat):
+        exterior_shifted = list(reversed(exterior_shifted))
+    # Snap endpoints exactly onto the host cut vertices.
+    exterior_shifted[0] = (max(exterior_shifted[0][0], 180.0), start_lat)
+    exterior_shifted[-1] = (max(exterior_shifted[-1][0], 180.0), end_lat)
+    # Prefer host cut longitudes (typically +180).
+    exterior_shifted[0] = (host_a[0] if host_a[0] >= 180.0 else 180.0, start_lat)
+    exterior_shifted[-1] = (host_b[0] if host_b[0] >= 180.0 else 180.0, end_lat)
+
+    host_open = _open_ring(host)
+    n = len(host_open)
+    # host_open[host_i]=host_a, host_open[host_i+1]=host_b
+    mid = exterior_shifted[1:-1]
+    merged = (
+        host_open[: host_i + 1]
+        + mid
+        + host_open[host_i + 1 :]
+    )
+    if merged[0] != merged[-1]:
+        merged.append(merged[0])
+    return merged
+
+
+def merge_dateline_wraps_into_land(
+    rings: list[list[tuple[float, float]]],
+) -> list[list[tuple[float, float]]]:
+    """Stitch NE Asia dateline remnants into the Eurasian ring (no seam)."""
+    wraps = [r for r in rings if is_east_asia_dateline_wrap(r)]
+    others = [r for r in rings if not is_east_asia_dateline_wrap(r)]
+    if not wraps:
+        return rings
+
+    # Primary host: largest ring that reaches the dateline from the west/Asia side.
+    host_index = None
+    host_area = -1.0
+    for index, ring in enumerate(others):
+        min_lon, min_lat, max_lon, max_lat = ring_bounds(ring)
+        if max_lon < 179.5 or max_lat < 60.0:
+            continue
+        area = bbox_area(ring)
+        if area > host_area:
+            host_area = area
+            host_index = index
+
+    consumed: set[int] = set()
+    if host_index is not None:
+        host = others[host_index]
+        for wrap_index, wrap in enumerate(wraps):
+            stitched = try_stitch_wrap_into_host(host, wrap)
+            if stitched is None:
+                continue
+            host = stitched
+            consumed.add(wrap_index)
+        others[host_index] = host
+
+    # Leftover wraps: try eastern island halves (e.g. Wrangel), else shift only.
+    for wrap_index, wrap in enumerate(wraps):
+        if wrap_index in consumed:
+            continue
+        merged = False
+        for index, ring in enumerate(others):
+            min_lon, min_lat, max_lon, max_lat = ring_bounds(ring)
+            if max_lon < 178.0 or min_lon < 100.0 or min_lat < 55.0:
+                continue
+            stitched = try_stitch_wrap_into_host(ring, wrap)
+            if stitched is None:
+                continue
+            others[index] = stitched
+            merged = True
+            break
+        if not merged:
+            others.append(_shift_lon_east(wrap))
+
+    others.sort(key=bbox_area, reverse=True)
+    return others
 
 
 def shift_dateline_wraps_east(
     geometries: list[list[tuple[float, float]]],
 ) -> list[list[tuple[float, float]]]:
+    """Shift (don't stitch) — used for open border polylines."""
     shifted: list[list[tuple[float, float]]] = []
     for points in geometries:
         if is_east_asia_dateline_wrap(points):
-            shifted.append([(lon + 360.0, lat) for lon, lat in points])
+            shifted.append(_shift_lon_east(points))
         else:
             shifted.append(points)
     return shifted
@@ -377,7 +559,7 @@ def rounded_coordinate(point: tuple[float, float]) -> dict[str, float]:
 def build_geography(
     land_path: Path, lakes_path: Path, boundaries_path: Path
 ) -> dict:
-    land_rings = shift_dateline_wraps_east(process_land(load_geojson(land_path)))
+    land_rings = process_land(load_geojson(land_path))
     lake_rings = process_lakes(load_geojson(lakes_path))
     boundary_lines = shift_dateline_wraps_east(
         process_boundaries(load_geojson(boundaries_path))
@@ -387,7 +569,7 @@ def build_geography(
         "source": (
             "Natural Earth 110m land + lakes, 50m admin-0 land boundary lines "
             "(https://www.naturalearthdata.com/); Antarctica omitted; "
-            "NE Asia dateline wrap shifted east (+360°); "
+            "NE Asia dateline wraps stitched into Eurasia (lon>180); "
             "land simplify ~6 km, borders ~2 km"
         ),
         "landMasses": [

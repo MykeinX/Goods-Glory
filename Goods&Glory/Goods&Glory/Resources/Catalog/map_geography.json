@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "source": "Natural Earth 110m land + lakes, 50m admin-0 land boundary lines (https://www.naturalearthdata.com/); Antarctica omitted; NE Asia dateline wrap shifted east (+360°); land simplify ~6 km, borders ~2 km",
+  "source": "Natural Earth 110m land + lakes, 50m admin-0 land boundary lines (https://www.naturalearthdata.com/); Antarctica omitted; NE Asia dateline wraps stitched into Eurasia (lon>180); land simplify ~6 km, borders ~2 km",
   "landMasses": [
     {
       "id": "world_land_001",
@@ -212,6 +212,90 @@
         {
           "latitude": 69.400085,
           "longitude": 178.600098
+        },
+        {
+          "latitude": 68.2,
+          "longitude": 182.45
+        },
+        {
+          "latitude": 67.20589,
+          "longitude": 185.07175
+        },
+        {
+          "latitude": 66.58435,
+          "longitude": 184.98575
+        },
+        {
+          "latitude": 66.33556,
+          "longitude": 185.66017
+        },
+        {
+          "latitude": 67.06219,
+          "longitude": 185.42818
+        },
+        {
+          "latitude": 66.91308,
+          "longitude": 188.14269
+        },
+        {
+          "latitude": 65.97724,
+          "longitude": 190.10042
+        },
+        {
+          "latitude": 65.54139,
+          "longitude": 189.10893
+        },
+        {
+          "latitude": 65.43791,
+          "longitude": 187.46975
+        },
+        {
+          "latitude": 64.46079,
+          "longitude": 187.445
+        },
+        {
+          "latitude": 64.25269,
+          "longitude": 187.04467
+        },
+        {
+          "latitude": 64.2826,
+          "longitude": 186.10816
+        },
+        {
+          "latitude": 64.63125,
+          "longitude": 185.34608
+        },
+        {
+          "latitude": 64.92288,
+          "longitude": 184.01647
+        },
+        {
+          "latitude": 65.35667,
+          "longitude": 183.79284
+        },
+        {
+          "latitude": 65.52024,
+          "longitude": 182.77734
+        },
+        {
+          "latitude": 65.39052,
+          "longitude": 181.64007
+        },
+        {
+          "latitude": 65.74044,
+          "longitude": 181.09668
+        },
+        {
+          "latitude": 66.11211,
+          "longitude": 181.31389
+        },
+        {
+          "latitude": 65.87456,
+          "longitude": 180.11623
+        },
+        {
+          "latitude": 65.40411,
+          "longitude": 180.56732
         },
         {
           "latitude": 64.974304,
@@ -11205,107 +11289,6 @@
       "id": "world_land_016",
       "points": [
         {
-          "latitude": 66.58435,
-          "longitude": 184.98575
-        },
-        {
-          "latitude": 66.33556,
-          "longitude": 185.66017
-        },
-        {
-          "latitude": 67.06219,
-          "longitude": 185.42818
-        },
-        {
-          "latitude": 66.91308,
-          "longitude": 188.14269
-        },
-        {
-          "latitude": 65.97724,
-          "longitude": 190.10042
-        },
-        {
-          "latitude": 65.54139,
-          "longitude": 189.10893
-        },
-        {
-          "latitude": 65.43791,
-          "longitude": 187.46975
-        },
-        {
-          "latitude": 64.46079,
-          "longitude": 187.445
-        },
-        {
-          "latitude": 64.25269,
-          "longitude": 187.04467
-        },
-        {
-          "latitude": 64.2826,
-          "longitude": 186.10816
-        },
-        {
-          "latitude": 64.63125,
-          "longitude": 185.34608
-        },
-        {
-          "latitude": 64.92288,
-          "longitude": 184.01647
-        },
-        {
-          "latitude": 65.35667,
-          "longitude": 183.79284
-        },
-        {
-          "latitude": 65.52024,
-          "longitude": 182.77734
-        },
-        {
-          "latitude": 65.39052,
-          "longitude": 181.64007
-        },
-        {
-          "latitude": 65.74044,
-          "longitude": 181.09668
-        },
-        {
-          "latitude": 66.11211,
-          "longitude": 181.31389
-        },
-        {
-          "latitude": 65.87456,
-          "longitude": 180.11623
-        },
-        {
-          "latitude": 65.40411,
-          "longitude": 180.56732
-        },
-        {
-          "latitude": 64.979709,
-          "longitude": 180.0
-        },
-        {
-          "latitude": 68.963636,
-          "longitude": 180.0
-        },
-        {
-          "latitude": 68.2,
-          "longitude": 182.45
-        },
-        {
-          "latitude": 67.20589,
-          "longitude": 185.07175
-        },
-        {
-          "latitude": 66.58435,
-          "longitude": 184.98575
-        }
-      ]
-    },
-    {
-      "id": "world_land_017",
-      "points": [
-        {
           "latitude": -40.919052,
           "longitude": 173.020375
         },
@@ -11412,7 +11395,7 @@
       ]
     },
     {
-      "id": "world_land_018",
+      "id": "world_land_017",
       "points": [
         {
           "latitude": 1.419836,
@@ -11589,7 +11572,7 @@
       ]
     },
     {
-      "id": "world_land_019",
+      "id": "world_land_018",
       "points": [
         {
           "latitude": -36.156397,
@@ -11726,7 +11709,7 @@
       ]
     },
     {
-      "id": "world_land_020",
+      "id": "world_land_019",
       "points": [
         {
           "latitude": 71.4,
@@ -11791,7 +11774,7 @@
       ]
     },
     {
-      "id": "world_land_021",
+      "id": "world_land_020",
       "points": [
         {
           "latitude": 79.70175,
@@ -11868,7 +11851,7 @@
       ]
     },
     {
-      "id": "world_land_022",
+      "id": "world_land_021",
       "points": [
         {
           "latitude": 22.765303,
@@ -12021,7 +12004,7 @@
       ]
     },
     {
-      "id": "world_land_023",
+      "id": "world_land_022",
       "points": [
         {
           "latitude": 50.68701,
@@ -12154,7 +12137,7 @@
       ]
     },
     {
-      "id": "world_land_024",
+      "id": "world_land_023",
       "points": [
         {
           "latitude": 79.66,
@@ -12239,7 +12222,7 @@
       ]
     },
     {
-      "id": "world_land_025",
+      "id": "world_land_024",
       "points": [
         {
           "latitude": 66.455892,
@@ -12316,7 +12299,7 @@
       ]
     },
     {
-      "id": "world_land_026",
+      "id": "world_land_025",
       "points": [
         {
           "latitude": -53.85,
@@ -12413,7 +12396,7 @@
       ]
     },
     {
-      "id": "world_land_027",
+      "id": "world_land_026",
       "points": [
         {
           "latitude": -6.777674,
@@ -12506,7 +12489,7 @@
       ]
     },
     {
-      "id": "world_land_028",
+      "id": "world_land_027",
       "points": [
         {
           "latitude": 76.20168,
@@ -12599,7 +12582,7 @@
       ]
     },
     {
-      "id": "world_land_029",
+      "id": "world_land_028",
       "points": [
         {
           "latitude": 50.7476,
@@ -12688,7 +12671,7 @@
       ]
     },
     {
-      "id": "world_land_030",
+      "id": "world_land_029",
       "points": [
         {
           "latitude": 18.504065,
@@ -12825,7 +12808,7 @@
       ]
     },
     {
-      "id": "world_land_031",
+      "id": "world_land_030",
       "points": [
         {
           "latitude": 44.1741,
@@ -12894,7 +12877,7 @@
       ]
     },
     {
-      "id": "world_land_032",
+      "id": "world_land_031",
       "points": [
         {
           "latitude": 78.88094,
@@ -12943,7 +12926,7 @@
       ]
     },
     {
-      "id": "world_land_033",
+      "id": "world_land_032",
       "points": [
         {
           "latitude": 8.414706,
@@ -13052,7 +13035,7 @@
       ]
     },
     {
-      "id": "world_land_034",
+      "id": "world_land_033",
       "points": [
         {
           "latitude": 65.657285,
@@ -13133,7 +13116,7 @@
       ]
     },
     {
-      "id": "world_land_035",
+      "id": "world_land_034",
       "points": [
         {
           "latitude": 73.84389,
@@ -13198,7 +13181,7 @@
       ]
     },
     {
-      "id": "world_land_036",
+      "id": "world_land_035",
       "points": [
         {
           "latitude": 52.260118,
@@ -13247,7 +13230,7 @@
       ]
     },
     {
-      "id": "world_land_037",
+      "id": "world_land_036",
       "points": [
         {
           "latitude": 19.871501,
@@ -13388,7 +13371,7 @@
       ]
     },
     {
-      "id": "world_land_038",
+      "id": "world_land_037",
       "points": [
         {
           "latitude": 80.40734,
@@ -13441,7 +13424,7 @@
       ]
     },
     {
-      "id": "world_land_039",
+      "id": "world_land_038",
       "points": [
         {
           "latitude": 75.562625,
@@ -13482,7 +13465,7 @@
       ]
     },
     {
-      "id": "world_land_040",
+      "id": "world_land_039",
       "points": [
         {
           "latitude": 48.510011,
@@ -13543,7 +13526,7 @@
       ]
     },
     {
-      "id": "world_land_041",
+      "id": "world_land_040",
       "points": [
         {
           "latitude": 72.771992,
@@ -13592,7 +13575,7 @@
       ]
     },
     {
-      "id": "world_land_042",
+      "id": "world_land_041",
       "points": [
         {
           "latitude": 77.645287,
@@ -13641,7 +13624,7 @@
       ]
     },
     {
-      "id": "world_land_043",
+      "id": "world_land_042",
       "points": [
         {
           "latitude": -40.792549,
@@ -13706,7 +13689,7 @@
       ]
     },
     {
-      "id": "world_land_044",
+      "id": "world_land_043",
       "points": [
         {
           "latitude": 76.72,
@@ -13763,7 +13746,7 @@
       ]
     },
     {
-      "id": "world_land_045",
+      "id": "world_land_044",
       "points": [
         {
           "latitude": -5.478063,
@@ -13848,7 +13831,7 @@
       ]
     },
     {
-      "id": "world_land_046",
+      "id": "world_land_045",
       "points": [
         {
           "latitude": 78.30689,
@@ -13881,7 +13864,7 @@
       ]
     },
     {
-      "id": "world_land_047",
+      "id": "world_land_046",
       "points": [
         {
           "latitude": 78.324754,
@@ -13930,7 +13913,7 @@
       ]
     },
     {
-      "id": "world_land_048",
+      "id": "world_land_047",
       "points": [
         {
           "latitude": -10.140001,
@@ -13991,7 +13974,7 @@
       ]
     },
     {
-      "id": "world_land_049",
+      "id": "world_land_048",
       "points": [
         {
           "latitude": 6.197141,
@@ -14036,7 +14019,7 @@
       ]
     },
     {
-      "id": "world_land_050",
+      "id": "world_land_049",
       "points": [
         {
           "latitude": 9.316383,
@@ -14077,7 +14060,7 @@
       ]
     },
     {
-      "id": "world_land_051",
+      "id": "world_land_050",
       "points": [
         {
           "latitude": -22.159991,
@@ -14118,7 +14101,7 @@
       ]
     },
     {
-      "id": "world_land_052",
+      "id": "world_land_051",
       "points": [
         {
           "latitude": 22.790857,
@@ -14159,7 +14142,7 @@
       ]
     },
     {
-      "id": "world_land_053",
+      "id": "world_land_052",
       "points": [
         {
           "latitude": 80.54728,
@@ -14220,7 +14203,7 @@
       ]
     },
     {
-      "id": "world_land_054",
+      "id": "world_land_053",
       "points": [
         {
           "latitude": 69.10769,
@@ -14265,7 +14248,7 @@
       ]
     },
     {
-      "id": "world_land_055",
+      "id": "world_land_054",
       "points": [
         {
           "latitude": -4.499983,
@@ -14310,7 +14293,7 @@
       ]
     },
     {
-      "id": "world_land_056",
+      "id": "world_land_055",
       "points": [
         {
           "latitude": 38.231155,
@@ -14355,7 +14338,7 @@
       ]
     },
     {
-      "id": "world_land_057",
+      "id": "world_land_056",
       "points": [
         {
           "latitude": 73.102685,
@@ -14400,7 +14383,7 @@
       ]
     },
     {
-      "id": "world_land_058",
+      "id": "world_land_057",
       "points": [
         {
           "latitude": 18.678395,
@@ -14445,7 +14428,7 @@
       ]
     },
     {
-      "id": "world_land_059",
+      "id": "world_land_058",
       "points": [
         {
           "latitude": -51.1,
@@ -14490,7 +14473,7 @@
       ]
     },
     {
-      "id": "world_land_060",
+      "id": "world_land_059",
       "points": [
         {
           "latitude": 54.040009,
@@ -14539,7 +14522,7 @@
       ]
     },
     {
-      "id": "world_land_061",
+      "id": "world_land_060",
       "points": [
         {
           "latitude": 77.85385,
@@ -14576,7 +14559,7 @@
       ]
     },
     {
-      "id": "world_land_062",
+      "id": "world_land_061",
       "points": [
         {
           "latitude": 34.149234,
@@ -14629,7 +14612,7 @@
       ]
     },
     {
-      "id": "world_land_063",
+      "id": "world_land_062",
       "points": [
         {
           "latitude": 1.132386,
@@ -14686,7 +14669,7 @@
       ]
     },
     {
-      "id": "world_land_064",
+      "id": "world_land_063",
       "points": [
         {
           "latitude": 41.209991,
@@ -14731,7 +14714,7 @@
       ]
     },
     {
-      "id": "world_land_065",
+      "id": "world_land_064",
       "points": [
         {
           "latitude": 10.278779,
@@ -14780,7 +14763,7 @@
       ]
     },
     {
-      "id": "world_land_066",
+      "id": "world_land_065",
       "points": [
         {
           "latitude": 75.08406,
@@ -14813,7 +14796,7 @@
       ]
     },
     {
-      "id": "world_land_067",
+      "id": "world_land_066",
       "points": [
         {
           "latitude": 12.162695,
@@ -14874,7 +14857,7 @@
       ]
     },
     {
-      "id": "world_land_068",
+      "id": "world_land_067",
       "points": [
         {
           "latitude": 74.979997,
@@ -14911,7 +14894,7 @@
       ]
     },
     {
-      "id": "world_land_069",
+      "id": "world_land_068",
       "points": [
         {
           "latitude": 78.056941,
@@ -14948,7 +14931,7 @@
       ]
     },
     {
-      "id": "world_land_070",
+      "id": "world_land_069",
       "points": [
         {
           "latitude": 57.115842,
@@ -14985,7 +14968,7 @@
       ]
     },
     {
-      "id": "world_land_071",
+      "id": "world_land_070",
       "points": [
         {
           "latitude": -3.093764,
@@ -15018,6 +15001,47 @@
         {
           "latitude": -3.093764,
           "longitude": 130.471344
+        }
+      ]
+    },
+    {
+      "id": "world_land_071",
+      "points": [
+        {
+          "latitude": 70.832199,
+          "longitude": 180.0
+        },
+        {
+          "latitude": 70.78114,
+          "longitude": 178.903425
+        },
+        {
+          "latitude": 71.0988,
+          "longitude": 178.7253
+        },
+        {
+          "latitude": 71.55762,
+          "longitude": 180.128125
+        },
+        {
+          "latitude": 71.55553,
+          "longitude": 180.97567
+        },
+        {
+          "latitude": 71.26948,
+          "longitude": 182.422055
+        },
+        {
+          "latitude": 71.13277,
+          "longitude": 182.336425
+        },
+        {
+          "latitude": 70.89302,
+          "longitude": 181.30622
+        },
+        {
+          "latitude": 70.832199,
+          "longitude": 180.0
         }
       ]
     },
@@ -15694,39 +15718,6 @@
       "id": "world_land_089",
       "points": [
         {
-          "latitude": 70.89302,
-          "longitude": 181.30622
-        },
-        {
-          "latitude": 70.832199,
-          "longitude": 180.0
-        },
-        {
-          "latitude": 71.515714,
-          "longitude": 180.0
-        },
-        {
-          "latitude": 71.55553,
-          "longitude": 180.97567
-        },
-        {
-          "latitude": 71.26948,
-          "longitude": 182.422055
-        },
-        {
-          "latitude": 71.13277,
-          "longitude": 182.336425
-        },
-        {
-          "latitude": 70.89302,
-          "longitude": 181.30622
-        }
-      ]
-    },
-    {
-      "id": "world_land_090",
-      "points": [
-        {
           "latitude": 19.08348,
           "longitude": -155.54211
         },
@@ -15773,7 +15764,7 @@
       ]
     },
     {
-      "id": "world_land_091",
+      "id": "world_land_090",
       "points": [
         {
           "latitude": 42.152492,
@@ -15806,7 +15797,7 @@
       ]
     },
     {
-      "id": "world_land_092",
+      "id": "world_land_091",
       "points": [
         {
           "latitude": -10.239581,
@@ -15835,7 +15826,7 @@
       ]
     },
     {
-      "id": "world_land_093",
+      "id": "world_land_092",
       "points": [
         {
           "latitude": -9.599982,
@@ -15868,7 +15859,7 @@
       ]
     },
     {
-      "id": "world_land_094",
+      "id": "world_land_093",
       "points": [
         {
           "latitude": 62.7108,
@@ -15901,7 +15892,7 @@
       ]
     },
     {
-      "id": "world_land_095",
+      "id": "world_land_094",
       "points": [
         {
           "latitude": 13.06959,
@@ -15926,7 +15917,7 @@
       ]
     },
     {
-      "id": "world_land_096",
+      "id": "world_land_095",
       "points": [
         {
           "latitude": -17.33992,
@@ -15967,7 +15958,7 @@
       ]
     },
     {
-      "id": "world_land_097",
+      "id": "world_land_096",
       "points": [
         {
           "latitude": -16.801354,
@@ -16000,7 +15991,7 @@
       ]
     },
     {
-      "id": "world_land_098",
+      "id": "world_land_097",
       "points": [
         {
           "latitude": 23.75975,
@@ -16037,7 +16028,7 @@
       ]
     },
     {
-      "id": "world_land_099",
+      "id": "world_land_098",
       "points": [
         {
           "latitude": 78.601973,
@@ -16070,7 +16061,7 @@
       ]
     },
     {
-      "id": "world_land_100",
+      "id": "world_land_099",
       "points": [
         {
           "latitude": 59.909987,
@@ -16099,7 +16090,7 @@
       ]
     },
     {
-      "id": "world_land_101",
+      "id": "world_land_100",
       "points": [
         {
           "latitude": 18.228035,
@@ -16132,7 +16123,7 @@
       ]
     },
     {
-      "id": "world_land_102",
+      "id": "world_land_101",
       "points": [
         {
           "latitude": 10.11,
@@ -16169,32 +16160,7 @@
       ]
     },
     {
-      "id": "world_land_103",
-      "points": [
-        {
-          "latitude": 70.832199,
-          "longitude": 180.0
-        },
-        {
-          "latitude": 70.78114,
-          "longitude": 178.903425
-        },
-        {
-          "latitude": 71.0988,
-          "longitude": 178.7253
-        },
-        {
-          "latitude": 71.515714,
-          "longitude": 180.0
-        },
-        {
-          "latitude": 70.832199,
-          "longitude": 180.0
-        }
-      ]
-    },
-    {
-      "id": "world_land_104",
+      "id": "world_land_102",
       "points": [
         {
           "latitude": 26.59,
@@ -16227,7 +16193,7 @@
       ]
     },
     {
-      "id": "world_land_105",
+      "id": "world_land_103",
       "points": [
         {
           "latitude": -6.214401,
@@ -16256,7 +16222,7 @@
       ]
     },
     {
-      "id": "world_land_106",
+      "id": "world_land_104",
       "points": [
         {
           "latitude": 77.519997,
@@ -16285,7 +16251,7 @@
       ]
     },
     {
-      "id": "world_land_107",
+      "id": "world_land_105",
       "points": [
         {
           "latitude": -7.34782,
@@ -16318,7 +16284,7 @@
       ]
     },
     {
-      "id": "world_land_108",
+      "id": "world_land_106",
       "points": [
         {
           "latitude": -3.459065,
@@ -16347,7 +16313,7 @@
       ]
     },
     {
-      "id": "world_land_109",
+      "id": "world_land_107",
       "points": [
         {
           "latitude": 62.158675,
@@ -16384,7 +16350,7 @@
       ]
     },
     {
-      "id": "world_land_110",
+      "id": "world_land_108",
       "points": [
         {
           "latitude": -9.872937,
@@ -16417,7 +16383,7 @@
       ]
     },
     {
-      "id": "world_land_111",
+      "id": "world_land_109",
       "points": [
         {
           "latitude": -14.93392,
@@ -16450,7 +16416,7 @@
       ]
     },
     {
-      "id": "world_land_112",
+      "id": "world_land_110",
       "points": [
         {
           "latitude": -10.482719,
@@ -16479,7 +16445,7 @@
       ]
     },
     {
-      "id": "world_land_113",
+      "id": "world_land_111",
       "points": [
         {
           "latitude": 26.58,
@@ -16508,7 +16474,7 @@
       ]
     },
     {
-      "id": "world_land_114",
+      "id": "world_land_112",
       "points": [
         {
           "latitude": -16.466333,
@@ -16533,7 +16499,7 @@
       ]
     },
     {
-      "id": "world_land_115",
+      "id": "world_land_113",
       "points": [
         {
           "latitude": 20.64397,
@@ -16562,7 +16528,7 @@
       ]
     },
     {
-      "id": "world_land_116",
+      "id": "world_land_114",
       "points": [
         {
           "latitude": 21.32217,
@@ -16595,7 +16561,7 @@
       ]
     },
     {
-      "id": "world_land_117",
+      "id": "world_land_115",
       "points": [
         {
           "latitude": 21.982,
@@ -16624,7 +16590,7 @@
       ]
     },
     {
-      "id": "world_land_118",
+      "id": "world_land_116",
       "points": [
         {
           "latitude": -16.501783,
@@ -16649,7 +16615,7 @@
       ]
     },
     {
-      "id": "world_land_119",
+      "id": "world_land_117",
       "points": [
         {
           "latitude": 21.17684,
