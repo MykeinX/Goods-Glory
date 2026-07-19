@@ -484,12 +484,26 @@ final class GameMapScene: SKScene {
         for node in cityNodes.values { node.setScale(scale) }
         for node in plannedVisitNodes.values { node.setScale(scale) }
         for (id, node) in vehicleNodes {
-            node.setScale(scale)
-            if let marker = vehicleMarkers[id] {
-                node.position = displayPosition(for: marker)
-            }
+            guard let marker = vehicleMarkers[id] else { continue }
+            node.position = displayPosition(for: marker)
         }
+        updateVehicleZoom()
         updateSemanticZoom()
+    }
+
+    /// Applies the zoom-driven vehicle appearance to the whole fleet.
+    private func updateVehicleZoom() {
+        let zoom = vehicleSemanticZoom(zoomOut: zoomOutAmount)
+        let cameraScale = cameraNode.xScale
+        for node in vehicleNodes.values {
+            node.setSemanticZoom(
+                cameraScale: cameraScale,
+                semanticScale: zoom.scale,
+                chassisAlpha: zoom.chassis,
+                sparkAlpha: zoom.spark,
+                labelAlpha: zoom.label
+            )
+        }
     }
 
     private static func bounds(containing points: [CGPoint]) -> CGRect? {
@@ -816,8 +830,9 @@ final class GameMapScene: SKScene {
                 node.removeAction(forKey: "movement")
                 node.position = target
             }
-            node.setScale(cameraNode.xScale)
+            node.setSparkColor(accentColor)
         }
+        updateVehicleZoom()
     }
 
     private func updateVehicleStyles() {
@@ -829,7 +844,9 @@ final class GameMapScene: SKScene {
                 isSelected: id == selectedVehicleID,
                 cameraScale: cameraNode.xScale
             )
+            node.setSparkColor(accentColor)
         }
+        updateVehicleZoom()
     }
 
     /// Loading/unloading stay on the city anchor; moving vehicles use interpolated arc points.
@@ -917,14 +934,18 @@ final class GameMapScene: SKScene {
         isEmphasized: Bool
     ) -> CGFloat {
         let closeScale: CGFloat = isEmphasized ? 1.20 : 1.08
+        // Pulled well below the previous floor. Cities used to bottom out near
+        // a third of their close size, which at full zoom-out still read as
+        // buttons crowding the continent rather than points on it.
         let farScale: CGFloat
         switch importance {
-        case .local: farScale = isEmphasized ? 0.42 : 0.32
-        case .regional: farScale = isEmphasized ? 0.48 : 0.38
-        case .major: farScale = isEmphasized ? 0.55 : 0.44
+        case .local: farScale = isEmphasized ? 0.22 : 0.14
+        case .regional: farScale = isEmphasized ? 0.27 : 0.18
+        case .major: farScale = isEmphasized ? 0.34 : 0.24
         }
-        // Ease toward tiny dots in the second half of zoom-out.
-        let t = smoothstep(((zoomOut - 0.08) / 0.92).clamped(to: 0...1))
+        // Shrinking starts immediately and eases the whole way, so the map
+        // opens out gradually instead of holding size and then collapsing.
+        let t = smoothstep(zoomOut.clamped(to: 0...1))
         return closeScale + (farScale - closeScale) * t
     }
 
@@ -954,6 +975,26 @@ final class GameMapScene: SKScene {
             }
         }
         return 1 - smoothstep(((zoomOut - start) / max(end - start, 0.0001)).clamped(to: 0...1))
+    }
+
+    /// Vehicle appearance across the zoom range.
+    ///
+    /// Counter-scaling alone kept trucks a fixed size on screen, so pulling
+    /// back turned the map into a field of identical capsules with no sense of
+    /// distance. They now shrink with the world and, past the point where a
+    /// truck silhouette stops being legible, become points of light instead.
+    private func vehicleSemanticZoom(zoomOut: CGFloat) -> (
+        scale: CGFloat, chassis: CGFloat, spark: CGFloat, label: CGFloat
+    ) {
+        let shrink = smoothstep(zoomOut.clamped(to: 0...1))
+        let scale = 1.0 + (0.34 - 1.0) * shrink
+
+        // Hand-over window: the body fades out across the middle of the range
+        // and the spark fades in behind it.
+        let handover = smoothstep(((zoomOut - 0.34) / 0.30).clamped(to: 0...1))
+        // Codes go first — a plate nobody can read is just noise on the lane.
+        let labelFade = smoothstep(((zoomOut - 0.12) / 0.26).clamped(to: 0...1))
+        return (scale, 1 - handover, handover, 1 - labelFade)
     }
 
     private func smoothstep(_ t: CGFloat) -> CGFloat {
@@ -1454,6 +1495,12 @@ private final class MapVehicleNode: SKNode {
     )
     private let labelBackground = SKShapeNode()
     private let label = SKLabelNode(fontNamed: "AvenirNext-Bold")
+    /// What a vehicle becomes when the camera pulls back far enough that a
+    /// truck silhouette is smaller than the ink it is drawn with: a point of
+    /// light. Pulling back then reads as watching traffic move across a
+    /// continent rather than losing sight of it.
+    private let spark = SKShapeNode(circleOfRadius: 2.6)
+    private let sparkGlow = SKShapeNode(circleOfRadius: 6)
 
     override init() {
         super.init()
@@ -1501,6 +1548,56 @@ private final class MapVehicleNode: SKNode {
         label.horizontalAlignmentMode = .center
         label.zPosition = 3
         labelBackground.addChild(label)
+
+        sparkGlow.strokeColor = .clear
+        sparkGlow.zPosition = 0
+        sparkGlow.alpha = 0
+        addChild(sparkGlow)
+
+        spark.strokeColor = .clear
+        spark.zPosition = 1
+        spark.alpha = 0
+        addChild(spark)
+    }
+
+    /// Zoom-driven appearance: shrink, then hand over from the truck body to a
+    /// point of light. The two never both carry the frame — as one fades the
+    /// other takes over — so there is no moment where the vehicle reads as a
+    /// smudge caught between two shapes.
+    /// - Parameters:
+    ///   - cameraScale: the camera's own scale, which counter-scales the node
+    ///     so world geometry does not stretch it.
+    ///   - semanticScale: how much smaller the vehicle should read at this
+    ///     zoom, 1 when close and well under 1 when pulled back.
+    func setSemanticZoom(
+        cameraScale: CGFloat,
+        semanticScale: CGFloat,
+        chassisAlpha: CGFloat,
+        sparkAlpha: CGFloat,
+        labelAlpha: CGFloat
+    ) {
+        setScale(cameraScale * semanticScale)
+        chassis.alpha = chassisAlpha
+        chassis.isHidden = chassisAlpha < 0.02
+        selectionRing.isHidden = chassisAlpha < 0.02 && selectionRing.alpha < 0.02
+        labelBackground.alpha = labelAlpha
+        labelBackground.isHidden = labelAlpha < 0.02
+
+        spark.alpha = sparkAlpha
+        spark.isHidden = sparkAlpha < 0.02
+        sparkGlow.alpha = sparkAlpha * 0.42
+        sparkGlow.isHidden = spark.isHidden
+        // Undo only the semantic shrink, not the camera scale: the spark then
+        // holds a constant on-screen size while the truck around it shrinks
+        // away. A star does not get smaller — it becomes the only thing left.
+        let counter = semanticScale > 0.001 ? 1 / semanticScale : 1
+        spark.setScale(counter)
+        sparkGlow.setScale(counter)
+    }
+
+    func setSparkColor(_ color: UIColor) {
+        spark.fillColor = color
+        sparkGlow.fillColor = color
     }
 
     @available(*, unavailable)
