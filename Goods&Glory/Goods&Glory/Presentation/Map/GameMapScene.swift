@@ -37,9 +37,15 @@ final class GameMapScene: SKScene {
     private enum StrokeWidth {
         static let landCoast: CGFloat = 1
         static let waterCoast: CGFloat = 1
-        /// Country borders — same ink as mockup country strokes (`#2B4463`).
-        /// Slightly thicker than coast so they read on land at strategic zoom.
-        static let boundary: CGFloat = 2.2
+        /// Country borders, drawn at exactly the coastline's weight.
+        ///
+        /// The art direction (design/europe-map.js) draws the whole world as a
+        /// single path — every country outline and every coast sharing one thin
+        /// `#2B4463` stroke — which is what gives that map its flat, tiled,
+        /// game-board character. Ours drew borders at more than twice the coast
+        /// weight, so the continent read as one continuous landmass with heavy
+        /// political lines scored across it: closer to an atlas than a board.
+        static let boundary: CGFloat = 1
         static let loadedRoute: CGFloat = 4.5
         static let deadheadRoute: CGFloat = 3.5
         static let plannedRoute: CGFloat = 3
@@ -343,11 +349,12 @@ final class GameMapScene: SKScene {
         }
     }
 
-    /// Closest zoom relative to fit. ~15% tighter than the previous `0.07` floor.
-    private static let minZoomInRelativeToFit: CGFloat = 0.0595
+    /// Closest zoom relative to fit. Tightened in lockstep with the 0.40→0.32
+    /// zoom-out trim (×0.8) so pinch range stays balanced.
+    private static let minZoomInRelativeToFit: CGFloat = 0.0476
     /// Zoom-out cap relative to full-content fit. Below 1 so the whole world
     /// is never on screen at once (less clutter as the network grows).
-    private static let maxZoomOutRelativeToFit: CGFloat = 0.4
+    private static let maxZoomOutRelativeToFit: CGFloat = 0.32
 
     private var maxZoomOutScale: CGFloat {
         switch cameraFocus {
@@ -361,7 +368,7 @@ final class GameMapScene: SKScene {
     }
 
     private var minZoomInScale: CGFloat {
-        max(0.1275, fitScale * Self.minZoomInRelativeToFit)
+        max(0.102, fitScale * Self.minZoomInRelativeToFit)
     }
 
     private var cameraScaleRange: ClosedRange<CGFloat> {
@@ -585,16 +592,89 @@ final class GameMapScene: SKScene {
         plannedRouteLayer.addChild(previewRouteNode)
     }
 
-    private func addGeography() {
-        let landPath = CGMutablePath()
-        for landMass in geography.landMasses where landMass.points.count >= 3 {
-            let points = MapPathSimplifier.simplifyClosed(
-                landMass.points.map(projection.point(for:))
-            )
-            guard points.count >= 3 else { continue }
-            landPath.addClosedPolyline(points)
+    /// Projected, simplified world silhouettes.
+    ///
+    /// The projection is a pure function of immutable catalog data and the
+    /// simplification tolerances are constants, so every map surface in the app
+    /// builds byte-identical paths. Building them once and handing out the same
+    /// `CGPath` objects removes ~13,000 Mercator projections and a full
+    /// Douglas–Peucker pass from every scene after the first — which is what
+    /// opening the city detail or route builder screen used to pay for.
+    @MainActor
+    private enum TerrainPaths {
+        /// Country borders read as national outlines at strategic zoom, not as
+        /// surveyed cadastral lines. They are two thirds of all geography
+        /// vertices, so this tolerance is the one worth being generous with.
+        static let boundaryToleranceKm: CGFloat = 8
+
+        static let cache = Cache()
+
+        struct Built {
+            let land: CGPath
+            let boundaries: CGPath?
+            let water: CGPath
         }
-        let land = SKShapeNode(path: landPath)
+
+        final class Cache {
+            private var built: Built?
+
+            func paths(
+                geography: MapGeographyDefinition,
+                projection: MapProjection
+            ) -> Built {
+                if let built { return built }
+                let value = Self.build(geography: geography, projection: projection)
+                built = value
+                return value
+            }
+
+            private static func build(
+                geography: MapGeographyDefinition,
+                projection: MapProjection
+            ) -> Built {
+                let landPath = CGMutablePath()
+                for landMass in geography.landMasses where landMass.points.count >= 3 {
+                    let points = MapPathSimplifier.simplifyClosed(
+                        landMass.points.map(projection.point(for:))
+                    )
+                    guard points.count >= 3 else { continue }
+                    landPath.addClosedPolyline(points)
+                }
+
+                let boundaryPath = CGMutablePath()
+                var boundaryCount = 0
+                for boundary in geography.boundaries where boundary.points.count >= 2 {
+                    let points = MapPathSimplifier.simplify(
+                        boundary.points.map(projection.point(for:)),
+                        tolerance: boundaryToleranceKm
+                    )
+                    guard points.count >= 2 else { continue }
+                    boundaryPath.addOpenPolyline(points)
+                    boundaryCount += 1
+                }
+
+                let waterPath = CGMutablePath()
+                for body in geography.waterBodies where body.points.count >= 3 {
+                    let points = MapPathSimplifier.simplifyClosed(
+                        body.points.map(projection.point(for:))
+                    )
+                    guard points.count >= 3 else { continue }
+                    waterPath.addClosedPolyline(points)
+                }
+
+                return Built(
+                    land: landPath,
+                    boundaries: boundaryCount > 0 ? boundaryPath : nil,
+                    water: waterPath
+                )
+            }
+        }
+    }
+
+    private func addGeography() {
+        let paths = TerrainPaths.cache.paths(geography: geography, projection: projection)
+
+        let land = SKShapeNode(path: paths.land)
         land.fillColor = MapPalette.land
         land.strokeColor = MapPalette.coastline
         land.lineWidth = StrokeWidth.landCoast
@@ -603,18 +683,7 @@ final class GameMapScene: SKScene {
         terrainLayer.addChild(land)
 
         // Country borders: one static SKShapeNode (no per-zoom rebuild).
-        let boundaryPath = CGMutablePath()
-        var boundaryCount = 0
-        for boundary in geography.boundaries where boundary.points.count >= 2 {
-            let points = MapPathSimplifier.simplify(
-                boundary.points.map(projection.point(for:)),
-                tolerance: 2
-            )
-            guard points.count >= 2 else { continue }
-            boundaryPath.addOpenPolyline(points)
-            boundaryCount += 1
-        }
-        if boundaryCount > 0 {
+        if let boundaryPath = paths.boundaries {
             let borders = SKShapeNode(path: boundaryPath)
             borders.fillColor = .clear
             borders.strokeColor = MapPalette.boundary
@@ -625,15 +694,7 @@ final class GameMapScene: SKScene {
             terrainLayer.addChild(borders)
         }
 
-        let waterPath = CGMutablePath()
-        for body in geography.waterBodies where body.points.count >= 3 {
-            let points = MapPathSimplifier.simplifyClosed(
-                body.points.map(projection.point(for:))
-            )
-            guard points.count >= 3 else { continue }
-            waterPath.addClosedPolyline(points)
-        }
-        let water = SKShapeNode(path: waterPath)
+        let water = SKShapeNode(path: paths.water)
         water.fillColor = MapPalette.water
         water.strokeColor = MapPalette.coastline
         water.lineWidth = StrokeWidth.waterCoast
@@ -670,14 +731,12 @@ final class GameMapScene: SKScene {
             case .planned: target = planned
             case .preview: target = preview
             }
+            // The adapter already produced the exact corridor polyline the
+            // vehicles ride. Drawing anything else here — as the old quad-curve
+            // reconstruction did — puts the truck beside its own route line.
             let anchors = overlay.anchors
             guard anchors.count >= 2 else { continue }
-            for index in 0..<(anchors.count - 1) {
-                let a = anchors[index]
-                let b = anchors[index + 1]
-                target.move(to: a)
-                target.addQuadCurve(to: b, control: MapArc.control(a, b))
-            }
+            target.addOpenPolyline(anchors)
         }
         loadedRouteNode.path = loaded
         // Dash the deadhead arc for the empty-return look.
@@ -1357,7 +1416,9 @@ private final class MapCityNode: SKNode {
 private enum MapPalette {
     static let land = UIColor(red: 0.086, green: 0.157, blue: 0.247, alpha: 1)     // #16283F
     static let water = UIColor(red: 0.039, green: 0.071, blue: 0.125, alpha: 1)     // #0A1220
-    static let coastline = UIColor(red: 0.169, green: 0.267, blue: 0.388, alpha: 0.85) // #2B4463
+    /// One ink for every land edge, coast and border alike — the design draws
+    /// them with a single stroke, so a faded coast would break the mosaic.
+    static let coastline = UIColor(red: 0.169, green: 0.267, blue: 0.388, alpha: 1) // #2B4463
     /// Country borders — mockup uses the same `#2B4463` country stroke.
     static let boundary = UIColor(red: 0.169, green: 0.267, blue: 0.388, alpha: 1) // #2B4463
     static let city = UIColor(red: 0.122, green: 0.212, blue: 0.329, alpha: 1)      // #1F3654 fill

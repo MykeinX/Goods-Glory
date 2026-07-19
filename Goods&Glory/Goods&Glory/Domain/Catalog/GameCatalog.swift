@@ -29,6 +29,9 @@ struct GameCatalog: Sendable {
     private let cityMarketsByID: [CityID: CityMarketProfile]
     /// Adjacency list, neighbor lists sorted by node and road ID for determinism.
     private let adjacency: [RoadNodeID: [RoadEdge]]
+    /// All-pairs road distances between cities. Absent pairs are on different
+    /// road networks. Built once at load: one Dijkstra per city.
+    private let cityDistances: [CityID: [CityID: Double]]
 
     private struct RoadEdge: Sendable {
         let neighbor: RoadNodeID
@@ -171,12 +174,26 @@ struct GameCatalog: Sendable {
         return Route(nodes: nodePath, cities: cityPath, traversals: traversals, distanceKm: total)
     }
 
-    /// Cities reachable from the given city, excluding itself.
+    /// Cities actually reachable by road from the given city, excluding itself.
+    ///
+    /// This used to return every city in the catalog. That was harmless while
+    /// the world was one country; with America and Eurasia on separate road
+    /// networks it would offer freight nobody can haul.
     func reachableCities(from origin: CityID) -> [CityID] {
         guard citiesByID[origin] != nil else { return [] }
-        return cities.map(\.id)
+        return (cityDistances[origin] ?? [:]).keys
             .filter { $0 != origin }
             .sorted { $0.rawValue < $1.rawValue }
+    }
+
+    /// Road distance between two cities, or nil when no road connects them.
+    ///
+    /// Backed by an all-pairs table built once at load. The offer generator
+    /// weighs every candidate destination by distance, so without this it ran a
+    /// Dijkstra per city per generated offer — 70 of them per offer at world
+    /// scale, over a 731-node graph.
+    func roadDistanceKm(from origin: CityID, to destination: CityID) -> Double? {
+        cityDistances[origin]?[destination]
     }
 
     /// Geographically closest connected cities, with stable ID tie-breaking.
@@ -293,8 +310,51 @@ struct GameCatalog: Sendable {
             }
         }
         self.adjacency = adjacency
+        self.cityDistances = Self.allPairsCityDistances(
+            cities: cities,
+            networkNodes: networkNodes,
+            adjacency: adjacency
+        )
 
         try validate()
+    }
+
+    /// One Dijkstra per city over the shared road graph, keeping only the
+    /// distances to other cities' entry nodes.
+    private static func allPairsCityDistances(
+        cities: [CityDefinition],
+        networkNodes: [NetworkNodeDefinition],
+        adjacency: [RoadNodeID: [RoadEdge]]
+    ) -> [CityID: [CityID: Double]] {
+        var cityByNode: [RoadNodeID: CityID] = [:]
+        cityByNode.reserveCapacity(cities.count)
+        for city in cities { cityByNode[city.roadNodeID] = city.id }
+
+        var result: [CityID: [CityID: Double]] = [:]
+        result.reserveCapacity(cities.count)
+        for city in cities {
+            var distances: [RoadNodeID: Double] = [city.roadNodeID: 0]
+            var visited: Set<RoadNodeID> = []
+            var frontier = RouteFrontier()
+            frontier.insert(node: city.roadNodeID, distance: 0)
+            var reached: [CityID: Double] = [:]
+            while let current = frontier.removeMinimum() {
+                if visited.contains(current.node) { continue }
+                visited.insert(current.node)
+                if let reachedCity = cityByNode[current.node] {
+                    reached[reachedCity] = current.distance
+                }
+                for edge in adjacency[current.node] ?? [] {
+                    let candidate = current.distance + edge.distanceKm
+                    if candidate < distances[edge.neighbor] ?? .infinity {
+                        distances[edge.neighbor] = candidate
+                        frontier.insert(node: edge.neighbor, distance: candidate)
+                    }
+                }
+            }
+            result[city.id] = reached
+        }
+        return result
     }
 
     // MARK: - Firm derivation
@@ -509,20 +569,30 @@ struct GameCatalog: Sendable {
             }
         }
 
-        // The canonical road graph must be a single component; otherwise a road can
-        // visually end without reaching the rest of the simulation network.
-        guard let firstNode = networkNodes.first?.id else {
+        // The road graph is one component per landmass, not one component
+        // overall: America genuinely has no road to Eurasia, and pretending
+        // otherwise would let a truck drive the Atlantic. What must hold is
+        // that no node is stranded — every component has to carry at least one
+        // city, or a road ends somewhere the simulation can never reach.
+        guard !networkNodes.isEmpty else {
             throw CatalogError.validationFailure("no road nodes defined")
         }
-        var visited: Set<RoadNodeID> = [firstNode]
-        var pending: [RoadNodeID] = [firstNode]
-        while let node = pending.popLast() {
-            for edge in adjacency[node] ?? [] where visited.insert(edge.neighbor).inserted {
-                pending.append(edge.neighbor)
+        let cityNodeIDs = Set(cities.map(\.roadNodeID))
+        var unvisited = Set(networkNodes.map(\.id))
+        while let seed = unvisited.first {
+            var component: Set<RoadNodeID> = [seed]
+            var pending: [RoadNodeID] = [seed]
+            while let node = pending.popLast() {
+                for edge in adjacency[node] ?? [] where component.insert(edge.neighbor).inserted {
+                    pending.append(edge.neighbor)
+                }
             }
-        }
-        guard visited.count == networkNodes.count else {
-            throw CatalogError.validationFailure("road network contains disconnected nodes")
+            guard !component.isDisjoint(with: cityNodeIDs) else {
+                throw CatalogError.validationFailure(
+                    "road network has a \(component.count)-node island with no city on it"
+                )
+            }
+            unvisited.subtract(component)
         }
     }
 

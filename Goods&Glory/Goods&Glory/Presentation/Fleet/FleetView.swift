@@ -193,9 +193,14 @@ struct FleetView: View {
 
     private var filteredVehicles: [Vehicle] {
         switch vehicleFilter {
-        case .all: return vehicles
-        case .idle: return vehicles.filter { session.state?.isVehicleIdle($0.id) ?? true }
-        case .onRoute: return vehicles.filter { session.state?.isVehicleIdle($0.id) == false }
+        case .all:
+            return vehicles
+        case .idle:
+            guard let busy = session.state?.busyVehicleIDs() else { return vehicles }
+            return vehicles.filter { !busy.contains($0.id) }
+        case .onRoute:
+            guard let busy = session.state?.busyVehicleIDs() else { return [] }
+            return vehicles.filter { busy.contains($0.id) }
         }
     }
 

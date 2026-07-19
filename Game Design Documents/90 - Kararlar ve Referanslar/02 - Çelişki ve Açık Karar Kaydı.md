@@ -92,17 +92,17 @@ Bu kayıt karar üretmez. Her madde, ürün sahibi onayı veya tanımlı prototi
 - **Öneri:** Hedef oyuncu profili ile resmi mağaza yaş derecesi ayrı tanımlansın; içerik tamamlanınca derecelendirme anketi uygulanmalı.
 - **Durum:** Açık
 
-## A-012 — Zaman hızlarındaki 5× / 8× farkı
+## A-012 — Zaman hızları (ürün kilidi)
 
-- **Kaynak:** `docs/02_OYUN_TASARIMI.md`, D-016 ve `docs/06_DATA_DRIVEN_MODELLER_VE_ZAMAN.md`: temel dönüşüm 1 gerçek saniye = 5 oyun dakikasıdır; seçilebilir en yüksek hız 8×'dir. Ana tasarım özetindeki 5×/8× ifadesi kullanıcı dilinde çakışma riski taşır.
-- **Etki:** Arayüz etiketi, denge hesapları, test beklentileri ve oyuncunun zaman algısı karışabilir.
-- **Öneri:** “Temel zaman dönüşümü” ile “oyuncu hız çarpanı” adları ayrıştırılsın; istenen hız seçenekleri ürün sahibi tarafından açıkça onaylansın.
-- **Durum:** Açık
+- **Kaynak:** Eski metinlerde 1 sn = 5 dk + 8× / tasarım özetinde 5× çakışması vardı.
+- **Karar (2026-07-19):** Ürün temposu **0× / 1× / 3× / 6×**; taban **1 gerçek saniye = 10 oyun dakikası**; 3× = 30 dk/sn, 6× = 60 dk/sn. Kod: `SimulationSpeed` (`GameSession.swift`).
+- **Etki:** UI etiketleri çarpanla uyumlu; harita hareketi aynı tick’e bağlı.
+- **Durum:** Karara bağlandı
 
 ## Özet
 
-- **Açık karar:** 9
-- **Karara bağlanan:** 3
-- **Son inceleme:** 2026-07-18
+- **Açık karar:** 8
+- **Karara bağlanan:** 4
+- **Son inceleme:** 2026-07-19
 
 #gdd #gdd/acik-karar

@@ -1365,9 +1365,11 @@ struct OfferDetailView: View {
 
     @ViewBuilder
     private func vehiclePicker(_ offer: JobOffer) -> some View {
-        let idleVehicles = session.state.map { state in
-            state.vehicles.filter { state.isVehicleIdle($0.id) }
-        } ?? []
+        let idleVehicles: [Vehicle] = {
+            guard let state = session.state else { return [] }
+            let busy = state.busyVehicleIDs()
+            return state.vehicles.filter { !busy.contains($0.id) }
+        }()
         VStack(alignment: .leading, spacing: 10) {
             SectionLabel("Assign Vehicle")
             if idleVehicles.isEmpty {

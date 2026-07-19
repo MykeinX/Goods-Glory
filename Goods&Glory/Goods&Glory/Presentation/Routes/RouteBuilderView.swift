@@ -1087,8 +1087,10 @@ private struct RouteVehiclePicker: View {
 
     private var available: [Vehicle] {
         guard let state = session.state else { return [] }
+        let busy = state.busyVehicleIDs()
+        let routed = state.routedVehicleIDs()
         return state.vehicles
-            .filter { state.isVehicleIdle($0.id) && state.route(of: $0.id) == nil }
+            .filter { !busy.contains($0.id) && !routed.contains($0.id) }
             .sorted { $0.id.rawValue < $1.id.rawValue }
     }
 

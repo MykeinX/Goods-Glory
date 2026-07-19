@@ -224,7 +224,7 @@ private struct MapStatusOverlay: View {
     }
 }
 
-/// The paused / 1× / 3× / 8× time control.
+/// The paused / 1× / 3× / 6× time control.
 struct GameSpeedControl: View {
     @Environment(GameSession.self) private var session
     var accent: Color
@@ -234,7 +234,7 @@ struct GameSpeedControl: View {
         .init(value: .paused, label: "", symbol: "pause.fill"),
         .init(value: .normal, label: "1×", symbol: nil),
         .init(value: .fast, label: "3×", symbol: nil),
-        .init(value: .veryFast, label: "8×", symbol: nil)
+        .init(value: .veryFast, label: "6×", symbol: nil)
     ]
 
     var body: some View {
@@ -769,8 +769,9 @@ private struct MapCityPopup: View {
 
     private func localVehiclesForAccept(offer: JobOffer) -> [Vehicle] {
         guard let state = session.state else { return [] }
+        let busy = state.busyVehicleIDs()
         return state.vehicles
-            .filter { $0.cityID == cityID && state.isVehicleIdle($0.id) }
+            .filter { $0.cityID == cityID && !busy.contains($0.id) }
             .filter { session.estimate(offer: offer, vehicle: $0) != nil }
             .sorted { $0.id.rawValue < $1.id.rawValue }
     }

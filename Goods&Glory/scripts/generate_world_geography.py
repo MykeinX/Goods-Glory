@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build bundled world land/inland-water silhouettes for the strategic map.
 
-Downloads Natural Earth physical land + lakes (110m) and admin-0 land boundary
-lines (50m) GeoJSON, drops Antarctica, splits antimeridian-crossing geometry,
+Downloads Natural Earth physical land + lakes and admin-0 land boundary lines
+at 50m, drops Antarctica, splits antimeridian-crossing geometry,
 simplifies to a strategic tolerance, and writes map_geography.json.
 
 No cities or roads are produced.
@@ -13,17 +13,27 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import urllib.request
 from pathlib import Path
 
 # Natural Earth vector GeoJSON mirrors.
+# 50m land + lakes, matching the boundary resolution.
+#
+# This used to be 110m, and it made map detail regionally uneven in a way that
+# looked like a bug in our pipeline but was really the source data: 110m keeps
+# smooth coastlines faithfully and deletes intricate ones. Measured over equal
+# windows, the US mainland carried 849 land vertices and six lakes while the
+# Turkish Aegean carried 21 vertices and no islands at all — the whole
+# archipelago is simply absent at 110m. Borders were already 50m, so land was
+# the odd one out.
 LAND_URL = (
     "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
-    "master/geojson/ne_110m_land.geojson"
+    "master/geojson/ne_50m_land.geojson"
 )
 LAKES_URL = (
     "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
-    "master/geojson/ne_110m_lakes.geojson"
+    "master/geojson/ne_50m_lakes.geojson"
 )
 # 50m land boundaries: accurate enough for customs/borders without 10m weight.
 BOUNDARIES_URL = (
@@ -35,11 +45,34 @@ KM_PER_LATITUDE_DEGREE = 111.32
 # Mid-latitude approximation is fine for strategic simplification.
 KM_PER_LONGITUDE_DEGREE = 85.0
 ANTARCTICA_MAX_LAT = -55.0
-# Drop tiny lake blobs; keep Great Lakes, Caspian, Baikal-scale features.
-MIN_LAKE_BBOX_AREA = 0.35  # deg²
-SIMPLIFY_TOLERANCE_KM = 6.0
-# Tighter than land silhouettes so border shapes stay close to reality.
-BOUNDARY_SIMPLIFY_TOLERANCE_KM = 2.0
+# Minimum footprint for a drawn landform or lake. Below this a shape is a
+# speck at strategic zoom: invisible, but it still makes the map read like a
+# navigation app instead of a game board. At 50m the source ships over a
+# thousand land rings and most of them are exactly that.
+#
+# 8,000 km² keeps every landform a player would name — Britain, Ireland,
+# Sicily, Sardinia, Corsica, Crete, Cyprus, Japan, Sri Lanka, the Great Lakes —
+# and deletes the confetti. The Aegean goes from 35 shapes to 2.
+MIN_LAND_BBOX_AREA = 0.95  # deg² ≈ 8,000 km² at mid latitudes
+MIN_LAKE_BBOX_AREA = 0.95  # deg², same rule for inland water
+
+# Coastline smoothing, deliberately far coarser than cartographic practice.
+#
+# The budget is anchored to the original 110m build, whose level of coastal
+# detail was the one the team liked: ~4,000 land vertices for the world. The
+# problem with 110m was never that it was coarse, it was that the coarseness
+# was uneven — smooth coasts survived and intricate ones were deleted outright,
+# so Turkey got 21 vertices where the US got 849. Taking the finer 50m source
+# and flattening it hard reaches the same budget with the detail spread evenly.
+#
+# A bay narrower than ~35 km is not something a player acts on. Route arcs do
+# not depend on the shoreline at all — they follow the road graph — so
+# coarsening here cannot make a truck look lost.
+SIMPLIFY_TOLERANCE_KM = 35.0
+# Borders were two thirds of every vertex in the file at 2 km, which bought
+# precision no one can see on a strategic map. A country still reads as itself
+# at 20 km — the silhouette is intact, only surveyed wiggle is gone.
+BOUNDARY_SIMPLIFY_TOLERANCE_KM = 20.0
 MIN_RING_POINTS = 4  # closed ring with ≥3 unique vertices
 MIN_BOUNDARY_POINTS = 2
 
@@ -269,8 +302,11 @@ def download(url: str, destination: Path) -> None:
 
 
 def ensure_sources(cache_dir: Path, refresh: bool) -> tuple[Path, Path, Path]:
-    land_path = cache_dir / "ne_110m_land.geojson"
-    lakes_path = cache_dir / "ne_110m_lakes.geojson"
+    # Filenames must track the URLs. When these still said 110m after the
+    # sources moved to 50m, an existing cache silently satisfied the download
+    # check and the script kept rebuilding from the old, coarser data.
+    land_path = cache_dir / "ne_50m_land.geojson"
+    lakes_path = cache_dir / "ne_50m_lakes.geojson"
     boundaries_path = cache_dir / "ne_50m_admin_0_boundary_lines_land.geojson"
     if refresh or not land_path.exists():
         download(LAND_URL, land_path)
@@ -300,6 +336,8 @@ def process_land(geojson: dict) -> list[list[tuple[float, float]]]:
     rings = merge_dateline_wraps_into_land(rings)
     simplified_rings: list[list[tuple[float, float]]] = []
     for ring in rings:
+        if bbox_area(ring) < MIN_LAND_BBOX_AREA:
+            continue
         simplified = simplified_closed_ring(ring, SIMPLIFY_TOLERANCE_KM)
         if simplified is None or len(simplified) < MIN_RING_POINTS:
             continue
@@ -565,12 +603,13 @@ def build_geography(
         process_boundaries(load_geojson(boundaries_path))
     )
     return {
-        "version": 2,
+        "version": 3,
         "source": (
-            "Natural Earth 110m land + lakes, 50m admin-0 land boundary lines "
+            "Natural Earth 50m land + lakes + admin-0 land boundary lines "
             "(https://www.naturalearthdata.com/); Antarctica omitted; "
             "NE Asia dateline wraps stitched into Eurasia (lon>180); "
-            "land simplify ~6 km, borders ~2 km"
+            f"land simplify ~{SIMPLIFY_TOLERANCE_KM:.0f} km, "
+            f"borders ~{BOUNDARY_SIMPLIFY_TOLERANCE_KM:.0f} km"
         ),
         "landMasses": [
             {
@@ -597,8 +636,22 @@ def build_geography(
 
 
 def write_json(path: Path, value: dict) -> None:
+    """Indented JSON, except that each coordinate stays on one line.
+
+    Fully indented, one coordinate spans four lines, so a regenerated world is
+    a ~90,000 line diff nobody can review. Collapsing just the innermost
+    `{latitude, longitude}` objects cuts that by three quarters and loses
+    nothing: the file is still ordinary, readable JSON and the Swift decoder
+    never sees the difference.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    text = json.dumps(value, indent=2, ensure_ascii=False)
+    text = re.sub(
+        r"\{\s*\"latitude\":\s*(-?[\d.]+),\s*\"longitude\":\s*(-?[\d.]+)\s*\}",
+        r'{ "latitude": \1, "longitude": \2 }',
+        text,
+    )
+    path.write_text(text + "\n", encoding="utf-8")
 
 
 def main() -> None:

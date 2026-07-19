@@ -73,6 +73,26 @@ struct MapGeographyDefinition: Decodable, Sendable {
             from: Data(contentsOf: url)
         )
     }
+
+    /// The bundled geography, decoded once per launch.
+    ///
+    /// The file is ~1.1 MB of nested `{latitude, longitude}` objects — nearly
+    /// 13,000 of them — and decoding it is not cheap. Every `InteractiveMapView`
+    /// used to decode its own copy in `makeCoordinator`, and there are four
+    /// mount points (founding, map tab, city detail, route builder). Opening
+    /// the route builder mid-game therefore re-parsed the whole world on the
+    /// main thread while the player waited.
+    ///
+    /// The value is immutable, so one shared copy is all anyone needs.
+    @MainActor
+    static let bundled: MapGeographyDefinition = {
+        do {
+            return try load(from: .main)
+        } catch {
+            assertionFailure("Map geography failed to load: \(error)")
+            return .empty
+        }
+    }()
 }
 
 struct MapPolygonDefinition: Decodable, Sendable {

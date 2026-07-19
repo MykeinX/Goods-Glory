@@ -229,6 +229,22 @@ struct GameCatalogTests {
         }
     }
 
+    /// The world is not one road network and must not be forced into one.
+    /// America has no road to Eurasia, so the catalog carries two components on
+    /// purpose; only a component with no city on it is a real defect.
+    @Test func separateRoadNetworksAreAllowedWhenEachCarriesACity() throws {
+        // Drop the road joining Beta to Gamma: Gamma keeps its own node and is
+        // reachable by nothing, exactly like a second continent.
+        let catalog = try graphCatalog(roads: [validRoadAJ, validRoadJB])
+
+        #expect(catalog.shortestRoute(from: cityA, to: cityB) != nil)
+        #expect(catalog.shortestRoute(from: cityA, to: cityC) == nil)
+        #expect(catalog.roadDistanceKm(from: cityA, to: cityC) == nil)
+        // Reachability must reflect the graph, not the city list.
+        #expect(!catalog.reachableCities(from: cityA).contains(cityC))
+        #expect(catalog.reachableCities(from: cityA).contains(cityB))
+    }
+
     @Test func nonPositiveRoadDistanceIsRejected() throws {
         let road = RoadDefinition(
             id: roadAJ,

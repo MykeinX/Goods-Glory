@@ -5155,5 +5155,1318 @@
     },
     "kind": "junction",
     "cityID": null
+  },
+  {
+    "id": "eu_london_node",
+    "coordinate": {
+      "latitude": 51.5074,
+      "longitude": -0.1278
+    },
+    "kind": "city",
+    "cityID": "eu_london"
+  },
+  {
+    "id": "eu_paris_node",
+    "coordinate": {
+      "latitude": 48.8566,
+      "longitude": 2.3522
+    },
+    "kind": "city",
+    "cityID": "eu_paris"
+  },
+  {
+    "id": "eu_madrid_node",
+    "coordinate": {
+      "latitude": 40.4168,
+      "longitude": -3.7038
+    },
+    "kind": "city",
+    "cityID": "eu_madrid"
+  },
+  {
+    "id": "eu_barcelona_node",
+    "coordinate": {
+      "latitude": 41.3874,
+      "longitude": 2.1686
+    },
+    "kind": "city",
+    "cityID": "eu_barcelona"
+  },
+  {
+    "id": "eu_lisbon_node",
+    "coordinate": {
+      "latitude": 38.7223,
+      "longitude": -9.1393
+    },
+    "kind": "city",
+    "cityID": "eu_lisbon"
+  },
+  {
+    "id": "eu_rome_node",
+    "coordinate": {
+      "latitude": 41.9028,
+      "longitude": 12.4964
+    },
+    "kind": "city",
+    "cityID": "eu_rome"
+  },
+  {
+    "id": "eu_milan_node",
+    "coordinate": {
+      "latitude": 45.4642,
+      "longitude": 9.19
+    },
+    "kind": "city",
+    "cityID": "eu_milan"
+  },
+  {
+    "id": "eu_berlin_node",
+    "coordinate": {
+      "latitude": 52.52,
+      "longitude": 13.405
+    },
+    "kind": "city",
+    "cityID": "eu_berlin"
+  },
+  {
+    "id": "eu_hamburg_node",
+    "coordinate": {
+      "latitude": 53.5511,
+      "longitude": 9.9937
+    },
+    "kind": "city",
+    "cityID": "eu_hamburg"
+  },
+  {
+    "id": "eu_munich_node",
+    "coordinate": {
+      "latitude": 48.1351,
+      "longitude": 11.582
+    },
+    "kind": "city",
+    "cityID": "eu_munich"
+  },
+  {
+    "id": "eu_amsterdam_node",
+    "coordinate": {
+      "latitude": 52.3676,
+      "longitude": 4.9041
+    },
+    "kind": "city",
+    "cityID": "eu_amsterdam"
+  },
+  {
+    "id": "eu_rotterdam_node",
+    "coordinate": {
+      "latitude": 51.9244,
+      "longitude": 4.4777
+    },
+    "kind": "city",
+    "cityID": "eu_rotterdam"
+  },
+  {
+    "id": "eu_brussels_node",
+    "coordinate": {
+      "latitude": 50.8503,
+      "longitude": 4.3517
+    },
+    "kind": "city",
+    "cityID": "eu_brussels"
+  },
+  {
+    "id": "eu_vienna_node",
+    "coordinate": {
+      "latitude": 48.2082,
+      "longitude": 16.3738
+    },
+    "kind": "city",
+    "cityID": "eu_vienna"
+  },
+  {
+    "id": "eu_prague_node",
+    "coordinate": {
+      "latitude": 50.0755,
+      "longitude": 14.4378
+    },
+    "kind": "city",
+    "cityID": "eu_prague"
+  },
+  {
+    "id": "eu_warsaw_node",
+    "coordinate": {
+      "latitude": 52.2297,
+      "longitude": 21.0122
+    },
+    "kind": "city",
+    "cityID": "eu_warsaw"
+  },
+  {
+    "id": "eu_budapest_node",
+    "coordinate": {
+      "latitude": 47.4979,
+      "longitude": 19.0402
+    },
+    "kind": "city",
+    "cityID": "eu_budapest"
+  },
+  {
+    "id": "eu_stockholm_node",
+    "coordinate": {
+      "latitude": 59.3293,
+      "longitude": 18.0686
+    },
+    "kind": "city",
+    "cityID": "eu_stockholm"
+  },
+  {
+    "id": "eu_copenhagen_node",
+    "coordinate": {
+      "latitude": 55.6761,
+      "longitude": 12.5683
+    },
+    "kind": "city",
+    "cityID": "eu_copenhagen"
+  },
+  {
+    "id": "eu_athens_node",
+    "coordinate": {
+      "latitude": 37.9838,
+      "longitude": 23.7275
+    },
+    "kind": "city",
+    "cityID": "eu_athens"
+  },
+  {
+    "id": "eu_istanbul_node",
+    "coordinate": {
+      "latitude": 41.0082,
+      "longitude": 28.9784
+    },
+    "kind": "city",
+    "cityID": "eu_istanbul"
+  },
+  {
+    "id": "eu_kyiv_node",
+    "coordinate": {
+      "latitude": 50.4501,
+      "longitude": 30.5234
+    },
+    "kind": "city",
+    "cityID": "eu_kyiv"
+  },
+  {
+    "id": "eu_moscow_node",
+    "coordinate": {
+      "latitude": 55.7558,
+      "longitude": 37.6173
+    },
+    "kind": "city",
+    "cityID": "eu_moscow"
+  },
+  {
+    "id": "as_ankara_node",
+    "coordinate": {
+      "latitude": 39.9334,
+      "longitude": 32.8597
+    },
+    "kind": "city",
+    "cityID": "as_ankara"
+  },
+  {
+    "id": "as_tehran_node",
+    "coordinate": {
+      "latitude": 35.6892,
+      "longitude": 51.389
+    },
+    "kind": "city",
+    "cityID": "as_tehran"
+  },
+  {
+    "id": "as_dubai_node",
+    "coordinate": {
+      "latitude": 25.2048,
+      "longitude": 55.2708
+    },
+    "kind": "city",
+    "cityID": "as_dubai"
+  },
+  {
+    "id": "as_riyadh_node",
+    "coordinate": {
+      "latitude": 24.7136,
+      "longitude": 46.6753
+    },
+    "kind": "city",
+    "cityID": "as_riyadh"
+  },
+  {
+    "id": "as_karachi_node",
+    "coordinate": {
+      "latitude": 24.8607,
+      "longitude": 67.0011
+    },
+    "kind": "city",
+    "cityID": "as_karachi"
+  },
+  {
+    "id": "as_lahore_node",
+    "coordinate": {
+      "latitude": 31.5204,
+      "longitude": 74.3587
+    },
+    "kind": "city",
+    "cityID": "as_lahore"
+  },
+  {
+    "id": "as_delhi_node",
+    "coordinate": {
+      "latitude": 28.6139,
+      "longitude": 77.209
+    },
+    "kind": "city",
+    "cityID": "as_delhi"
+  },
+  {
+    "id": "as_mumbai_node",
+    "coordinate": {
+      "latitude": 19.076,
+      "longitude": 72.8777
+    },
+    "kind": "city",
+    "cityID": "as_mumbai"
+  },
+  {
+    "id": "as_kolkata_node",
+    "coordinate": {
+      "latitude": 22.5726,
+      "longitude": 88.3639
+    },
+    "kind": "city",
+    "cityID": "as_kolkata"
+  },
+  {
+    "id": "as_chennai_node",
+    "coordinate": {
+      "latitude": 13.0827,
+      "longitude": 80.2707
+    },
+    "kind": "city",
+    "cityID": "as_chennai"
+  },
+  {
+    "id": "as_dhaka_node",
+    "coordinate": {
+      "latitude": 23.8103,
+      "longitude": 90.4125
+    },
+    "kind": "city",
+    "cityID": "as_dhaka"
+  },
+  {
+    "id": "as_yangon_node",
+    "coordinate": {
+      "latitude": 16.8661,
+      "longitude": 96.1951
+    },
+    "kind": "city",
+    "cityID": "as_yangon"
+  },
+  {
+    "id": "as_bangkok_node",
+    "coordinate": {
+      "latitude": 13.7563,
+      "longitude": 100.5018
+    },
+    "kind": "city",
+    "cityID": "as_bangkok"
+  },
+  {
+    "id": "as_hanoi_node",
+    "coordinate": {
+      "latitude": 21.0278,
+      "longitude": 105.8342
+    },
+    "kind": "city",
+    "cityID": "as_hanoi"
+  },
+  {
+    "id": "as_ho_chi_minh_city_node",
+    "coordinate": {
+      "latitude": 10.8231,
+      "longitude": 106.6297
+    },
+    "kind": "city",
+    "cityID": "as_ho_chi_minh_city"
+  },
+  {
+    "id": "as_kuala_lumpur_node",
+    "coordinate": {
+      "latitude": 3.139,
+      "longitude": 101.6869
+    },
+    "kind": "city",
+    "cityID": "as_kuala_lumpur"
+  },
+  {
+    "id": "as_guangzhou_node",
+    "coordinate": {
+      "latitude": 23.1291,
+      "longitude": 113.2644
+    },
+    "kind": "city",
+    "cityID": "as_guangzhou"
+  },
+  {
+    "id": "as_shanghai_node",
+    "coordinate": {
+      "latitude": 31.2304,
+      "longitude": 121.4737
+    },
+    "kind": "city",
+    "cityID": "as_shanghai"
+  },
+  {
+    "id": "as_beijing_node",
+    "coordinate": {
+      "latitude": 39.9042,
+      "longitude": 116.4074
+    },
+    "kind": "city",
+    "cityID": "as_beijing"
+  },
+  {
+    "id": "as_chengdu_node",
+    "coordinate": {
+      "latitude": 30.5728,
+      "longitude": 104.0668
+    },
+    "kind": "city",
+    "cityID": "as_chengdu"
+  },
+  {
+    "id": "as_xian_node",
+    "coordinate": {
+      "latitude": 34.3416,
+      "longitude": 108.9398
+    },
+    "kind": "city",
+    "cityID": "as_xian"
+  },
+  {
+    "id": "as_seoul_node",
+    "coordinate": {
+      "latitude": 37.5665,
+      "longitude": 126.978
+    },
+    "kind": "city",
+    "cityID": "as_seoul"
+  },
+  {
+    "id": "as_almaty_node",
+    "coordinate": {
+      "latitude": 43.222,
+      "longitude": 76.8512
+    },
+    "kind": "city",
+    "cityID": "as_almaty"
+  },
+  {
+    "id": "as_tashkent_node",
+    "coordinate": {
+      "latitude": 41.2995,
+      "longitude": 69.2401
+    },
+    "kind": "city",
+    "cityID": "as_tashkent"
+  },
+  {
+    "id": "as_novosibirsk_node",
+    "coordinate": {
+      "latitude": 55.0084,
+      "longitude": 82.9357
+    },
+    "kind": "city",
+    "cityID": "as_novosibirsk"
+  },
+  {
+    "id": "as_yekaterinburg_node",
+    "coordinate": {
+      "latitude": 56.8389,
+      "longitude": 60.6057
+    },
+    "kind": "city",
+    "cityID": "as_yekaterinburg"
+  },
+  {
+    "id": "eur_junction_0001",
+    "coordinate": {
+      "latitude": 40.7,
+      "longitude": 74.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0002",
+    "coordinate": {
+      "latitude": 49.1,
+      "longitude": 77.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0003",
+    "coordinate": {
+      "latitude": 43.2,
+      "longitude": 71.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0004",
+    "coordinate": {
+      "latitude": 43.2,
+      "longitude": 100.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0005",
+    "coordinate": {
+      "latitude": 56.8,
+      "longitude": 62.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0006",
+    "coordinate": {
+      "latitude": 26.3,
+      "longitude": 46.7
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0007",
+    "coordinate": {
+      "latitude": 39.9,
+      "longitude": 47.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0008",
+    "coordinate": {
+      "latitude": 41.1,
+      "longitude": 31.7
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0009",
+    "coordinate": {
+      "latitude": 41.2,
+      "longitude": 23.3
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0010",
+    "coordinate": {
+      "latitude": 38.9,
+      "longitude": 22.6
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0011",
+    "coordinate": {
+      "latitude": 41.5,
+      "longitude": 28.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0012",
+    "coordinate": {
+      "latitude": 47.5,
+      "longitude": 22.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0013",
+    "coordinate": {
+      "latitude": 41.0,
+      "longitude": 31.8
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0014",
+    "coordinate": {
+      "latitude": 42.4,
+      "longitude": 27.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0015",
+    "coordinate": {
+      "latitude": 47.5,
+      "longitude": 27.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0016",
+    "coordinate": {
+      "latitude": 15.7,
+      "longitude": 100.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0017",
+    "coordinate": {
+      "latitude": 13.8,
+      "longitude": 103.6
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0018",
+    "coordinate": {
+      "latitude": 12.4,
+      "longitude": 99.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0019",
+    "coordinate": {
+      "latitude": 17.4,
+      "longitude": 96.9
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0020",
+    "coordinate": {
+      "latitude": 39.9,
+      "longitude": 113.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0021",
+    "coordinate": {
+      "latitude": 41.0,
+      "longitude": 117.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0022",
+    "coordinate": {
+      "latitude": 41.0,
+      "longitude": 123.9
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0023",
+    "coordinate": {
+      "latitude": 39.9,
+      "longitude": 114.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0024",
+    "coordinate": {
+      "latitude": 30.6,
+      "longitude": 105.8
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0025",
+    "coordinate": {
+      "latitude": 28.9,
+      "longitude": 105.8
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0026",
+    "coordinate": {
+      "latitude": 34.3,
+      "longitude": 107.8
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0027",
+    "coordinate": {
+      "latitude": 25.8,
+      "longitude": 80.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0028",
+    "coordinate": {
+      "latitude": 15.5,
+      "longitude": 80.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0029",
+    "coordinate": {
+      "latitude": 23.8,
+      "longitude": 88.3
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0030",
+    "coordinate": {
+      "latitude": 22.6,
+      "longitude": 87.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0031",
+    "coordinate": {
+      "latitude": 19.1,
+      "longitude": 74.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0032",
+    "coordinate": {
+      "latitude": 28.6,
+      "longitude": 85.6
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0033",
+    "coordinate": {
+      "latitude": 28.6,
+      "longitude": 70.7
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0034",
+    "coordinate": {
+      "latitude": 28.6,
+      "longitude": 82.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0035",
+    "coordinate": {
+      "latitude": 24.5,
+      "longitude": 73.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0036",
+    "coordinate": {
+      "latitude": 33.3,
+      "longitude": 77.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0037",
+    "coordinate": {
+      "latitude": 18.2,
+      "longitude": 96.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0038",
+    "coordinate": {
+      "latitude": 24.1,
+      "longitude": 54.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0039",
+    "coordinate": {
+      "latitude": 23.9,
+      "longitude": 52.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0040",
+    "coordinate": {
+      "latitude": 29.4,
+      "longitude": 47.7
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0041",
+    "coordinate": {
+      "latitude": 30.6,
+      "longitude": 48.9
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0042",
+    "coordinate": {
+      "latitude": 30.6,
+      "longitude": 61.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0043",
+    "coordinate": {
+      "latitude": 30.6,
+      "longitude": 64.3
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0044",
+    "coordinate": {
+      "latitude": 21.8,
+      "longitude": 73.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0045",
+    "coordinate": {
+      "latitude": 32.0,
+      "longitude": 47.7
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0046",
+    "coordinate": {
+      "latitude": 23.1,
+      "longitude": 107.9
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0047",
+    "coordinate": {
+      "latitude": 34.7,
+      "longitude": 113.3
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0048",
+    "coordinate": {
+      "latitude": 41.0,
+      "longitude": 119.6
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0049",
+    "coordinate": {
+      "latitude": 29.9,
+      "longitude": 113.3
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0050",
+    "coordinate": {
+      "latitude": 14.3,
+      "longitude": 99.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0051",
+    "coordinate": {
+      "latitude": 21.0,
+      "longitude": 100.3
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0052",
+    "coordinate": {
+      "latitude": 13.6,
+      "longitude": 103.8
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0053",
+    "coordinate": {
+      "latitude": 13.6,
+      "longitude": 100.3
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0054",
+    "coordinate": {
+      "latitude": 17.4,
+      "longitude": 100.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0055",
+    "coordinate": {
+      "latitude": 24.9,
+      "longitude": 70.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0056",
+    "coordinate": {
+      "latitude": 28.4,
+      "longitude": 46.7
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0057",
+    "coordinate": {
+      "latitude": 23.6,
+      "longitude": 90.8
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0058",
+    "coordinate": {
+      "latitude": 15.2,
+      "longitude": 99.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0059",
+    "coordinate": {
+      "latitude": 30.2,
+      "longitude": 73.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0060",
+    "coordinate": {
+      "latitude": 44.0,
+      "longitude": 74.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0061",
+    "coordinate": {
+      "latitude": 36.1,
+      "longitude": 74.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0062",
+    "coordinate": {
+      "latitude": 35.7,
+      "longitude": 70.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0063",
+    "coordinate": {
+      "latitude": 56.8,
+      "longitude": 81.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0064",
+    "coordinate": {
+      "latitude": 31.0,
+      "longitude": 46.7
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0065",
+    "coordinate": {
+      "latitude": 38.9,
+      "longitude": 117.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0066",
+    "coordinate": {
+      "latitude": 32.0,
+      "longitude": 120.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0067",
+    "coordinate": {
+      "latitude": 41.0,
+      "longitude": 115.6
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0068",
+    "coordinate": {
+      "latitude": 34.3,
+      "longitude": 117.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0069",
+    "coordinate": {
+      "latitude": 41.3,
+      "longitude": 57.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0070",
+    "coordinate": {
+      "latitude": 48.2,
+      "longitude": 69.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0071",
+    "coordinate": {
+      "latitude": 56.8,
+      "longitude": 38.6
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0072",
+    "coordinate": {
+      "latitude": 44.0,
+      "longitude": 22.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0073",
+    "coordinate": {
+      "latitude": 40.4,
+      "longitude": 22.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0074",
+    "coordinate": {
+      "latitude": 45.8,
+      "longitude": 15.7
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0075",
+    "coordinate": {
+      "latitude": 45.8,
+      "longitude": 12.6
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0076",
+    "coordinate": {
+      "latitude": 41.4,
+      "longitude": -6.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0077",
+    "coordinate": {
+      "latitude": 41.4,
+      "longitude": -2.7
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0078",
+    "coordinate": {
+      "latitude": 45.5,
+      "longitude": 5.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0079",
+    "coordinate": {
+      "latitude": 44.5,
+      "longitude": 4.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0080",
+    "coordinate": {
+      "latitude": 44.5,
+      "longitude": 9.9
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0081",
+    "coordinate": {
+      "latitude": 53.6,
+      "longitude": 12.3
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0082",
+    "coordinate": {
+      "latitude": 50.5,
+      "longitude": 22.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0083",
+    "coordinate": {
+      "latitude": 48.1,
+      "longitude": 18.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0084",
+    "coordinate": {
+      "latitude": 50.1,
+      "longitude": 16.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0085",
+    "coordinate": {
+      "latitude": 47.5,
+      "longitude": 14.3
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0086",
+    "coordinate": {
+      "latitude": 45.4,
+      "longitude": 12.2
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0087",
+    "coordinate": {
+      "latitude": 55.8,
+      "longitude": 35.8
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0088",
+    "coordinate": {
+      "latitude": 50.5,
+      "longitude": 18.7
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0089",
+    "coordinate": {
+      "latitude": 52.2,
+      "longitude": 28.8
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0090",
+    "coordinate": {
+      "latitude": 40.4,
+      "longitude": -7.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0091",
+    "coordinate": {
+      "latitude": 43.3,
+      "longitude": -4.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0092",
+    "coordinate": {
+      "latitude": 43.4,
+      "longitude": -1.6
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0093",
+    "coordinate": {
+      "latitude": 45.5,
+      "longitude": 1.4
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0094",
+    "coordinate": {
+      "latitude": 48.9,
+      "longitude": 5.8
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0095",
+    "coordinate": {
+      "latitude": 48.2,
+      "longitude": 11.9
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0096",
+    "coordinate": {
+      "latitude": 65.9,
+      "longitude": 27.8
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0097",
+    "coordinate": {
+      "latitude": 65.9,
+      "longitude": 20.9
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0098",
+    "coordinate": {
+      "latitude": 62.1,
+      "longitude": 17.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0099",
+    "coordinate": {
+      "latitude": 55.8,
+      "longitude": 24.6
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0100",
+    "coordinate": {
+      "latitude": 52.2,
+      "longitude": 16.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0101",
+    "coordinate": {
+      "latitude": 48.2,
+      "longitude": 15.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0102",
+    "coordinate": {
+      "latitude": 51.09,
+      "longitude": 1.16
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0103",
+    "coordinate": {
+      "latitude": 50.95,
+      "longitude": 1.85
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0104",
+    "coordinate": {
+      "latitude": 55.33,
+      "longitude": 11.14
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0105",
+    "coordinate": {
+      "latitude": 55.5,
+      "longitude": 9.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0106",
+    "coordinate": {
+      "latitude": 53.8,
+      "longitude": 9.1
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0107",
+    "coordinate": {
+      "latitude": 52.2,
+      "longitude": 5.5
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0108",
+    "coordinate": {
+      "latitude": 55.6,
+      "longitude": 13.0
+    },
+    "kind": "junction"
+  },
+  {
+    "id": "eur_junction_0109",
+    "coordinate": {
+      "latitude": 59.2,
+      "longitude": 16.6
+    },
+    "kind": "junction"
   }
 ]

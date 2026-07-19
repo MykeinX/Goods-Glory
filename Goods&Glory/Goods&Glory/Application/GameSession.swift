@@ -15,19 +15,19 @@ enum SimulationSpeed: Int, CaseIterable, Codable {
     case paused = 0
     case normal = 1
     case fast = 3
-    case veryFast = 8
+    case veryFast = 6
 
     /// Wall-clock interval between simulation ticks. Map vehicle motion is
     /// smoothed across this same window so sprites do not pause between jumps.
     static let clockTickSeconds: Double = 1
 
-    /// Game minutes applied per real second (prototype pacing: 1s = 5 game min at 1x).
+    /// Game minutes applied per real second (1× = 10 min, 3× = 30 min, 6× = 60 min).
     var minutesPerRealSecond: Int {
         switch self {
         case .paused: 0
-        case .normal: 5
-        case .fast: 15
-        case .veryFast: 40
+        case .normal: 10
+        case .fast: 30
+        case .veryFast: 60
         }
     }
 }

@@ -34,9 +34,9 @@ Kabul edilmiş davranış:
 
 ## Hız Değerleri
 
-Browser prototipinde 0×/1×/3×/8× ve başlangıçta 1 gerçek saniye = 5 oyun dakikası uygulanmıştır. Ana tasarım özetindeki 1×/3×/5× ifadesiyle farklılık vardır.
+Ürün temposu: **0× / 1× / 3× / 6×**, taban dönüşüm **1 gerçek saniye = 10 oyun dakikası** (1×). Üst kademeler tam çarpan: 3× = 30 dk/sn, 6× = 60 dk/sn (1 oyun saati / sn). Harita araç hareketi aynı tick penceresine bağlanır; ayrı bir harita hızı yoktur.
 
-**Denge parametresi:** Kesin zaman oranı ve hız kademeleri ürün kararı olarak kilitlenmemiştir. Kullanıcı testi; okunabilirlik, bekleme süresi, pil yükü ve çevrimdışı dengeye göre nihai değerleri belirler.
+Eski browser prototipi 1 sn = 5 dk ve 8× kullanıyordu; ana tasarım özetindeki 5× ifadesi de kilitlenmemişti. Bu değerler oturum okunabilirliği ve harita sıçrama boyutu için seçilmiştir; gerekirse denge parametresi olarak yeniden ayarlanır.
 
 ## Otomatik Duraklatma
 

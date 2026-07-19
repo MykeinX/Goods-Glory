@@ -28,7 +28,8 @@ Persistence (SaveRepository)   Resources (JSON kataloglar)
     zamanın kaç parçada ilerletildiği sonucu değiştirmez.
 
 - **Application** (`Application/`): `GameSession` (@Observable, @MainActor).
-  Gerçek zamanı oyun dakikasına çevirir (1 sn = 5 dk × hız), komutları doğrulatıp
+  Gerçek zamanı oyun dakikasına çevirir (1×’te 1 sn = 10 dk; 3× / 6× tam çarpan),
+  komutları doğrulatıp
   uygular, kayıt anlarını koordine eder. UI, `GameState`'i asla doğrudan değiştirmez.
 
 - **Persistence** (`Persistence/`): Atomik JSON snapshot (`SaveEnvelope`, sürümlü).

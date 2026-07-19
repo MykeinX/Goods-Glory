@@ -44,6 +44,14 @@ enum MapCameraFocus: Equatable {
     static func route(_ cities: [CityID]) -> MapCameraFocus {
         .route(cities: cities, bottomInset: 126)
     }
+
+    /// Frames a whole continent. Built from its cities rather than a hardcoded
+    /// bounding box, so adding a city to a continent reframes it automatically.
+    static func continent(_ continent: Continent, catalog: GameCatalog, bottomInset: CGFloat) -> MapCameraFocus {
+        let cities = catalog.cities.filter { $0.continent == continent }.map(\.id)
+        guard !cities.isEmpty else { return .world }
+        return .route(cities: cities, bottomInset: bottomInset)
+    }
 }
 
 /// One-shot request to pan the live map to a city without changing zoom.
@@ -82,7 +90,9 @@ enum MapRouteKind: Hashable {
 
 struct MapRouteOverlay: Identifiable, Equatable {
     let id: String
-    /// Ordered city anchor points; consecutive pairs are joined by a quad arc.
+    /// The corridor polyline, already projected and smoothed. Drawn as-is: the
+    /// shape is decided here so the scene cannot draw a different curve from
+    /// the one the vehicles ride.
     let anchors: [CGPoint]
     let kind: MapRouteKind
 }
@@ -139,34 +149,6 @@ struct MapRenderSnapshot: Equatable {
     )
 }
 
-/// Shared quadratic-arc geometry so the scene draws exactly the curve the
-/// vehicles travel along. Mirrors the design's `leg()` control-point math.
-enum MapArc {
-    private static let bow: CGFloat = 0.14
-
-    static func control(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
-        CGPoint(
-            x: (a.x + b.x) / 2 + (a.y - b.y) * bow,
-            y: (a.y + b.y) / 2 + (b.x - a.x) * bow
-        )
-    }
-
-    static func point(_ a: CGPoint, _ b: CGPoint, _ t: CGFloat) -> CGPoint {
-        let c = control(a, b)
-        let mt = 1 - t
-        return CGPoint(
-            x: mt * mt * a.x + 2 * mt * t * c.x + t * t * b.x,
-            y: mt * mt * a.y + 2 * mt * t * c.y + t * t * b.y
-        )
-    }
-
-    static func heading(_ a: CGPoint, _ b: CGPoint, _ t: CGFloat) -> CGFloat {
-        let c = control(a, b)
-        let dx = 2 * (1 - t) * (c.x - a.x) + 2 * t * (b.x - c.x)
-        let dy = 2 * (1 - t) * (c.y - a.y) + 2 * t * (b.y - c.y)
-        return atan2(dy, dx)
-    }
-}
 
 enum MapSceneAdapter {
     /// Per-snapshot lookup tables. Built once in O(n) and read in O(1), instead
@@ -212,11 +194,13 @@ enum MapSceneAdapter {
         }
     }
 
+    @MainActor
     static func snapshot(
         state: GameState,
         catalog: GameCatalog,
         projection: MapProjection,
-        previewRoute: Route? = nil
+        previewRoute: Route? = nil,
+        corridors: MapCorridorCache = .shared
     ) -> MapRenderSnapshot {
         var markers: [MapVehicleMarker] = []
         var routes: [MapRouteOverlay] = []
@@ -239,6 +223,12 @@ enum MapSceneAdapter {
             return value
         }
 
+        // Every drawn leg and every vehicle position comes from here, so the
+        // line on screen and the truck riding it can never diverge.
+        func leg(_ from: CityID, _ to: CityID) -> MapCorridor {
+            corridors.corridor(from: from, to: to, catalog: catalog, projection: projection)
+        }
+
         // Sorted by ID for stable iteration order.
         for vehicle in state.vehicles.sorted(by: { $0.id.rawValue < $1.id.rawValue }) {
             let typeName = catalog.vehicleType(vehicle.typeID)?.name ?? "VEH"
@@ -251,6 +241,7 @@ enum MapSceneAdapter {
                     state: state,
                     index: index,
                     point: point,
+                    leg: leg,
                     overlays: &routes
                 ) {
                     markers.append(marker)
@@ -269,28 +260,29 @@ enum MapSceneAdapter {
             let destPt = point(job.offer.destination)
             let vehiclePt = point(vehicle.cityID)
 
-            // Deadhead arc (dashed): from the vehicle's city to the pickup.
+            // Deadhead corridor (dashed): from the vehicle's city to the pickup.
             if job.phase == .deadheading, vehiclePt != originPt {
                 routes.append(MapRouteOverlay(
                     id: "\(job.id.rawValue)-deadhead",
-                    anchors: [vehiclePt, originPt],
+                    anchors: leg(vehicle.cityID, job.offer.origin).points,
                     kind: .deadhead
                 ))
             }
-            // Loaded arc (solid, brand): pickup to delivery.
+            // Loaded corridor (solid, brand): pickup to delivery.
             routes.append(MapRouteOverlay(
                 id: "\(job.id.rawValue)-loaded",
-                anchors: [originPt, destPt],
+                anchors: leg(job.offer.origin, job.offer.destination).points,
                 kind: .loaded
             ))
 
             let progress = fraction(of: job, clock: state.clock)
             let placement = placement(
                 for: job,
+                vehicleCityID: vehicle.cityID,
                 originPt: originPt,
                 destPt: destPt,
-                vehiclePt: vehiclePt,
-                progress: progress
+                progress: progress,
+                leg: leg
             )
             let isServicing = job.phase == .loading || job.phase == .unloading
             var labelStackIndex = 0
@@ -320,7 +312,8 @@ enum MapSceneAdapter {
             let preview = routePreview(
                 route: previewRoute,
                 catalog: catalog,
-                projection: projection
+                projection: projection,
+                leg: leg
             )
             if let overlay = preview.overlay {
                 routes.append(overlay)
@@ -407,7 +400,8 @@ enum MapSceneAdapter {
     private static func routePreview(
         route: Route,
         catalog: GameCatalog,
-        projection: MapProjection
+        projection: MapProjection,
+        leg: (CityID, CityID) -> MapCorridor
     ) -> (overlay: MapRouteOverlay?, markers: [MapPlannedVisitMarker]) {
         struct Visit {
             let cityID: CityID
@@ -471,9 +465,26 @@ enum MapSceneAdapter {
            anchorCityIDs.last != first {
             anchorCityIDs.append(first)
         }
-        let anchors = anchorCityIDs.compactMap { cityID in
-            catalog.city(cityID).map(projection.point(for:))
+
+        // The planned lap follows the same land corridors the vehicles will,
+        // so what the player sees while building a route is what they get.
+        // Consecutive corridors share a city point; the duplicate is dropped
+        // so the polyline stays continuous and `first == last` still holds for
+        // a closed lap.
+        var anchors: [CGPoint] = []
+        for index in 0..<max(0, anchorCityIDs.count - 1) {
+            let points = leg(anchorCityIDs[index], anchorCityIDs[index + 1]).points
+            if index == 0 {
+                anchors.append(contentsOf: points)
+            } else {
+                anchors.append(contentsOf: points.dropFirst())
+            }
         }
+        if anchors.isEmpty, let only = anchorCityIDs.first,
+           let point = catalog.city(only).map(projection.point(for:)) {
+            anchors = [point]
+        }
+
         let overlay: MapRouteOverlay? = anchors.count > 1
             ? MapRouteOverlay(
                 id: "preview-\(route.id.rawValue)",
@@ -493,6 +504,7 @@ enum MapSceneAdapter {
         state: GameState,
         index: Index,
         point: (CityID) -> CGPoint,
+        leg: (CityID, CityID) -> MapCorridor,
         overlays: inout [MapRouteOverlay]
     ) -> MapVehicleMarker? {
         guard let route = index.routesByID[run.routeID],
@@ -508,17 +520,18 @@ enum MapSceneAdapter {
             let originPt = point(run.legOriginCityID)
             guard originPt != stopPt else { return nil }
             let loaded = index.loadedVehicleIDs.contains(vehicle.id)
+            let corridor = leg(run.legOriginCityID, stopCity)
             overlays.append(MapRouteOverlay(
                 id: "run-\(run.id)-leg",
-                anchors: [originPt, stopPt],
+                anchors: corridor.points,
                 kind: loaded ? .loaded : .deadhead
             ))
             let progress = fraction(started: run.phaseStartedAt, ends: run.phaseEndsAt, clock: state.clock)
             return MapVehicleMarker(
                 id: vehicle.id,
                 displayCode: code,
-                position: MapArc.point(originPt, stopPt, progress),
-                headingRadians: MapArc.heading(originPt, stopPt, progress),
+                position: corridor.position(at: progress),
+                headingRadians: corridor.heading(at: progress),
                 isMoving: true,
                 serviceProgress: nil,
                 labelStackIndex: 0
@@ -551,10 +564,11 @@ enum MapSceneAdapter {
 
     private static func placement(
         for job: ActiveJob,
+        vehicleCityID: CityID,
         originPt: CGPoint,
         destPt: CGPoint,
-        vehiclePt: CGPoint,
-        progress: CGFloat
+        progress: CGFloat,
+        leg: (CityID, CityID) -> MapCorridor
     ) -> (position: CGPoint, heading: CGFloat) {
         switch job.phase {
         case .loading:
@@ -562,9 +576,11 @@ enum MapSceneAdapter {
         case .unloading:
             return (destPt, 0)
         case .deadheading:
-            return (MapArc.point(vehiclePt, originPt, progress), MapArc.heading(vehiclePt, originPt, progress))
+            let corridor = leg(vehicleCityID, job.offer.origin)
+            return (corridor.position(at: progress), corridor.heading(at: progress))
         case .enRoute:
-            return (MapArc.point(originPt, destPt, progress), MapArc.heading(originPt, destPt, progress))
+            let corridor = leg(job.offer.origin, job.offer.destination)
+            return (corridor.position(at: progress), corridor.heading(at: progress))
         }
     }
 

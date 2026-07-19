@@ -238,6 +238,23 @@ private struct HeadquartersStageView: View {
     let onBack: () -> Void
 
     @State private var inspectedCityID: CityID?
+    /// Opens on Europe, matching where the map used to sit on first launch.
+    @State private var continent: Continent = .europe
+
+    /// Only continents that actually have a starter city are offered — an
+    /// arrow that lands on a continent you cannot found in is a dead end.
+    private var availableContinents: [Continent] {
+        let founded = Set(session.catalog.cities.filter(\.isStarterCity).map(\.continent))
+        return Continent.pickerOrder.filter(founded.contains)
+    }
+
+    private func step(_ direction: Int) {
+        let list = availableContinents
+        guard let index = list.firstIndex(of: continent), !list.isEmpty else { return }
+        // Wraps: the picker is a ring, not a bounded slider.
+        continent = list[(index + direction + list.count) % list.count]
+        inspectedCityID = nil
+    }
 
     var body: some View {
         ZStack {
@@ -246,6 +263,11 @@ private struct HeadquartersStageView: View {
                 hqCityID: nil,
                 highlightsStarterCities: true,
                 accentColorHex: draft.colorHex,
+                cameraFocus: .continent(
+                    continent,
+                    catalog: session.catalog,
+                    bottomInset: inspectedCityID == nil ? 160 : 360
+                ),
                 selection: Binding(
                     get: { inspectedCityID.map { MapSelection.city($0) } ?? .none },
                     set: { selection in
@@ -289,6 +311,15 @@ private struct HeadquartersStageView: View {
                 .padding(.horizontal, 14)
                 .padding(.top, 6)
 
+                ContinentPicker(
+                    continent: continent,
+                    accent: draft.accentColor,
+                    isEnabled: availableContinents.count > 1,
+                    onPrevious: { step(-1) },
+                    onNext: { step(1) }
+                )
+                .padding(.horizontal, 14)
+
                 Spacer()
 
                 if inspectedCityID != nil {
@@ -325,6 +356,65 @@ private struct HeadquartersStageView: View {
         DispatchQueue.main.async {
             session.startNewGame(identity: identity, hqCity: city.id)
         }
+    }
+}
+
+/// Continent name flanked by arrows. Changing it reframes the map; the cities
+/// themselves are unchanged, so this is navigation, not a filter.
+private struct ContinentPicker: View {
+    let continent: Continent
+    let accent: Color
+    let isEnabled: Bool
+    let onPrevious: () -> Void
+    let onNext: () -> Void
+
+    private var title: String {
+        switch continent {
+        case .america: String(localized: "America")
+        case .europe: String(localized: "Europe")
+        case .asia: String(localized: "Asia")
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            arrow("chevron.left", action: onPrevious)
+            Text(title)
+                .font(.gg(16, .heavy))
+                .foregroundStyle(Theme.textPrimary)
+                .frame(maxWidth: .infinity)
+                .contentTransition(.opacity)
+                .animation(.easeInOut(duration: 0.2), value: continent)
+            arrow("chevron.right", action: onNext)
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 6)
+        .background(Capsule().fill(Theme.surfaceGlass))
+        .overlay(Capsule().stroke(accent.opacity(0.45), lineWidth: 1))
+        .opacity(isEnabled ? 1 : 0.5)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("Continent"))
+        .accessibilityValue(Text(title))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: onNext()
+            case .decrement: onPrevious()
+            @unknown default: break
+            }
+        }
+    }
+
+    private func arrow(_ symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .heavy))
+                .foregroundStyle(isEnabled ? accent : Theme.textTertiary)
+                .frame(width: 34, height: 30)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityHidden(true)
     }
 }
 

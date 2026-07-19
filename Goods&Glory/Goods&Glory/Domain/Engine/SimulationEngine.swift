@@ -114,7 +114,9 @@ struct SimulationEngine: Sendable {
         guard state.isVehicleIdle(vehicleID) else { throw CommandError.vehicleBusy }
         guard state.clock < offer.expiresAt else { throw CommandError.offerExpired }
         guard offer.load.fits(in: vehicleType.capacity) else { throw CommandError.loadExceedsCapacity }
-        guard let mainRoute = catalog.shortestRoute(from: offer.origin, to: offer.destination) else {
+        // A lane with no road path is not acceptable work, even though the
+        // traversal list itself is no longer kept.
+        guard catalog.shortestRoute(from: offer.origin, to: offer.destination) != nil else {
             throw CommandError.noRoute
         }
         guard let deadheadRoute = catalog.shortestRoute(from: vehicle.cityID, to: offer.origin) else {
@@ -127,13 +129,15 @@ struct SimulationEngine: Sendable {
             ? travelMinutes(distanceKm: deadheadRoute.distanceKm, speedKmh: vehicleType.speedKmh)
             : loadingMinutes(at: offer.origin)
 
+        // `mainRoute` is still required: a job with no road path is invalid, and
+        // its distance drives the delivery clock. Only the traversal lists are
+        // dropped — they were stored on every job and serialized into every
+        // save while nothing ever read them.
         let job = ActiveJob(
             id: offer.id,
             offer: offer,
             vehicleID: vehicleID,
-            deadheadRoute: startsWithDeadhead ? deadheadRoute.traversals : [],
             deadheadKm: deadheadRoute.distanceKm,
-            route: mainRoute.traversals,
             startedAt: state.clock,
             phase: firstPhase,
             phaseStartedAt: state.clock,
@@ -780,15 +784,22 @@ struct SimulationEngine: Sendable {
     /// the next batch tick burning a day of fixed costs. Freight appears where
     /// capacity appears, which is also how a real market behaves.
     private func ensureLocalSpotOffers(state: inout GameState) {
+        let busy = state.busyVehicleIDs()
         var idleCities: [CityID: [VehicleTypeDefinition]] = [:]
-        for vehicle in state.vehicles where state.isVehicleIdle(vehicle.id) {
+        for vehicle in state.vehicles where !busy.contains(vehicle.id) {
             guard let type = catalog.vehicleType(vehicle.typeID) else { continue }
             idleCities[vehicle.cityID, default: []].append(type)
         }
         guard !idleCities.isEmpty else { return }
 
+        // One pass over the board instead of one pass per idle city.
+        var openSpotByOrigin: [CityID: Int] = [:]
+        for offer in state.offers where offer.source == .spot {
+            openSpotByOrigin[offer.origin, default: 0] += 1
+        }
+
         for origin in idleCities.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
-            let open = state.offers.count { $0.origin == origin && $0.source == .spot }
+            let open = openSpotByOrigin[origin, default: 0]
             guard open == 0, let types = idleCities[origin], !types.isEmpty else { continue }
 
             // Seeded on the arrival minute so the same campaign replays the
@@ -816,8 +827,9 @@ struct SimulationEngine: Sendable {
         let generatedAt = state.nextOfferBatchAt
         state.nextOfferBatchAt = generatedAt + catalog.economy.offerGenerationIntervalMinutes
 
+        let busy = state.busyVehicleIDs()
         var vehicleTypesByOrigin: [CityID: [VehicleTypeDefinition]] = [:]
-        for vehicle in state.vehicles where state.isVehicleIdle(vehicle.id) {
+        for vehicle in state.vehicles where !busy.contains(vehicle.id) {
             if let vehicleType = catalog.vehicleType(vehicle.typeID) {
                 vehicleTypesByOrigin[vehicle.cityID, default: []].append(vehicleType)
             }
@@ -964,20 +976,22 @@ struct SimulationEngine: Sendable {
             let demandWeight = Double(
                 catalog.cityMarket(city.id)?.demand.first(where: { $0.productID == productID })?.weight ?? 0
             )
+            // Table lookup, not a Dijkstra per candidate: this loop runs over
+            // every city for every generated offer.
             guard demandWeight > 0,
-                  let route = catalog.shortestRoute(from: origin, to: city.id) else { continue }
+                  let distanceKm = catalog.roadDistanceKm(from: origin, to: city.id) else { continue }
             let distanceWeight = preferShort
-                ? 1.0 / pow(max(route.distanceKm, 80), 0.85)
-                : pow(max(route.distanceKm, 80), 0.35) / 1000
+                ? 1.0 / pow(max(distanceKm, 80), 0.85)
+                : pow(max(distanceKm, 80), 0.35) / 1000
             weighted.append((city.id, demandWeight * distanceWeight * populationPull(of: city)))
         }
         if weighted.isEmpty {
             // No market match: fall back to distance-weighted reachable cities.
             for city in catalog.cities where city.id != origin {
-                guard let route = catalog.shortestRoute(from: origin, to: city.id) else { continue }
+                guard let distanceKm = catalog.roadDistanceKm(from: origin, to: city.id) else { continue }
                 let w = preferShort
-                    ? 1.0 / pow(max(route.distanceKm, 80), 0.85)
-                    : pow(max(route.distanceKm, 80), 0.35) / 1000
+                    ? 1.0 / pow(max(distanceKm, 80), 0.85)
+                    : pow(max(distanceKm, 80), 0.35) / 1000
                 weighted.append((city.id, w * populationPull(of: city)))
             }
         }
@@ -1173,6 +1187,12 @@ struct SimulationEngine: Sendable {
         let tier = companyTier(state)
         let available = archetypes(forTier: tier)
 
+        // Open lanes counted once for the whole board rather than rescanning it
+        // per city. Safe to cache: every offer appended below belongs to the
+        // origin currently being processed, and each origin is visited once.
+        var openByOrigin: [CityID: Int] = [:]
+        for offer in state.contractOffers { openByOrigin[offer.origin, default: 0] += 1 }
+
         // Contract business exists only where the company has a branch, and a
         // branch city's board is never allowed to sit empty: whatever emptied
         // it — expiry, signing, a demolished rival branch — the next pass tops
@@ -1180,7 +1200,7 @@ struct SimulationEngine: Sendable {
         // see work, independent of where the fleet happens to be parked.
         for origin in state.contractCities.sorted(by: { $0.rawValue < $1.rawValue }) {
             let slots = contractSlots(in: origin, state: state)
-            let open = state.contractOffers.count { $0.origin == origin }
+            let open = openByOrigin[origin, default: 0]
             guard open < slots else { continue }
 
             for slot in open..<slots {
@@ -1912,9 +1932,19 @@ struct SimulationEngine: Sendable {
     /// Spawns runs for idle vehicles on running routes and re-evaluates
     /// sentinel waits. Called from the event loop and route commands.
     private func syncRouteRuns(state: inout GameState) {
+        // `isVehicleIdle` rescans activeJobs and routeRuns, so calling it per
+        // assigned vehicle made this O(fleet × (jobs + runs)) on every pass of
+        // the advance loop. The busy set is computed once and updated as runs
+        // are spawned, which keeps the same "already busy" semantics.
+        var busy = state.busyVehicleIDs()
         for route in state.routes where route.isRunning && !route.stops.isEmpty {
-            for vehicleID in route.vehicleIDs where state.isVehicleIdle(vehicleID) {
+            for vehicleID in route.vehicleIDs where !busy.contains(vehicleID) {
+                let runsBefore = state.routeRuns.count
                 spawnRun(routeID: route.id, vehicleID: vehicleID, state: &state)
+                // Only a run that was actually created makes the vehicle busy —
+                // `spawnRun` bails on dangling references, and the old code
+                // would have re-tried such a vehicle on the next route.
+                if state.routeRuns.count != runsBefore { busy.insert(vehicleID) }
             }
         }
         let sentinelWaiters = state.routeRuns
@@ -2486,13 +2516,27 @@ struct SimulationEngine: Sendable {
     /// their committed cargo has left the network. Closing never destroys
     /// freight: parcels already accepted keep running to their destination.
     private func expireFinishedContracts(state: inout GameState) {
+        // Which contracts still have cargo anywhere in the network, in one pass
+        // over shipments and offers rather than one pass per contract. This
+        // runs on every step of the advance loop, so the old
+        // O(contracts × (shipments + offers)) shape dominated a large campaign.
+        // Only built when something is actually winding down, which is rare.
+        var committedContractIDs: Set<ContractID> = []
+        if state.activeContracts.contains(where: { $0.cancellationRequestedAt != nil }) {
+            for shipment in state.shipments {
+                if let id = shipment.offer.contractID { committedContractIDs.insert(id) }
+            }
+            for offer in state.offers {
+                if let id = offer.contractID { committedContractIDs.insert(id) }
+            }
+        }
+
+        let clock = state.clock
         let finished = state.activeContracts.filter { contract in
-            if let endsAt = contract.endsAt, endsAt <= state.clock { return true }
+            if let endsAt = contract.endsAt, endsAt <= clock { return true }
             // A cancelled contract lingers until nothing of it is left moving.
             guard contract.cancellationRequestedAt != nil else { return false }
-            let hasCommittedCargo = state.shipments.contains { $0.offer.contractID == contract.id }
-                || state.offers.contains { $0.contractID == contract.id }
-            return !hasCommittedCargo
+            return !committedContractIDs.contains(contract.id)
         }
         guard !finished.isEmpty else { return }
         let finishedIDs = Set(finished.map(\.id))

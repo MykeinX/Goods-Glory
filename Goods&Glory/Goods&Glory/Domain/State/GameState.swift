@@ -79,11 +79,8 @@ struct ActiveJob: Codable, Identifiable, Sendable {
     /// Snapshot of the accepted offer; offers are removed from the open list.
     let offer: JobOffer
     let vehicleID: VehicleID
-    /// Roads the vehicle drives empty to reach the origin. Empty if already there.
-    let deadheadRoute: [RoadTraversal]
+    /// Empty-running distance to reach the pickup. Charged to the odometer.
     let deadheadKm: Double
-    /// Ordered road traversals from origin to destination.
-    let route: [RoadTraversal]
     /// When the vehicle started working on this job (accept time).
     let startedAt: GameTime
 
@@ -591,23 +588,29 @@ struct GameState: Codable, Sendable {
     }
 
     /// Cargo currently loaded on the vehicle.
+    ///
+    /// Sums in place rather than via `shipments(onBoard:)`, which allocated a
+    /// filtered array on every call. This runs per vehicle inside the route
+    /// service loop, so the allocation was the measurable part.
     func cargoLoad(of vehicleID: VehicleID) -> LoadSize {
-        shipments(onBoard: vehicleID).reduce(LoadSize(massKg: 0, volumeM3: 0)) { total, shipment in
-            LoadSize(
-                massKg: total.massKg + shipment.offer.load.massKg,
-                volumeM3: total.volumeM3 + shipment.offer.load.volumeM3
-            )
+        var massKg = 0
+        var volumeM3 = 0.0
+        for shipment in shipments where shipment.location.vehicleID == vehicleID {
+            massKg += shipment.offer.load.massKg
+            volumeM3 += shipment.offer.load.volumeM3
         }
+        return LoadSize(massKg: massKg, volumeM3: volumeM3)
     }
 
     /// Cargo occupying a warehouse right now.
     func storedLoad(in facilityID: FacilityID) -> LoadSize {
-        shipments(storedIn: facilityID).reduce(LoadSize(massKg: 0, volumeM3: 0)) { total, shipment in
-            LoadSize(
-                massKg: total.massKg + shipment.offer.load.massKg,
-                volumeM3: total.volumeM3 + shipment.offer.load.volumeM3
-            )
+        var massKg = 0
+        var volumeM3 = 0.0
+        for shipment in shipments where shipment.location.facilityID == facilityID {
+            massKg += shipment.offer.load.massKg
+            volumeM3 += shipment.offer.load.volumeM3
         }
+        return LoadSize(massKg: massKg, volumeM3: volumeM3)
     }
 
     /// Warehouse contents grouped the way the player picks them: by product,
@@ -648,6 +651,17 @@ struct GameState: Codable, Sendable {
     /// Idle = no direct job and no route run. Only idle vehicles can take new work.
     func isVehicleIdle(_ vehicleID: VehicleID) -> Bool {
         activeJob(for: vehicleID) == nil && routeRun(for: vehicleID) == nil
+    }
+
+    /// Every vehicle assigned to any route, in one pass.
+    ///
+    /// The alternative — `route(of:)` per vehicle — is O(vehicles × routes ×
+    /// vehicles-per-route), which is the worst shape in the codebase for a
+    /// large fleet.
+    func routedVehicleIDs() -> Set<VehicleID> {
+        var ids: Set<VehicleID> = []
+        for route in routes { ids.formUnion(route.vehicleIDs) }
+        return ids
     }
 
     /// Every vehicle currently on a job or a route run, in one pass.

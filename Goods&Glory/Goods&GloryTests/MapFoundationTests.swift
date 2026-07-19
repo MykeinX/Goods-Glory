@@ -54,7 +54,7 @@ struct MapFoundationTests {
         #expect((longitudes.max() ?? 0) > 100)
     }
 
-    @Test func movingVehicleIsSampledOnCityChordAtHalfProgress() throws {
+    @MainActor @Test func movingVehicleRidesItsDrawnCorridorAtHalfProgress() throws {
         let cityA = CityID("alpha")
         let cityB = CityID("beta")
         let nodeA = RoadNodeID("node_alpha")
@@ -155,9 +155,7 @@ struct MapFoundationTests {
             id: jobID,
             offer: offer,
             vehicleID: vehicleID,
-            deadheadRoute: [],
             deadheadKm: 0,
-            route: [RoadTraversal(roadID: roadID, direction: .forward)],
             startedAt: .start,
             phase: .enRoute,
             phaseStartedAt: .start,
@@ -184,18 +182,36 @@ struct MapFoundationTests {
         state.activeJobs = [job]
 
         let projection = MapProjection()
+        let corridors = MapCorridorCache()
         let marker = try #require(
-            MapSceneAdapter.snapshot(state: state, catalog: catalog, projection: projection)
-                .vehicles.first
+            MapSceneAdapter.snapshot(
+                state: state,
+                catalog: catalog,
+                projection: projection,
+                corridors: corridors
+            )
+            .vehicles.first
         )
-        // Current map adapter interpolates along the projected city-to-city MapArc.
-        let originPt = projection.point(latitude: 0, longitude: 0)
-        let destPt = projection.point(latitude: 1, longitude: 1)
-        let expected = MapArc.point(originPt, destPt, 0.5)
+        // The vehicle rides the same corridor the map draws, so the expected
+        // position is that corridor's midpoint by arc length — not a bezier
+        // reconstructed independently, which is exactly the divergence that
+        // used to put trucks beside their own route line.
+        let corridor = corridors.corridor(
+            from: cityA,
+            to: cityB,
+            catalog: catalog,
+            projection: projection
+        )
+        let expected = corridor.position(at: 0.5)
         #expect(hypot(marker.position.x - expected.x, marker.position.y - expected.y) < 1)
+        // Halfway through the leg means halfway along the drawn line.
+        let start = corridor.points.first ?? .zero
+        let end = corridor.points.last ?? .zero
+        #expect(hypot(expected.x - start.x, expected.y - start.y) > 0)
+        #expect(hypot(expected.x - end.x, expected.y - end.y) > 0)
     }
 
-    @Test func routePreviewClosesTheLoopAndGroupsRepeatedCityMarkers() throws {
+    @MainActor @Test func routePreviewClosesTheLoopAndGroupsRepeatedCityMarkers() throws {
         let catalog = try GameCatalog.load(from: .main)
         let cities = try #require(catalog.cities.count >= 3 ? Array(catalog.cities.prefix(3)) : nil)
         let cityA = cities[0].id
@@ -230,13 +246,17 @@ struct MapFoundationTests {
             state: state,
             catalog: catalog,
             projection: projection,
-            previewRoute: route
+            previewRoute: route,
+            corridors: MapCorridorCache()
         )
         let planned = try #require(snapshot.routes.first { $0.kind == .planned })
         let markerA = try #require(snapshot.plannedVisits.first { $0.id == cityA })
         let markerB = try #require(snapshot.plannedVisits.first { $0.id == cityB })
 
-        #expect(planned.anchors.count == 4)
+        // Three legs (A→B→C→A), each drawn as a road corridor rather than a
+        // single point per visit, so the exact count depends on the terrain.
+        // What must hold is that the lap is continuous and closes on itself.
+        #expect(planned.anchors.count >= 4)
         #expect(planned.anchors.first == planned.anchors.last)
         #expect(snapshot.plannedVisits.count == 3)
         #expect(markerA.stepNumbers == [1, 4])

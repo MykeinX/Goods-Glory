@@ -9,6 +9,17 @@
 
 import Foundation
 
+/// Landmass grouping. Road networks do not cross between continents — freight
+/// between them needs sea or air, which the vehicle catalog does not offer yet.
+enum Continent: String, Codable, Sendable, CaseIterable {
+    case america
+    case europe
+    case asia
+
+    /// Display order for the founding screen's continent picker.
+    static let pickerOrder: [Continent] = [.america, .europe, .asia]
+}
+
 struct CityDefinition: Codable, Identifiable, Sendable {
     let id: CityID
     /// Entry point from the city into the canonical road graph.
@@ -16,6 +27,7 @@ struct CityDefinition: Codable, Identifiable, Sendable {
     /// Proper noun; not localized.
     let name: String
     let country: String
+    let continent: Continent
     let latitude: Double
     let longitude: Double
     /// Addressable population baseline for market demand. Every catalog city
@@ -37,6 +49,41 @@ struct CityDefinition: Codable, Identifiable, Sendable {
 
     var coordinate: GeoCoordinate {
         GeoCoordinate(latitude: latitude, longitude: longitude)
+    }
+
+    /// Spelled out rather than synthesized so `continent` can carry a default.
+    /// Bundled content always states it; code-defined test fixtures build
+    /// one-country worlds where it is noise.
+    init(
+        id: CityID,
+        roadNodeID: RoadNodeID,
+        name: String,
+        country: String,
+        continent: Continent = .america,
+        latitude: Double,
+        longitude: Double,
+        population: Int,
+        hasRailFreightAccess: Bool,
+        hasAirCargoAccess: Bool,
+        hasSeaPortAccess: Bool,
+        costIndex: UInt16,
+        trafficDelayIndex: UInt16,
+        isStarterCity: Bool
+    ) {
+        self.id = id
+        self.roadNodeID = roadNodeID
+        self.name = name
+        self.country = country
+        self.continent = continent
+        self.latitude = latitude
+        self.longitude = longitude
+        self.population = population
+        self.hasRailFreightAccess = hasRailFreightAccess
+        self.hasAirCargoAccess = hasAirCargoAccess
+        self.hasSeaPortAccess = hasSeaPortAccess
+        self.costIndex = costIndex
+        self.trafficDelayIndex = trafficDelayIndex
+        self.isStarterCity = isStarterCity
     }
 }
 

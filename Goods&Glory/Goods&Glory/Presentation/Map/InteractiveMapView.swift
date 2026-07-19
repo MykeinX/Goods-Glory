@@ -65,18 +65,11 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
     @Binding var selection: MapSelection
 
     func makeCoordinator() -> Coordinator {
-        let geography: MapGeographyDefinition
-        do {
-            geography = try MapGeographyDefinition.load(from: .main)
-        } catch {
-            assertionFailure("Map geography failed to load: \(error)")
-            geography = .empty
-        }
-        return Coordinator(
+        Coordinator(
             scene: GameMapScene(
                 catalog: catalog,
                 projection: MapProjection(),
-                geography: geography
+                geography: MapGeographyDefinition.bundled
             ),
             selection: $selection
         )

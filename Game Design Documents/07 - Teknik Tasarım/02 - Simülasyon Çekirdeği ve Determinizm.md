@@ -75,7 +75,7 @@ Kesin sayısal bütçeler desteklenen cihaz matrisi ve gerçek içerikle ölçü
 - Simülasyon maliyeti render kare hızından bağımsızdır.
 - Ana thread uzun simülasyon partileriyle bloklanmaz.
 - Normal hızda adım süresi cihaz bütçesinin yalnız küçük bir bölümünü kullanır.
-- 8×, zaman atlama ve çevrimdışı yakalama için işlem sayısı geçen her dakikayla doğrusal büyümek zorunda değildir.
+- 6×, zaman atlama ve çevrimdışı yakalama için işlem sayısı geçen her dakikayla doğrusal büyümek zorunda değildir.
 - Bellek; geçmişin tamamını canlı nesne olarak tutmak yerine snapshot ve sınırlı denetim iziyle yönetilir.
 - Büyük dünya, kötü cihaz performansı nedeniyle farklı ekonomik sonuç üretmez.
 
@@ -94,7 +94,7 @@ Kesin sayısal bütçeler desteklenen cihaz matrisi ve gerçek içerikle ölçü
 
 Browser motorunda seed’li talep, iş teklifleri, faz süreleri, koridorlar, rezervasyonlar ve settlement testleri vardır. FNV-1a/üçgensel örnekleme gibi mevcut ayrıntılar uyumluluk için değerli bir referanstır; nihai Swift RNG uygulaması ancak çapraz platform fixture’ları ve uzun dönem kalite testiyle kabul edilir.
 
-Browser’ın mevcut 1 saniye = 5 oyun dakikası ve 1×/3×/8× hızları prototip ayarıdır; ürün hızları denge ve oturum testine tabidir.
+Ürün temposu: 1 saniye = 10 oyun dakikası (1×), seçilebilir 1×/3×/6×. Browser prototipinin 5 dk / 8× ayarı tarihsel referanstır.
 
 ## İlişkili notlar
 
