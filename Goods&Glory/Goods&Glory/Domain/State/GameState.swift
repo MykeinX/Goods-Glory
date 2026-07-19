@@ -649,4 +649,17 @@ struct GameState: Codable, Sendable {
     func isVehicleIdle(_ vehicleID: VehicleID) -> Bool {
         activeJob(for: vehicleID) == nil && routeRun(for: vehicleID) == nil
     }
+
+    /// Every vehicle currently on a job or a route run, in one pass.
+    ///
+    /// Prefer this over calling `isVehicleIdle` inside a loop over the fleet:
+    /// that pattern rescans `activeJobs` and `routeRuns` per vehicle, which is
+    /// O(vehicles × (jobs + runs)) and quietly becomes the dominant cost as the
+    /// fleet grows.
+    func busyVehicleIDs() -> Set<VehicleID> {
+        var ids = Set<VehicleID>(minimumCapacity: activeJobs.count + routeRuns.count)
+        for job in activeJobs { ids.insert(job.vehicleID) }
+        for run in routeRuns { ids.insert(run.vehicleID) }
+        return ids
+    }
 }

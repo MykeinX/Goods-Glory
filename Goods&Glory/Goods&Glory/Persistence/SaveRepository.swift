@@ -92,3 +92,33 @@ struct SaveRepository {
         try FileManager.default.removeItem(at: fileURL)
     }
 }
+
+/// Serializes disk access off the main thread.
+///
+/// Encoding a campaign to JSON and writing it atomically (temp file, fsync,
+/// rename) is tens of milliseconds of blocking work on a large save, and the
+/// game used to do it on the main thread on every single player command.
+///
+/// Writes and deletes both go through this actor, so a delete can never be
+/// overtaken by a write that was already queued behind it — the ordering bug
+/// that would otherwise resurrect a campaign the player just erased.
+actor SaveWriter {
+    private let repository: SaveRepository
+
+    init(repository: SaveRepository) {
+        self.repository = repository
+    }
+
+    func write(_ state: GameState) {
+        do {
+            try repository.save(state)
+        } catch {
+            // Persistence failure must never crash the game loop.
+            print("Save failed: \(error)")
+        }
+    }
+
+    func delete() {
+        try? repository.deleteSave()
+    }
+}

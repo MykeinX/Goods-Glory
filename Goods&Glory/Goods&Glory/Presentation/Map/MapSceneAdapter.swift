@@ -169,6 +169,49 @@ enum MapArc {
 }
 
 enum MapSceneAdapter {
+    /// Per-snapshot lookup tables. Built once in O(n) and read in O(1), instead
+    /// of rescanning the same arrays for every vehicle.
+    private struct Index {
+        let runByVehicle: [VehicleID: RouteRun]
+        let jobByVehicle: [VehicleID: ActiveJob]
+        let routesByID: [RouteID: Route]
+        /// Vehicles currently carrying at least one shipment.
+        let loadedVehicleIDs: Set<VehicleID>
+
+        init(state: GameState) {
+            // First-wins, matching the `first { }` lookups these replace. A
+            // vehicle should never have two runs or two jobs, but the index must
+            // not quietly change behaviour if the invariant is ever broken.
+            var runByVehicle: [VehicleID: RouteRun] = [:]
+            runByVehicle.reserveCapacity(state.routeRuns.count)
+            for run in state.routeRuns where runByVehicle[run.vehicleID] == nil {
+                runByVehicle[run.vehicleID] = run
+            }
+
+            var jobByVehicle: [VehicleID: ActiveJob] = [:]
+            jobByVehicle.reserveCapacity(state.activeJobs.count)
+            for job in state.activeJobs where jobByVehicle[job.vehicleID] == nil {
+                jobByVehicle[job.vehicleID] = job
+            }
+
+            var routesByID: [RouteID: Route] = [:]
+            routesByID.reserveCapacity(state.routes.count)
+            for route in state.routes where routesByID[route.id] == nil {
+                routesByID[route.id] = route
+            }
+
+            var loaded: Set<VehicleID> = []
+            for shipment in state.shipments {
+                if let vehicleID = shipment.loadedVehicleID { loaded.insert(vehicleID) }
+            }
+
+            self.runByVehicle = runByVehicle
+            self.jobByVehicle = jobByVehicle
+            self.routesByID = routesByID
+            self.loadedVehicleIDs = loaded
+        }
+    }
+
     static func snapshot(
         state: GameState,
         catalog: GameCatalog,
@@ -180,20 +223,33 @@ enum MapSceneAdapter {
         var idleCountPerCity: [CityID: Int] = [:]
         var labelStackByCity: [CityID: Int] = [:]
 
+        // This runs once per simulation tick for the whole fleet. Looking each
+        // vehicle's job / run / route up with `first { }` made the snapshot cost
+        // O(vehicles × jobs) and O(vehicles × shipments); indexing once makes it
+        // linear, which is what lets the fleet grow without the map paying for it.
+        let index = Index(state: state)
+
+        // City projections are pure trigonometry on immutable catalog data and
+        // the same handful of cities recur across every vehicle and leg.
+        var pointCache: [CityID: CGPoint] = [:]
         func point(_ id: CityID) -> CGPoint {
-            catalog.city(id).map(projection.point(for:)) ?? .zero
+            if let cached = pointCache[id] { return cached }
+            let value = catalog.city(id).map(projection.point(for:)) ?? .zero
+            pointCache[id] = value
+            return value
         }
 
         // Sorted by ID for stable iteration order.
         for vehicle in state.vehicles.sorted(by: { $0.id.rawValue < $1.id.rawValue }) {
             let typeName = catalog.vehicleType(vehicle.typeID)?.name ?? "VEH"
             let code = Format.vehicleCode(typeName: typeName, id: vehicle.id)
-            if let run = state.routeRun(for: vehicle.id) {
+            if let run = index.runByVehicle[vehicle.id] {
                 if let marker = routeRunMarker(
                     run: run,
                     vehicle: vehicle,
                     code: code,
                     state: state,
+                    index: index,
                     point: point,
                     overlays: &routes
                 ) {
@@ -203,7 +259,7 @@ enum MapSceneAdapter {
                 }
                 continue
             }
-            guard let job = state.activeJob(for: vehicle.id) else {
+            guard let job = index.jobByVehicle[vehicle.id] else {
                 // Idle fleet is summarized on the city label — no per-vehicle sprite.
                 idleCountPerCity[vehicle.cityID, default: 0] += 1
                 continue
@@ -317,12 +373,18 @@ enum MapSceneAdapter {
             waiting[offer.origin, default: 0] += 1
             noteUrgency(city: offer.origin, createdAt: offer.createdAt, expiresAt: offer.expiresAt)
         }
+        // Indexed rather than `state.facility(id)` per shipment, which would be
+        // O(shipments × facilities) on every tick.
+        var cityByFacility: [FacilityID: CityID] = [:]
+        cityByFacility.reserveCapacity(state.facilities.count)
+        for facility in state.facilities { cityByFacility[facility.id] = facility.cityID }
+
         for shipment in state.shipments {
             guard let facilityID = shipment.location.facilityID,
-                  let facility = state.facility(facilityID) else { continue }
-            stored[facility.cityID, default: 0] += 1
+                  let cityID = cityByFacility[facilityID] else { continue }
+            stored[cityID, default: 0] += 1
             noteUrgency(
-                city: facility.cityID,
+                city: cityID,
                 createdAt: shipment.offer.createdAt,
                 expiresAt: shipment.offer.expiresAt
             )
@@ -429,10 +491,11 @@ enum MapSceneAdapter {
         vehicle: Vehicle,
         code: String,
         state: GameState,
+        index: Index,
         point: (CityID) -> CGPoint,
         overlays: inout [MapRouteOverlay]
     ) -> MapVehicleMarker? {
-        guard let route = state.route(run.routeID),
+        guard let route = index.routesByID[run.routeID],
               route.stops.indices.contains(run.stopIndex) else { return nil }
         let stopCity = route.stops[run.stopIndex].cityID
         let stopPt = point(stopCity)
@@ -444,7 +507,7 @@ enum MapSceneAdapter {
         case .traveling:
             let originPt = point(run.legOriginCityID)
             guard originPt != stopPt else { return nil }
-            let loaded = state.shipments.contains { $0.loadedVehicleID == vehicle.id }
+            let loaded = index.loadedVehicleIDs.contains(vehicle.id)
             overlays.append(MapRouteOverlay(
                 id: "run-\(run.id)-leg",
                 anchors: [originPt, stopPt],

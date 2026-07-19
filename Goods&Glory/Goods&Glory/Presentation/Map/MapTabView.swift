@@ -284,18 +284,19 @@ private struct MapBottomChrome: View {
     var onOpenDetail: (MapDetailDestination) -> Void
     var onFocusCity: (CityID) -> Void
 
-    private var onRouteCount: Int {
-        guard let state = session.state else { return 0 }
-        return state.vehicles.count { !state.isVehicleIdle($0.id) }
-    }
-
-    private var idleCount: Int {
-        guard let state = session.state else { return 0 }
-        return state.vehicles.count { state.isVehicleIdle($0.id) }
+    /// Both counts from one pass. Computed together because this runs on every
+    /// simulation tick, and the previous per-vehicle `isVehicleIdle` calls made
+    /// it two full rescans of the job and run lists.
+    private var fleetSplit: (onRoute: Int, idle: Int) {
+        guard let state = session.state else { return (0, 0) }
+        let busy = state.busyVehicleIDs()
+        let onRoute = state.vehicles.count { busy.contains($0.id) }
+        return (onRoute, state.vehicles.count - onRoute)
     }
 
     var body: some View {
-        VStack(spacing: 10) {
+        let fleet = fleetSplit
+        return VStack(spacing: 10) {
             GameNotificationStack(
                 notifications: session.notifications,
                 accent: accent,
@@ -335,13 +336,13 @@ private struct MapBottomChrome: View {
                 MapFleetStatChip(
                     systemImage: "truck.box.fill",
                     tint: accent,
-                    count: onRouteCount,
+                    count: fleet.onRoute,
                     label: String(localized: "on route")
                 )
                 MapFleetStatChip(
                     systemImage: "truck.box",
                     tint: Theme.textSecondary,
-                    count: idleCount,
+                    count: fleet.idle,
                     label: String(localized: "idle")
                 )
             }

@@ -74,10 +74,17 @@ final class GameSession {
     /// observable: the main menu must never stat the filesystem from `body`.
     private(set) var saveSummary: SaveSummary?
 
+    private let saveWriter: SaveWriter
+    /// Debounce timer for background saves. Cancelled and replaced by each new
+    /// persist request so a burst of commands costs one write, not five.
+    private var pendingSaveTask: Task<Void, Never>?
+    private static let saveDebounce = Duration.milliseconds(400)
+
     init(catalog: GameCatalog, saveRepository: SaveRepository = SaveRepository()) {
         self.catalog = catalog
         self.engine = SimulationEngine(catalog: catalog)
         self.saveRepository = saveRepository
+        self.saveWriter = SaveWriter(repository: saveRepository)
         self.saveSummary = saveRepository.summary()
     }
 
@@ -86,8 +93,12 @@ final class GameSession {
     /// Drops the stored campaign without touching the current phase. Used by
     /// the main menu's Settings screen.
     func deleteSave() {
-        try? saveRepository.deleteSave()
+        // Kill the debounce first, then delete through the writer actor so a
+        // write that is already in flight cannot land after the delete.
+        pendingSaveTask?.cancel()
+        pendingSaveTask = nil
         saveSummary = nil
+        Task { [saveWriter] in await saveWriter.delete() }
     }
 
     // MARK: - Lifecycle
@@ -137,7 +148,7 @@ final class GameSession {
     }
 
     func quitToMenu() {
-        persist()
+        persistImmediately()
         stopClock()
         clearNotifications()
         state = nil
@@ -155,7 +166,7 @@ final class GameSession {
     /// App left the foreground: freeze simulation time (no catch-up on return) and save.
     func suspendForBackground() {
         stopClock()
-        persist()
+        persistImmediately()
     }
 
     /// App became active again: resume at the player's current speed setting.
@@ -337,9 +348,32 @@ final class GameSession {
 
     // MARK: - Persistence
 
-    /// Saves the current campaign. Called on commands, pause, background and quit.
-    /// (Tick autosave is currently disabled — see `isTickAutosaveEnabled`.)
+    /// Queues a save of the current campaign. Called on every command, so the
+    /// disk write is debounced and performed off the main thread — a player
+    /// tapping "accept job" should never wait on JSON encoding.
+    ///
+    /// The observable `saveSummary` is updated immediately from memory, so the
+    /// UI never has to wait for the write to know what is stored.
     func persist() {
+        guard let state else { return }
+        saveSummary = SaveSummary(state: state, savedAt: Date())
+        secondsSinceAutosave = 0
+
+        pendingSaveTask?.cancel()
+        pendingSaveTask = Task { [saveWriter] in
+            try? await Task.sleep(for: Self.saveDebounce)
+            guard !Task.isCancelled else { return }
+            await saveWriter.write(state)
+        }
+    }
+
+    /// Writes the campaign right now, on the calling thread, and returns only
+    /// once it is on disk. Used where losing the last few hundred milliseconds
+    /// is unacceptable: leaving the app and quitting to the menu. Blocking the
+    /// main thread is the correct trade here — the player is already leaving.
+    func persistImmediately() {
+        pendingSaveTask?.cancel()
+        pendingSaveTask = nil
         guard let state else { return }
         do {
             let startedAt = CACurrentMediaTime()
