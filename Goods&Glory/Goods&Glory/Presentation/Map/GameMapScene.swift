@@ -12,7 +12,7 @@ import UIKit
 
 @MainActor
 final class GameMapScene: SKScene {
-    var onCitySelected: ((CityID?) -> Void)?
+    var onSelectionChanged: ((MapSelection) -> Void)?
 
     private let catalog: GameCatalog
     private let projection: MapProjection
@@ -21,11 +21,15 @@ final class GameMapScene: SKScene {
 
     private let terrainLayer = SKNode()
     private let routeLayer = SKNode()
+    private let plannedRouteLayer = SKNode()
     private let cityLayer = SKNode()
+    private let plannedVisitLayer = SKNode()
     private let vehicleLayer = SKNode()
 
     private let loadedRouteNode = SKShapeNode()
     private let deadheadRouteNode = SKShapeNode()
+    private let plannedRouteNode = SKShapeNode()
+    private let previewRouteNode = SKShapeNode()
 
     /// Fixed world-unit stroke widths (≈ km). Not scaled on zoom — avoids
     /// SKShapeNode retessellation during pinch gestures.
@@ -37,17 +41,25 @@ final class GameMapScene: SKScene {
         static let boundary: CGFloat = 2.2
         static let loadedRoute: CGFloat = 4.5
         static let deadheadRoute: CGFloat = 3.5
+        static let plannedRoute: CGFloat = 3
+        static let previewRoute: CGFloat = 1.8
     }
 
     private var cityNodes: [CityID: MapCityNode] = [:]
-    private var vehicleNodes: [VehicleID: SKSpriteNode] = [:]
-    private var recycledVehicleNodes: [SKSpriteNode] = []
+    private var vehicleNodes: [VehicleID: MapVehicleNode] = [:]
+    private var recycledVehicleNodes: [MapVehicleNode] = []
     private var vehicleMarkers: [VehicleID: MapVehicleMarker] = [:]
     private var lastRoutes: [MapRouteOverlay] = []
+    private var plannedVisitNodes: [CityID: MapPlannedVisitNode] = [:]
+    private var plannedVisitMarkers: [CityID: MapPlannedVisitMarker] = [:]
+    private var lastPlannedVisits: [MapPlannedVisitMarker] = []
+    private var idleFleetByCity: [CityID: Int] = [:]
 
     private var hqCityID: CityID?
     private var selectedCityID: CityID?
+    private var selectedVehicleID: VehicleID?
     private var highlightsStarterCities = false
+    private var cameraFocus: MapCameraFocus = .world
     private var accentColor = UIColor.systemBlue
     private var fitScale: CGFloat = 1
     private var hasFittedCamera = false
@@ -99,13 +111,13 @@ final class GameMapScene: SKScene {
         view.shouldCullNonVisibleNodes = true
         // Strategic map: 30 fps is enough and keeps idle heat down on device.
         view.preferredFramesPerSecond = 30
-        if !hasFittedCamera { fitCamera(animated: false) }
+        if !hasFittedCamera { applyCameraFocus(animated: false) }
     }
 
     override func didChangeSize(_ oldSize: CGSize) {
         guard size.width > 1, size.height > 1 else { return }
         if !userMovedCamera {
-            fitCamera(animated: false)
+            applyCameraFocus(animated: false)
         } else {
             clampCamera()
         }
@@ -114,26 +126,48 @@ final class GameMapScene: SKScene {
     func configure(
         hqCityID: CityID?,
         selectedCityID: CityID?,
+        selectedVehicleID: VehicleID?,
         highlightsStarterCities: Bool,
-        accentColorHex: String
+        accentColorHex: String,
+        cameraFocus: MapCameraFocus
     ) {
+        let framingChanged = self.cameraFocus != cameraFocus || self.hqCityID != hqCityID
         self.hqCityID = hqCityID
         self.selectedCityID = selectedCityID
+        self.selectedVehicleID = selectedVehicleID
         self.highlightsStarterCities = highlightsStarterCities
+        self.cameraFocus = cameraFocus
         self.accentColor = UIColor(hex: accentColorHex)
         loadedRouteNode.strokeColor = accentColor
+        plannedRouteNode.strokeColor = accentColor.withAlphaComponent(0.78)
+        previewRouteNode.strokeColor = accentColor.withAlphaComponent(0.7)
         updateCityStyles()
-        for node in vehicleNodes.values {
-            node.color = accentColor
+        updateVehicleStyles()
+        updatePlannedVisitStyles()
+        if framingChanged, size.width > 1, size.height > 1 {
+            // Spot-job / route previews reframe. Returning to `.free` keeps the
+            // camera where the player left it (including after leaving a preview).
+            if case .free = cameraFocus, hasFittedCamera {
+                // Keep current camera.
+            } else {
+                userMovedCamera = false
+                applyCameraFocus(animated: true)
+            }
         }
     }
 
     func apply(snapshot: MapRenderSnapshot) {
         if snapshot.routes != lastRoutes {
             lastRoutes = snapshot.routes
-            rebuildActiveRoutes(snapshot.routes)
+            rebuildRouteOverlays(snapshot.routes)
         }
+        if snapshot.plannedVisits != lastPlannedVisits {
+            lastPlannedVisits = snapshot.plannedVisits
+            rebuildPlannedVisits(snapshot.plannedVisits)
+        }
+        idleFleetByCity = snapshot.idleFleetByCity
         updateVehicles(snapshot.vehicles)
+        updateCityStyles()
     }
 
     // MARK: - Camera and input
@@ -157,49 +191,162 @@ final class GameMapScene: SKScene {
         clampCamera()
     }
 
-    func selectCity(at viewPoint: CGPoint) {
+    func selectAt(viewPoint: CGPoint) {
         let scenePoint = convertPoint(fromView: viewPoint)
         let hitRadius = 34 * cameraNode.xScale
-        var closest: (id: CityID, distance: CGFloat)?
+        let vehicleHitRadius = 28 * cameraNode.xScale
+
+        var closestVehicle: (id: VehicleID, distance: CGFloat)?
+        for (id, marker) in vehicleMarkers {
+            let point = displayPosition(for: marker)
+            let distance = hypot(point.x - scenePoint.x, point.y - scenePoint.y)
+            guard distance <= vehicleHitRadius else { continue }
+            if closestVehicle == nil
+                || distance < closestVehicle!.distance
+                || (distance == closestVehicle!.distance && id.rawValue < closestVehicle!.id.rawValue) {
+                closestVehicle = (id, distance)
+            }
+        }
+        if let closestVehicle {
+            onSelectionChanged?(.vehicle(closestVehicle.id))
+            return
+        }
+
+        var closestCity: (id: CityID, distance: CGFloat)?
         for city in catalog.cities {
             let point = projection.point(for: city)
             let distance = hypot(point.x - scenePoint.x, point.y - scenePoint.y)
             guard distance <= hitRadius else { continue }
-            if closest == nil
-                || distance < closest!.distance
-                || (distance == closest!.distance && city.id.rawValue < closest!.id.rawValue) {
-                closest = (city.id, distance)
+            if closestCity == nil
+                || distance < closestCity!.distance
+                || (distance == closestCity!.distance && city.id.rawValue < closestCity!.id.rawValue) {
+                closestCity = (city.id, distance)
             }
         }
-        onCitySelected?(closest?.id)
+        if let closestCity {
+            onSelectionChanged?(.city(closestCity.id))
+        } else {
+            onSelectionChanged?(.none)
+        }
     }
 
+    /// Closest zoom relative to fit. ~15% tighter than the previous `0.07` floor.
+    private static let minZoomInRelativeToFit: CGFloat = 0.0595
     /// Zoom-out cap relative to full-content fit. Below 1 so the whole world
     /// is never on screen at once (less clutter as the network grows).
-    private static let maxZoomOutRelativeToFit: CGFloat = 0.5
+    private static let maxZoomOutRelativeToFit: CGFloat = 0.4
 
     private var maxZoomOutScale: CGFloat {
-        max(0.3, fitScale * Self.maxZoomOutRelativeToFit)
+        switch cameraFocus {
+        case .route:
+            // Route planning may span the whole network, so its fitted view is
+            // allowed to pull farther back than the strategic live map.
+            return max(0.3, fitScale * 1.05)
+        case .world, .city, .free:
+            return max(0.3, fitScale * Self.maxZoomOutRelativeToFit)
+        }
+    }
+
+    private var minZoomInScale: CGFloat {
+        max(0.1275, fitScale * Self.minZoomInRelativeToFit)
     }
 
     private var cameraScaleRange: ClosedRange<CGFloat> {
-        // Zoom-in: ~14× closer than fit. Zoom-out: 0.5× fit.
-        max(0.15, fitScale * 0.07)...maxZoomOutScale
+        minZoomInScale...maxZoomOutScale
     }
 
-    private func fitCamera(animated: Bool) {
+    /// Recompute fit metrics and place the camera for the active focus mode.
+    private func applyCameraFocus(animated: Bool) {
         guard size.width > 1, size.height > 1 else { return }
+
+        // `.free` preserves whatever framing the player (or a prior focus) left.
+        // On the very first layout it still falls through to the HQ opening frame.
+        if case .free = cameraFocus, hasFittedCamera {
+            clampCamera()
+            return
+        }
+
         fitScale = max(worldBounds.width / size.width, worldBounds.height / size.height) * 1.08
-        let targetScale = maxZoomOutScale
+
+        let effectiveFocus: MapCameraFocus
+        if case .free = cameraFocus {
+            effectiveFocus = .world
+        } else {
+            effectiveFocus = cameraFocus
+        }
+
+        let target: (position: CGPoint, scale: CGFloat)
+        switch effectiveFocus {
+        case .free:
+            return
+        case .world:
+            let center: CGPoint
+            if let hqCityID, let hq = catalog.city(hqCityID) {
+                center = projection.point(for: hq)
+            } else {
+                center = CGPoint(x: worldBounds.midX, y: worldBounds.midY)
+            }
+            // Strategic map opens at the closest allowed zoom, centered on HQ.
+            target = (center, minZoomInScale)
+        case .city(let cityID):
+            if let city = catalog.city(cityID) {
+                // Closest allowed zoom, city locked to viewport center.
+                target = (projection.point(for: city), minZoomInScale)
+            } else {
+                target = (
+                    CGPoint(x: worldBounds.midX, y: worldBounds.midY),
+                    minZoomInScale
+                )
+            }
+        case .route(let cityIDs, let bottomInset):
+            let points = cityIDs.compactMap { cityID in
+                catalog.city(cityID).map(projection.point(for:))
+            }
+            if points.count == 1, let point = points.first {
+                target = (point, minZoomInScale)
+            } else if let bounds = Self.bounds(containing: points) {
+                // Keep endpoints inside the visible band between the top status
+                // chrome and the bottom city card / tab bar.
+                let topInset: CGFloat = 130
+                let bottom = max(126, bottomInset)
+                let availableWidth = max(1, size.width - 72)
+                let availableHeight = max(1, size.height - topInset - bottom)
+                let fittedScale = max(
+                    bounds.width / availableWidth,
+                    bounds.height / availableHeight
+                ) * 1.28
+                let scale = fittedScale.clamped(to: cameraScaleRange)
+                // Visible band center sits above the geometric screen center when
+                // the bottom inset is larger than the top — bias the camera so the
+                // leg is framed in that band instead of under the city card.
+                let screenBiasY = (bottom - topInset) / 2
+                let worldBiasY = -screenBiasY * scale
+                target = (
+                    CGPoint(x: bounds.midX, y: bounds.midY + worldBiasY),
+                    scale
+                )
+            } else {
+                let center = hqCityID
+                    .flatMap(catalog.city)
+                    .map(projection.point(for:))
+                    ?? CGPoint(x: worldBounds.midX, y: worldBounds.midY)
+                target = (center, minZoomInScale)
+            }
+        }
+
         let updates = {
-            self.cameraNode.position = CGPoint(x: self.worldBounds.midX, y: self.worldBounds.midY)
-            self.setCameraScale(targetScale)
+            self.cameraNode.position = target.position
+            self.setCameraScale(target.scale)
+            self.clampCamera()
         }
         if animated {
             cameraNode.run(.group([
-                .move(to: CGPoint(x: worldBounds.midX, y: worldBounds.midY), duration: 0.25),
-                .scale(to: targetScale, duration: 0.25)
-            ]))
+                .move(to: target.position, duration: 0.25),
+                .scale(to: target.scale, duration: 0.25)
+            ])) {
+                self.setCameraScale(target.scale)
+                self.clampCamera()
+            }
         } else {
             updates()
         }
@@ -208,15 +355,41 @@ final class GameMapScene: SKScene {
 
     private func setCameraScale(_ scale: CGFloat) {
         cameraNode.setScale(scale)
+        // The preview contains only a handful of legs, so keeping it at a
+        // stable screen-space weight is inexpensive and remains readable when
+        // a continent-spanning route is fitted.
+        plannedRouteNode.lineWidth = StrokeWidth.plannedRoute * scale
+        previewRouteNode.lineWidth = StrokeWidth.previewRoute * scale
 
         for node in cityNodes.values { node.setScale(scale) }
+        for node in plannedVisitNodes.values { node.setScale(scale) }
         for (id, node) in vehicleNodes {
             node.setScale(scale)
             if let marker = vehicleMarkers[id] {
-                node.position = displayPosition(for: marker, cameraScale: scale)
+                node.position = displayPosition(for: marker)
             }
         }
         updateSemanticZoom()
+    }
+
+    private static func bounds(containing points: [CGPoint]) -> CGRect? {
+        guard let first = points.first else { return nil }
+        var minX = first.x
+        var maxX = first.x
+        var minY = first.y
+        var maxY = first.y
+        for point in points.dropFirst() {
+            minX = min(minX, point.x)
+            maxX = max(maxX, point.x)
+            minY = min(minY, point.y)
+            maxY = max(maxY, point.y)
+        }
+        return CGRect(
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        )
     }
 
     private func clampCamera() {
@@ -254,11 +427,15 @@ final class GameMapScene: SKScene {
 
         terrainLayer.zPosition = 0
         routeLayer.zPosition = 20
+        plannedRouteLayer.zPosition = 30
         cityLayer.zPosition = 40
+        plannedVisitLayer.zPosition = 50
         vehicleLayer.zPosition = 60
         addChild(terrainLayer)
         addChild(routeLayer)
+        addChild(plannedRouteLayer)
         addChild(cityLayer)
+        addChild(plannedVisitLayer)
         addChild(vehicleLayer)
 
         addGeography()
@@ -278,6 +455,21 @@ final class GameMapScene: SKScene {
         deadheadRouteNode.lineWidth = StrokeWidth.deadheadRoute
         deadheadRouteNode.zPosition = 1
         routeLayer.addChild(deadheadRouteNode)
+
+        plannedRouteNode.strokeColor = accentColor.withAlphaComponent(0.78)
+        plannedRouteNode.lineCap = .round
+        plannedRouteNode.lineJoin = .round
+        plannedRouteNode.lineWidth = StrokeWidth.plannedRoute
+        plannedRouteNode.glowWidth = 1
+        plannedRouteLayer.addChild(plannedRouteNode)
+
+        previewRouteNode.strokeColor = accentColor.withAlphaComponent(0.7)
+        previewRouteNode.lineCap = .round
+        previewRouteNode.lineJoin = .round
+        previewRouteNode.lineWidth = StrokeWidth.previewRoute
+        previewRouteNode.glowWidth = 0
+        previewRouteNode.zPosition = 0
+        plannedRouteLayer.addChild(previewRouteNode)
     }
 
     private func addGeography() {
@@ -349,13 +541,22 @@ final class GameMapScene: SKScene {
 
     // MARK: - Dynamic layers
 
-    /// Draws each active route as a smooth city-to-city quadratic arc, matching
-    /// the design's stylized network (no road-following polylines).
-    private func rebuildActiveRoutes(_ overlays: [MapRouteOverlay]) {
+    /// Draws live and planned routes as smooth city-to-city quadratic arcs.
+    /// Planned geometry owns a separate layer so it cannot inherit live cargo
+    /// or deadhead styling.
+    private func rebuildRouteOverlays(_ overlays: [MapRouteOverlay]) {
         let loaded = CGMutablePath()
         let deadhead = CGMutablePath()
+        let planned = CGMutablePath()
+        let preview = CGMutablePath()
         for overlay in overlays {
-            let target = overlay.kind == .loaded ? loaded : deadhead
+            let target: CGMutablePath
+            switch overlay.kind {
+            case .loaded: target = loaded
+            case .deadhead: target = deadhead
+            case .planned: target = planned
+            case .preview: target = preview
+            }
             let anchors = overlay.anchors
             guard anchors.count >= 2 else { continue }
             for index in 0..<(anchors.count - 1) {
@@ -371,6 +572,35 @@ final class GameMapScene: SKScene {
             dashingWithPhase: 0,
             lengths: [StrokeWidth.deadheadRoute * 1.6, StrokeWidth.deadheadRoute * 2.4]
         )
+        plannedRouteNode.path = planned
+        previewRouteNode.path = preview.copy(
+            dashingWithPhase: 0,
+            lengths: [StrokeWidth.previewRoute * 2.2, StrokeWidth.previewRoute * 2.8]
+        )
+    }
+
+    private func rebuildPlannedVisits(_ markers: [MapPlannedVisitMarker]) {
+        for node in plannedVisitNodes.values {
+            node.removeFromParent()
+        }
+        plannedVisitNodes = [:]
+        plannedVisitMarkers = Dictionary(uniqueKeysWithValues: markers.map { ($0.id, $0) })
+
+        for marker in markers {
+            let node = MapPlannedVisitNode()
+            node.position = marker.position
+            node.configure(marker: marker, accent: accentColor)
+            node.setScale(cameraNode.xScale)
+            plannedVisitLayer.addChild(node)
+            plannedVisitNodes[marker.id] = node
+        }
+    }
+
+    private func updatePlannedVisitStyles() {
+        for (cityID, node) in plannedVisitNodes {
+            guard let marker = plannedVisitMarkers[cityID] else { continue }
+            node.configure(marker: marker, accent: accentColor)
+        }
     }
 
     private func updateVehicles(_ markers: [MapVehicleMarker]) {
@@ -384,48 +614,55 @@ final class GameMapScene: SKScene {
         }
 
         for marker in markers {
-            let node: SKSpriteNode
+            let node: MapVehicleNode
             if let existing = vehicleNodes[marker.id] {
                 node = existing
             } else {
-                node = recycledVehicleNodes.popLast() ?? makeVehicleNode()
-                node.color = accentColor
+                node = recycledVehicleNodes.popLast() ?? MapVehicleNode()
                 vehicleLayer.addChild(node)
                 vehicleNodes[marker.id] = node
             }
 
             vehicleMarkers[marker.id] = marker
-            let target = displayPosition(for: marker, cameraScale: cameraNode.xScale)
+            node.apply(
+                marker: marker,
+                accent: accentColor,
+                isSelected: marker.id == selectedVehicleID,
+                cameraScale: cameraNode.xScale
+            )
+            let target = displayPosition(for: marker)
             if marker.isMoving, node.parent != nil, node.position != .zero {
-                node.run(.move(to: target, duration: 0.28), withKey: "movement")
-                node.run(.rotate(toAngle: marker.headingRadians, duration: 0.18, shortestUnitArc: true), withKey: "heading")
+                // Match the simulation tick window so motion fills the whole
+                // second instead of a short burst followed by a visible pause.
+                let move = SKAction.move(
+                    to: target,
+                    duration: SimulationSpeed.clockTickSeconds
+                )
+                move.timingMode = .linear
+                node.run(move, withKey: "movement")
             } else {
                 node.removeAction(forKey: "movement")
                 node.position = target
-                node.zRotation = marker.headingRadians
             }
-            node.alpha = marker.isMoving ? 1 : 0.82
             node.setScale(cameraNode.xScale)
         }
     }
 
-    private func makeVehicleNode() -> SKSpriteNode {
-        let node = SKSpriteNode(texture: MapVehicleTexture.shared)
-        node.size = CGSize(width: 22, height: 14)
-        node.colorBlendFactor = 1
-        node.color = accentColor
-        node.zPosition = 1
-        return node
+    private func updateVehicleStyles() {
+        for (id, node) in vehicleNodes {
+            guard let marker = vehicleMarkers[id] else { continue }
+            node.apply(
+                marker: marker,
+                accent: accentColor,
+                isSelected: id == selectedVehicleID,
+                cameraScale: cameraNode.xScale
+            )
+        }
     }
 
-    private func displayPosition(for marker: MapVehicleMarker, cameraScale: CGFloat) -> CGPoint {
-        guard !marker.isMoving else { return marker.position }
-        let column = marker.stackIndex % 3
-        let row = marker.stackIndex / 3
-        return CGPoint(
-            x: marker.position.x + CGFloat(18 + column * 14) * cameraScale,
-            y: marker.position.y - CGFloat(15 + row * 12) * cameraScale
-        )
+    /// Loading/unloading stay on the city anchor; moving vehicles use interpolated arc points.
+    private func displayPosition(for marker: MapVehicleMarker) -> CGPoint {
+        marker.position
     }
 
     private func updateCityStyles() {
@@ -434,14 +671,15 @@ final class GameMapScene: SKScene {
                 isHQ: city.id == hqCityID,
                 isStarter: highlightsStarterCities && city.isStarterCity,
                 isSelected: city.id == selectedCityID,
-                accent: accentColor
+                accent: accentColor,
+                idleFleetCount: idleFleetByCity[city.id, default: 0]
             )
         }
         updateSemanticZoom()
     }
 
     private func updateSemanticZoom() {
-        let relativeScale = cameraNode.xScale / max(fitScale, 0.001)
+        let zoomOut = zoomOutAmount
         for city in catalog.cities {
             let isEmphasized = city.id == selectedCityID
                 || city.id == hqCityID
@@ -455,17 +693,9 @@ final class GameMapScene: SKScene {
                 importance = .local
             }
             cityNodes[city.id]?.setSemanticZoom(
-                markerScale: markerScale(relativeScale: relativeScale, importance: importance),
-                markerAlpha: markerAlpha(
-                    relativeScale: relativeScale,
-                    importance: importance,
-                    isEmphasized: isEmphasized
-                ),
-                labelAlpha: labelAlpha(
-                    relativeScale: relativeScale,
-                    importance: importance,
-                    isEmphasized: isEmphasized
-                )
+                markerScale: markerScale(zoomOut: zoomOut, importance: importance, isEmphasized: isEmphasized),
+                markerAlpha: 1,
+                labelAlpha: labelAlpha(zoomOut: zoomOut, importance: importance, isEmphasized: isEmphasized)
             )
         }
     }
@@ -476,64 +706,63 @@ final class GameMapScene: SKScene {
         case major
     }
 
-    /// Relative scale is 1 when the whole map is fitted. Values below 1 are
-    /// closer zoom levels; values above 1 are strategic, zoomed-out levels.
-    private func markerScale(relativeScale: CGFloat, importance: CityImportance) -> CGFloat {
-        let zoomInProgress = ((0.75 - relativeScale) / 0.55).clamped(to: 0...1)
-        let zoomOutProgress = ((relativeScale - 0.75) / 1.25).clamped(to: 0...1)
-        let importanceAdjustment: CGFloat
-        switch importance {
-        case .local: importanceAdjustment = -0.10
-        case .regional: importanceAdjustment = 0
-        case .major: importanceAdjustment = 0.08
-        }
-        return 1 + zoomInProgress * 0.25
-            - zoomOutProgress * 0.38
-            + zoomOutProgress * importanceAdjustment
+    /// 0 at closest zoom-in, 1 at the farthest allowed zoom-out.
+    private var zoomOutAmount: CGFloat {
+        let minScale = cameraScaleRange.lowerBound
+        let maxScale = cameraScaleRange.upperBound
+        let span = max(maxScale - minScale, 0.0001)
+        return ((cameraNode.xScale - minScale) / span).clamped(to: 0...1)
     }
 
-    private func markerAlpha(
-        relativeScale: CGFloat,
+    /// Counter-scaled cities stay ~constant on screen unless this shrinks them
+    /// as the camera pulls back — small dots at full zoom-out.
+    private func markerScale(
+        zoomOut: CGFloat,
         importance: CityImportance,
         isEmphasized: Bool
     ) -> CGFloat {
-        let zoomOutProgress = ((relativeScale - 0.75) / 1.25).clamped(to: 0...1)
-        let maximumFade: CGFloat
+        let closeScale: CGFloat = isEmphasized ? 1.20 : 1.08
+        let farScale: CGFloat
         switch importance {
-        case .local: maximumFade = 0.55
-        case .regional: maximumFade = 0.34
-        case .major: maximumFade = 0.16
+        case .local: farScale = isEmphasized ? 0.42 : 0.32
+        case .regional: farScale = isEmphasized ? 0.48 : 0.38
+        case .major: farScale = isEmphasized ? 0.55 : 0.44
         }
-        let baseAlpha = 1 - zoomOutProgress * maximumFade
-        return isEmphasized ? max(baseAlpha, 0.88) : baseAlpha
+        // Ease toward tiny dots in the second half of zoom-out.
+        let t = smoothstep(((zoomOut - 0.08) / 0.92).clamped(to: 0...1))
+        return closeScale + (farScale - closeScale) * t
     }
 
+    /// Labels disappear small → large. At full zoom-out every name is gone.
     private func labelAlpha(
-        relativeScale: CGFloat,
+        zoomOut: CGFloat,
         importance: CityImportance,
         isEmphasized: Bool
     ) -> CGFloat {
+        let start: CGFloat
+        let end: CGFloat
         if isEmphasized {
-            return fadeOutAlpha(relativeScale, startsAt: 1.20, endsAt: 1.85)
+            // HQ / selection linger longest, but still clear by full zoom-out.
+            start = 0.55
+            end = 0.92
+        } else {
+            switch importance {
+            case .local:
+                start = 0.08
+                end = 0.36
+            case .regional:
+                start = 0.28
+                end = 0.58
+            case .major:
+                start = 0.45
+                end = 0.78
+            }
         }
-        switch importance {
-        case .local:
-            return fadeOutAlpha(relativeScale, startsAt: 0.28, endsAt: 0.52)
-        case .regional:
-            return fadeOutAlpha(relativeScale, startsAt: 0.48, endsAt: 0.86)
-        case .major:
-            return fadeOutAlpha(relativeScale, startsAt: 0.82, endsAt: 1.48)
-        }
+        return 1 - smoothstep(((zoomOut - start) / max(end - start, 0.0001)).clamped(to: 0...1))
     }
 
-    private func fadeOutAlpha(
-        _ value: CGFloat,
-        startsAt start: CGFloat,
-        endsAt end: CGFloat
-    ) -> CGFloat {
-        let progress = ((value - start) / (end - start)).clamped(to: 0...1)
-        let smoothProgress = progress * progress * (3 - 2 * progress)
-        return 1 - smoothProgress
+    private func smoothstep(_ t: CGFloat) -> CGFloat {
+        t * t * (3 - 2 * t)
     }
 
     private static func makeWorldBounds(
@@ -543,8 +772,7 @@ final class GameMapScene: SKScene {
     ) -> CGRect {
         // Borders are dense polylines; land/water already define the globe
         // extent, so skip them here to keep scene init cheap.
-        let points = catalog.roads.flatMap(\.geometry).map(projection.point(for:))
-            + catalog.cities.map(projection.point(for:))
+        let points = catalog.cities.map(projection.point(for:))
             + geography.landMasses.flatMap(\.points).map(projection.point(for:))
             + geography.waterBodies.flatMap(\.points).map(projection.point(for:))
         guard let first = points.first else { return CGRect(x: -100, y: -100, width: 200, height: 200) }
@@ -561,14 +789,119 @@ final class GameMapScene: SKScene {
 // MARK: - Map nodes
 
 @MainActor
+private final class MapPlannedVisitNode: SKNode {
+    private let marker = SKShapeNode(circleOfRadius: 13)
+    private let stepLabel = SKLabelNode(fontNamed: "AvenirNext-Bold")
+    private let pickupBadge = SKShapeNode(circleOfRadius: 7.5)
+    private let deliveryBadge = SKShapeNode(circleOfRadius: 7.5)
+    private let pickupIcon = SKSpriteNode()
+    private let deliveryIcon = SKSpriteNode()
+
+    override init() {
+        super.init()
+
+        marker.fillColor = MapPalette.water
+        marker.lineWidth = 2.2
+        marker.zPosition = 1
+        addChild(marker)
+
+        stepLabel.fontSize = 9
+        stepLabel.verticalAlignmentMode = .center
+        stepLabel.horizontalAlignmentMode = .center
+        stepLabel.position = CGPoint(x: 0, y: -0.5)
+        stepLabel.zPosition = 2
+        addChild(stepLabel)
+
+        configureBadge(
+            pickupBadge,
+            icon: pickupIcon,
+            symbol: "tray.and.arrow.up.fill"
+        )
+        configureBadge(
+            deliveryBadge,
+            icon: deliveryIcon,
+            symbol: "tray.and.arrow.down.fill"
+        )
+    }
+
+    @available(*, unavailable)
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(marker value: MapPlannedVisitMarker, accent: UIColor) {
+        let numberText = value.stepNumbers.map(String.init).joined(separator: "·")
+        stepLabel.text = numberText
+        stepLabel.fontSize = numberText.count > 4 ? 7 : (numberText.count > 2 ? 8 : 9)
+        stepLabel.fontColor = accent
+        marker.strokeColor = accent
+        marker.glowWidth = 0.5
+
+        pickupBadge.isHidden = !value.hasPickup
+        deliveryBadge.isHidden = !value.hasDelivery
+        pickupBadge.fillColor = accent
+        pickupBadge.strokeColor = MapPalette.water
+        deliveryBadge.fillColor = MapPalette.mint
+        deliveryBadge.strokeColor = MapPalette.water
+        pickupIcon.color = MapPalette.onBrand
+        deliveryIcon.color = MapPalette.water
+
+        let visibleBadges = [pickupBadge, deliveryBadge].filter { !$0.isHidden }
+        if visibleBadges.count == 1 {
+            visibleBadges[0].position = CGPoint(x: 0, y: -21)
+        } else {
+            pickupBadge.position = CGPoint(x: -9, y: -21)
+            deliveryBadge.position = CGPoint(x: 9, y: -21)
+        }
+    }
+
+    private func configureBadge(
+        _ badge: SKShapeNode,
+        icon: SKSpriteNode,
+        symbol: String
+    ) {
+        badge.lineWidth = 1.2
+        badge.zPosition = 3
+        addChild(badge)
+
+        icon.texture = Self.symbolTexture(named: symbol)
+        icon.size = CGSize(width: 9, height: 9)
+        icon.colorBlendFactor = 1
+        icon.zPosition = 1
+        badge.addChild(icon)
+    }
+
+    private static func symbolTexture(named name: String) -> SKTexture? {
+        let configuration = UIImage.SymbolConfiguration(pointSize: 10, weight: .black)
+        guard let image = UIImage(
+            systemName: name,
+            withConfiguration: configuration
+        )?.withTintColor(.white, renderingMode: .alwaysOriginal) else {
+            return nil
+        }
+        return SKTexture(image: image)
+    }
+}
+
+@MainActor
 private final class MapCityNode: SKNode {
     private let markerContainer = SKNode()
     private let marker = SKShapeNode(circleOfRadius: 7)
+    /// Design 1b HQ pin: rounded square filled with the company brand color.
+    private let hqMarker = SKShapeNode(
+        rect: CGRect(x: -8, y: -8, width: 16, height: 16),
+        cornerRadius: 5
+    )
     private let halo = SKShapeNode(circleOfRadius: 12)
     private let selectionRing = SKShapeNode(circleOfRadius: 10)
+    private let labelRow = SKNode()
     private let label = SKLabelNode(fontNamed: "AvenirNext-DemiBold")
+    private let fleetBadge = SKShapeNode(circleOfRadius: 7)
+    private let fleetCount = SKLabelNode(fontNamed: "AvenirNext-Bold")
+    private let cityName: String
 
     init(city: CityDefinition) {
+        cityName = city.name
         super.init()
         markerContainer.zPosition = 2
         addChild(markerContainer)
@@ -578,6 +911,13 @@ private final class MapCityNode: SKNode {
         marker.lineWidth = 1.8
         marker.zPosition = 2
         markerContainer.addChild(marker)
+
+        hqMarker.fillColor = MapPalette.gold
+        hqMarker.strokeColor = MapPalette.water
+        hqMarker.lineWidth = 1.5
+        hqMarker.zPosition = 3
+        hqMarker.isHidden = true
+        markerContainer.addChild(hqMarker)
 
         halo.strokeColor = MapPalette.city
         halo.lineWidth = 1.5
@@ -593,14 +933,33 @@ private final class MapCityNode: SKNode {
         selectionRing.isHidden = true
         markerContainer.addChild(selectionRing)
 
+        labelRow.zPosition = 4
+        labelRow.position = CGPoint(x: 0, y: 11)
+        addChild(labelRow)
+
         label.text = city.name
         label.fontSize = 11
         label.fontColor = MapPalette.label
-        label.verticalAlignmentMode = .bottom
-        label.horizontalAlignmentMode = .center
-        label.position = CGPoint(x: 0, y: 11)
-        label.zPosition = 4
-        addChild(label)
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .left
+        labelRow.addChild(label)
+
+        fleetBadge.fillColor = MapPalette.gold
+        fleetBadge.strokeColor = MapPalette.water
+        fleetBadge.lineWidth = 1.2
+        fleetBadge.zPosition = 1
+        fleetBadge.isHidden = true
+        labelRow.addChild(fleetBadge)
+
+        // Baseline + left: frame ortası dairenin (0,0) noktasına taşınır (optik ortalama).
+        fleetCount.fontSize = 9
+        fleetCount.fontColor = MapPalette.water
+        fleetCount.verticalAlignmentMode = .baseline
+        fleetCount.horizontalAlignmentMode = .left
+        fleetCount.zPosition = 2
+        fleetBadge.addChild(fleetCount)
+
+        layoutLabelRow()
     }
 
     @available(*, unavailable)
@@ -608,12 +967,28 @@ private final class MapCityNode: SKNode {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func configure(isHQ: Bool, isStarter: Bool, isSelected: Bool, accent: UIColor) {
-        let color = isHQ ? accent : (isStarter ? MapPalette.gold : MapPalette.city)
-        marker.fillColor = color
-        halo.strokeColor = color
+    func configure(
+        isHQ: Bool,
+        isStarter: Bool,
+        isSelected: Bool,
+        accent: UIColor,
+        idleFleetCount: Int
+    ) {
+        marker.isHidden = isHQ
+        hqMarker.isHidden = !isHQ
+        if isHQ {
+            hqMarker.fillColor = accent
+            hqMarker.strokeColor = MapPalette.water
+            halo.strokeColor = accent
+        } else {
+            let color = isStarter ? MapPalette.gold : MapPalette.city
+            marker.fillColor = color
+            marker.strokeColor = isStarter ? MapPalette.gold : MapPalette.cityStroke
+            halo.strokeColor = color
+        }
         halo.isHidden = !(isHQ || isStarter)
         selectionRing.isHidden = !isSelected
+        selectionRing.strokeColor = isHQ ? accent : .white
         if halo.isHidden {
             halo.removeAllActions()
             halo.alpha = 1
@@ -624,40 +999,54 @@ private final class MapCityNode: SKNode {
                 .group([.scale(to: 0.9, duration: 0), .fadeAlpha(to: 0.85, duration: 0)])
             ])), withKey: "pulse")
         }
+
+        let showBadge = idleFleetCount > 0
+        fleetBadge.isHidden = !showBadge
+        fleetCount.isHidden = !showBadge
+        if showBadge {
+            fleetBadge.fillColor = accent
+            fleetCount.fontColor = MapPalette.onBrand
+            fleetCount.text = idleFleetCount > 9 ? "9+" : "\(idleFleetCount)"
+        }
+        layoutLabelRow()
     }
 
     func setSemanticZoom(markerScale: CGFloat, markerAlpha: CGFloat, labelAlpha: CGFloat) {
         markerContainer.setScale(markerScale)
         markerContainer.alpha = markerAlpha
-        label.position.y = 8 + 7 * markerScale
-        label.alpha = labelAlpha
-        label.isHidden = labelAlpha < 0.01
+        labelRow.position.y = 8 + 7 * markerScale
+        labelRow.setScale(max(0.55, 0.55 + 0.45 * labelAlpha))
+        labelRow.alpha = labelAlpha
+        labelRow.isHidden = labelAlpha < 0.02
     }
-}
 
-private enum MapVehicleTexture {
-    static let shared: SKTexture = {
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 44, height: 28))
-        let image = renderer.image { context in
-            let cg = context.cgContext
-            cg.setFillColor(UIColor.white.cgColor)
-            let body = UIBezierPath(roundedRect: CGRect(x: 3, y: 8, width: 25, height: 12), cornerRadius: 3)
-            body.fill()
-            let cabin = UIBezierPath()
-            cabin.move(to: CGPoint(x: 28, y: 11))
-            cabin.addLine(to: CGPoint(x: 35, y: 11))
-            cabin.addLine(to: CGPoint(x: 40, y: 17))
-            cabin.addLine(to: CGPoint(x: 40, y: 20))
-            cabin.addLine(to: CGPoint(x: 28, y: 20))
-            cabin.close()
-            cabin.fill()
-            cg.fillEllipse(in: CGRect(x: 9, y: 18, width: 7, height: 7))
-            cg.fillEllipse(in: CGRect(x: 31, y: 18, width: 7, height: 7))
+    private func layoutLabelRow() {
+        label.position = .zero
+        // Gerçek glif kutusu: isim işaret altında ortalı kalsın.
+        let nameFrame = label.frame
+        if nameFrame.width > 1 {
+            labelRow.position.x = -nameFrame.midX
+        } else {
+            labelRow.position.x = -(CGFloat(cityName.count) * 6.2) / 2
         }
-        let texture = SKTexture(image: image)
-        texture.filteringMode = .linear
-        return texture
-    }()
+        guard !fleetBadge.isHidden else { return }
+
+        let gap = label.fontSize * 0.12
+        let badgeRadius: CGFloat = 7
+        // Rozet merkezi, isim kutusunun dikey ortası ve sağ kenarı ile hizalı.
+        let nameEndX = nameFrame.width > 1
+            ? nameFrame.maxX
+            : CGFloat(cityName.count) * 6.2
+        let nameMidY = nameFrame.width > 1 ? nameFrame.midY : 0
+        fleetBadge.position = CGPoint(x: nameEndX + gap + badgeRadius, y: nameMidY)
+
+        // Rakam bounding box'unu dairenin merkezine kilitle.
+        fleetCount.position = .zero
+        let digitFrame = fleetCount.frame
+        if digitFrame.width > 0.5, digitFrame.height > 0.5 {
+            fleetCount.position = CGPoint(x: -digitFrame.midX, y: -digitFrame.midY)
+        }
+    }
 }
 
 private enum MapPalette {
@@ -670,7 +1059,161 @@ private enum MapPalette {
     static let cityStroke = UIColor(red: 0.478, green: 0.588, blue: 0.722, alpha: 1) // #7A96B8
     static let gold = UIColor(red: 1.0, green: 0.690, blue: 0.216, alpha: 1)         // #FFB037
     static let deadhead = UIColor(red: 1.0, green: 0.420, blue: 0.369, alpha: 0.85)  // #FF6B5E coral
+    static let mint = UIColor(red: 0.310, green: 0.839, blue: 0.643, alpha: 1)       // #4FD6A4
     static let label = UIColor(red: 0.949, green: 0.929, blue: 0.886, alpha: 0.62)   // #F2EDE3
+    static let onBrand = UIColor(red: 0.141, green: 0.082, blue: 0, alpha: 1)         // #241500
+}
+
+private final class MapVehicleNode: SKNode {
+    private static let bodyRect = CGRect(x: -5.5, y: -3.5, width: 11, height: 7)
+    private static let bodyCorner: CGFloat = 2.4
+
+    private let selectionRing = SKShapeNode(circleOfRadius: 9)
+    private let chassis = SKNode()
+    /// Dim full capsule (empty / traveling base).
+    private let body = SKShapeNode(
+        rect: MapVehicleNode.bodyRect,
+        cornerRadius: MapVehicleNode.bodyCorner
+    )
+    /// Loading/unloading fill that grows left → right inside the capsule.
+    private let fillCrop = SKCropNode()
+    private let fillBody = SKShapeNode(
+        rect: MapVehicleNode.bodyRect,
+        cornerRadius: MapVehicleNode.bodyCorner
+    )
+    private let fillMask = SKSpriteNode(color: .white, size: CGSize(width: 11, height: 7))
+    private let outline = SKShapeNode(
+        rect: MapVehicleNode.bodyRect,
+        cornerRadius: MapVehicleNode.bodyCorner
+    )
+    private let labelBackground = SKShapeNode()
+    private let label = SKLabelNode(fontNamed: "AvenirNext-Bold")
+
+    override init() {
+        super.init()
+        selectionRing.fillColor = .clear
+        selectionRing.lineWidth = 1.4
+        selectionRing.alpha = 0
+        selectionRing.zPosition = 0
+        addChild(selectionRing)
+
+        chassis.zPosition = 1
+        addChild(chassis)
+
+        body.fillColor = .white
+        body.strokeColor = .clear
+        body.lineWidth = 0
+        body.zPosition = 0
+        chassis.addChild(body)
+
+        fillBody.fillColor = .white
+        fillBody.strokeColor = .clear
+        fillBody.lineWidth = 0
+        fillCrop.addChild(fillBody)
+        fillMask.anchorPoint = CGPoint(x: 0, y: 0.5)
+        fillMask.position = CGPoint(x: Self.bodyRect.minX, y: 0)
+        fillCrop.maskNode = fillMask
+        fillCrop.zPosition = 1
+        fillCrop.isHidden = true
+        chassis.addChild(fillCrop)
+
+        outline.fillColor = .clear
+        outline.strokeColor = MapPalette.water
+        outline.lineWidth = 1
+        outline.zPosition = 2
+        chassis.addChild(outline)
+
+        labelBackground.fillColor = UIColor(red: 0.039, green: 0.071, blue: 0.125, alpha: 0.85)
+        labelBackground.strokeColor = .clear
+        labelBackground.zPosition = 2
+        labelBackground.position = CGPoint(x: 0, y: 14)
+        addChild(labelBackground)
+
+        label.fontSize = 7.5
+        label.fontColor = MapPalette.label.withAlphaComponent(0.92)
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+        label.zPosition = 3
+        labelBackground.addChild(label)
+    }
+
+    @available(*, unavailable)
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func apply(
+        marker: MapVehicleMarker,
+        accent: UIColor,
+        isSelected: Bool,
+        cameraScale: CGFloat
+    ) {
+        _ = cameraScale
+        let heading = Self.stabilizedHeading(marker.headingRadians)
+        if marker.isMoving {
+            chassis.run(
+                .rotate(
+                    toAngle: heading,
+                    duration: SimulationSpeed.clockTickSeconds,
+                    shortestUnitArc: true
+                ),
+                withKey: "heading"
+            )
+        } else {
+            chassis.removeAction(forKey: "heading")
+            chassis.zRotation = heading
+        }
+
+        if let progress = marker.serviceProgress {
+            let clamped = max(0, min(1, progress))
+            body.fillColor = accent
+            body.alpha = 0.18
+            fillCrop.isHidden = false
+            fillBody.fillColor = accent
+            fillMask.size = CGSize(
+                width: max(0.35, Self.bodyRect.width * CGFloat(clamped)),
+                height: Self.bodyRect.height
+            )
+            outline.strokeColor = accent
+        } else {
+            fillCrop.isHidden = true
+            body.fillColor = accent
+            body.alpha = marker.isMoving ? 1 : 0.85
+            outline.strokeColor = MapPalette.water
+        }
+
+        label.text = marker.displayCode
+        label.fontColor = isSelected ? accent : MapPalette.label.withAlphaComponent(0.85)
+        let textWidth = max(28, CGFloat(marker.displayCode.count) * 5.2 + 12)
+        labelBackground.path = CGPath(
+            roundedRect: CGRect(x: -textWidth / 2, y: -5.5, width: textWidth, height: 11),
+            cornerWidth: 5.5,
+            cornerHeight: 5.5,
+            transform: nil
+        )
+        // Şehirdeyken isim, şehir adının üstünde; birden fazla araç dikey istiflenir.
+        if marker.serviceProgress != nil {
+            let baseY: CGFloat = 28
+            let stackStep: CGFloat = 13
+            labelBackground.position = CGPoint(
+                x: 0,
+                y: baseY + CGFloat(marker.labelStackIndex) * stackStep
+            )
+        } else {
+            labelBackground.position = CGPoint(x: 0, y: 14)
+        }
+
+        selectionRing.strokeColor = accent
+        selectionRing.alpha = isSelected ? 0.7 : 0
+    }
+
+    /// Keep heading in (-π, π] so shortest-arc rotates stay smooth across the ±π wrap.
+    private static func stabilizedHeading(_ radians: CGFloat) -> CGFloat {
+        var value = radians
+        while value <= -.pi { value += 2 * .pi }
+        while value > .pi { value -= 2 * .pi }
+        return value
+    }
 }
 
 private extension CGMutablePath {

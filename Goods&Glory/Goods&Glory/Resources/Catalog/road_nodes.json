@@ -72,15 +72,6 @@
     "cityID": "us_miami"
   },
   {
-    "id": "us_city_philadelphia",
-    "coordinate": {
-      "latitude": 40.009376,
-      "longitude": -75.133346
-    },
-    "kind": "city",
-    "cityID": "us_philadelphia"
-  },
-  {
     "id": "us_city_phoenix",
     "coordinate": {
       "latitude": 33.572154,
@@ -135,24 +126,6 @@
     "cityID": "us_minneapolis"
   },
   {
-    "id": "us_city_tampa",
-    "coordinate": {
-      "latitude": 27.970086,
-      "longitude": -82.479673
-    },
-    "kind": "city",
-    "cityID": "us_tampa"
-  },
-  {
-    "id": "us_city_san_diego",
-    "coordinate": {
-      "latitude": 32.830391,
-      "longitude": -117.120923
-    },
-    "kind": "city",
-    "cityID": "us_san_diego"
-  },
-  {
     "id": "us_city_denver",
     "coordinate": {
       "latitude": 39.76185,
@@ -160,15 +133,6 @@
     },
     "kind": "city",
     "cityID": "us_denver"
-  },
-  {
-    "id": "us_city_orlando",
-    "coordinate": {
-      "latitude": 28.5383,
-      "longitude": -81.3792
-    },
-    "kind": "city",
-    "cityID": "us_orlando"
   },
   {
     "id": "us_city_charlotte",
@@ -189,42 +153,6 @@
     "cityID": "us_st_louis"
   },
   {
-    "id": "us_city_san_antonio",
-    "coordinate": {
-      "latitude": 29.462809,
-      "longitude": -98.524635
-    },
-    "kind": "city",
-    "cityID": "us_san_antonio"
-  },
-  {
-    "id": "us_city_portland",
-    "coordinate": {
-      "latitude": 45.536951,
-      "longitude": -122.649971
-    },
-    "kind": "city",
-    "cityID": "us_portland"
-  },
-  {
-    "id": "us_city_sacramento",
-    "coordinate": {
-      "latitude": 38.567694,
-      "longitude": -121.468161
-    },
-    "kind": "city",
-    "cityID": "us_sacramento"
-  },
-  {
-    "id": "us_city_pittsburgh",
-    "coordinate": {
-      "latitude": 40.439936,
-      "longitude": -79.975676
-    },
-    "kind": "city",
-    "cityID": "us_pittsburgh"
-  },
-  {
     "id": "us_city_las_vegas",
     "coordinate": {
       "latitude": 36.1699,
@@ -232,15 +160,6 @@
     },
     "kind": "city",
     "cityID": "us_las_vegas"
-  },
-  {
-    "id": "us_city_cincinnati",
-    "coordinate": {
-      "latitude": 39.140183,
-      "longitude": -84.505829
-    },
-    "kind": "city",
-    "cityID": "us_cincinnati"
   },
   {
     "id": "us_city_kansas_city",
@@ -252,15 +171,6 @@
     "cityID": "us_kansas_city"
   },
   {
-    "id": "us_city_indianapolis",
-    "coordinate": {
-      "latitude": 39.776664,
-      "longitude": -86.145935
-    },
-    "kind": "city",
-    "cityID": "us_indianapolis"
-  },
-  {
     "id": "us_city_nashville",
     "coordinate": {
       "latitude": 36.1718,
@@ -268,51 +178,6 @@
     },
     "kind": "city",
     "cityID": "us_nashville"
-  },
-  {
-    "id": "us_city_cleveland",
-    "coordinate": {
-      "latitude": 41.478462,
-      "longitude": -81.679435
-    },
-    "kind": "city",
-    "cityID": "us_cleveland"
-  },
-  {
-    "id": "us_city_virginia_beach",
-    "coordinate": {
-      "latitude": 36.8529,
-      "longitude": -75.978
-    },
-    "kind": "city",
-    "cityID": "us_virginia_beach"
-  },
-  {
-    "id": "us_city_jacksonville",
-    "coordinate": {
-      "latitude": 30.336864,
-      "longitude": -81.661603
-    },
-    "kind": "city",
-    "cityID": "us_jacksonville"
-  },
-  {
-    "id": "us_city_oklahoma_city",
-    "coordinate": {
-      "latitude": 35.467079,
-      "longitude": -97.513657
-    },
-    "kind": "city",
-    "cityID": "us_oklahoma_city"
-  },
-  {
-    "id": "us_city_memphis",
-    "coordinate": {
-      "latitude": 35.109164,
-      "longitude": -89.968511
-    },
-    "kind": "city",
-    "cityID": "us_memphis"
   },
   {
     "id": "us_city_salt_lake_city",
@@ -324,15 +189,6 @@
     "cityID": "us_salt_lake_city"
   },
   {
-    "id": "us_city_omaha",
-    "coordinate": {
-      "latitude": 41.262705,
-      "longitude": -96.053475
-    },
-    "kind": "city",
-    "cityID": "us_omaha"
-  },
-  {
     "id": "us_city_new_orleans",
     "coordinate": {
       "latitude": 30.05342,
@@ -340,24 +196,6 @@
     },
     "kind": "city",
     "cityID": "us_new_orleans"
-  },
-  {
-    "id": "us_city_albuquerque",
-    "coordinate": {
-      "latitude": 35.10478,
-      "longitude": -106.646809
-    },
-    "kind": "city",
-    "cityID": "us_albuquerque"
-  },
-  {
-    "id": "us_city_el_paso",
-    "coordinate": {
-      "latitude": 31.84778,
-      "longitude": -106.431106
-    },
-    "kind": "city",
-    "cityID": "us_el_paso"
   },
   {
     "id": "us_junction_0001",
@@ -434,15 +272,6 @@
   {
     "id": "us_junction_0009",
     "coordinate": {
-      "latitude": 27.956568,
-      "longitude": -82.478669
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0010",
-    "coordinate": {
       "latitude": 27.965097,
       "longitude": -82.450665
     },
@@ -450,7 +279,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0011",
+    "id": "us_junction_0010",
     "coordinate": {
       "latitude": 28.002181,
       "longitude": -82.328106
@@ -459,7 +288,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0012",
+    "id": "us_junction_0011",
     "coordinate": {
       "latitude": 28.171943,
       "longitude": -82.392845
@@ -468,16 +297,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0013",
-    "coordinate": {
-      "latitude": 28.538724,
-      "longitude": -81.382774
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0014",
+    "id": "us_junction_0012",
     "coordinate": {
       "latitude": 29.15367,
       "longitude": -81.076993
@@ -486,7 +306,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0015",
+    "id": "us_junction_0013",
     "coordinate": {
       "latitude": 29.288949,
       "longitude": -94.834459
@@ -495,7 +315,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0016",
+    "id": "us_junction_0014",
     "coordinate": {
       "latitude": 29.396008,
       "longitude": -98.478331
@@ -504,7 +324,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0017",
+    "id": "us_junction_0015",
     "coordinate": {
       "latitude": 29.398514,
       "longitude": -98.508925
@@ -513,7 +333,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0018",
+    "id": "us_junction_0016",
     "coordinate": {
       "latitude": 29.430371,
       "longitude": -98.501889
@@ -522,7 +342,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0019",
+    "id": "us_junction_0017",
     "coordinate": {
       "latitude": 29.439853,
       "longitude": -98.481823
@@ -531,7 +351,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0020",
+    "id": "us_junction_0018",
     "coordinate": {
       "latitude": 29.454754,
       "longitude": -95.07995
@@ -540,16 +360,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0021",
-    "coordinate": {
-      "latitude": 29.463359,
-      "longitude": -98.516302
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0022",
+    "id": "us_junction_0019",
     "coordinate": {
       "latitude": 29.506357,
       "longitude": -95.11604
@@ -558,7 +369,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0023",
+    "id": "us_junction_0020",
     "coordinate": {
       "latitude": 29.534238,
       "longitude": -95.856601
@@ -567,7 +378,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0024",
+    "id": "us_junction_0021",
     "coordinate": {
       "latitude": 29.583469,
       "longitude": -95.180937
@@ -576,7 +387,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0025",
+    "id": "us_junction_0022",
     "coordinate": {
       "latitude": 29.602621,
       "longitude": -98.275227
@@ -585,7 +396,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0026",
+    "id": "us_junction_0023",
     "coordinate": {
       "latitude": 29.60896,
       "longitude": -95.208684
@@ -594,7 +405,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0027",
+    "id": "us_junction_0024",
     "coordinate": {
       "latitude": 29.613281,
       "longitude": -98.262364
@@ -603,7 +414,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0028",
+    "id": "us_junction_0025",
     "coordinate": {
       "latitude": 29.696676,
       "longitude": -95.288523
@@ -612,7 +423,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0029",
+    "id": "us_junction_0026",
     "coordinate": {
       "latitude": 29.728023,
       "longitude": -95.46479
@@ -621,7 +432,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0030",
+    "id": "us_junction_0027",
     "coordinate": {
       "latitude": 29.731352,
       "longitude": -95.414598
@@ -630,7 +441,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0031",
+    "id": "us_junction_0028",
     "coordinate": {
       "latitude": 29.732025,
       "longitude": -95.390136
@@ -639,7 +450,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0032",
+    "id": "us_junction_0029",
     "coordinate": {
       "latitude": 29.734865,
       "longitude": -95.370759
@@ -648,7 +459,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0033",
+    "id": "us_junction_0030",
     "coordinate": {
       "latitude": 29.742442,
       "longitude": -95.358516
@@ -657,7 +468,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0034",
+    "id": "us_junction_0031",
     "coordinate": {
       "latitude": 29.768926,
       "longitude": -95.34187
@@ -666,7 +477,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0035",
+    "id": "us_junction_0032",
     "coordinate": {
       "latitude": 29.773047,
       "longitude": -95.368936
@@ -675,7 +486,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0036",
+    "id": "us_junction_0033",
     "coordinate": {
       "latitude": 29.777514,
       "longitude": -95.427894
@@ -684,7 +495,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0037",
+    "id": "us_junction_0034",
     "coordinate": {
       "latitude": 29.777815,
       "longitude": -95.408072
@@ -693,7 +504,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0038",
+    "id": "us_junction_0035",
     "coordinate": {
       "latitude": 29.778764,
       "longitude": -95.388454
@@ -702,7 +513,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0039",
+    "id": "us_junction_0036",
     "coordinate": {
       "latitude": 29.782077,
       "longitude": -95.810376
@@ -711,7 +522,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0040",
+    "id": "us_junction_0037",
     "coordinate": {
       "latitude": 29.784295,
       "longitude": -95.465238
@@ -720,7 +531,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0041",
+    "id": "us_junction_0038",
     "coordinate": {
       "latitude": 29.816887,
       "longitude": -95.377956
@@ -729,7 +540,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0042",
+    "id": "us_junction_0039",
     "coordinate": {
       "latitude": 29.865519,
       "longitude": -95.404499
@@ -738,7 +549,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0043",
+    "id": "us_junction_0040",
     "coordinate": {
       "latitude": 29.878352,
       "longitude": -95.411558
@@ -747,7 +558,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0044",
+    "id": "us_junction_0041",
     "coordinate": {
       "latitude": 30.009221,
       "longitude": -95.42735
@@ -756,7 +567,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0045",
+    "id": "us_junction_0042",
     "coordinate": {
       "latitude": 30.039422,
       "longitude": -95.255009
@@ -765,7 +576,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0046",
+    "id": "us_junction_0043",
     "coordinate": {
       "latitude": 30.059316,
       "longitude": -89.940417
@@ -774,7 +585,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0047",
+    "id": "us_junction_0044",
     "coordinate": {
       "latitude": 30.093379,
       "longitude": -90.440072
@@ -783,7 +594,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0048",
+    "id": "us_junction_0045",
     "coordinate": {
       "latitude": 30.094642,
       "longitude": -94.091109
@@ -792,7 +603,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0049",
+    "id": "us_junction_0046",
     "coordinate": {
       "latitude": 30.127476,
       "longitude": -93.701426
@@ -801,7 +612,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0050",
+    "id": "us_junction_0047",
     "coordinate": {
       "latitude": 30.259114,
       "longitude": -92.015618
@@ -810,7 +621,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0051",
+    "id": "us_junction_0048",
     "coordinate": {
       "latitude": 30.266105,
       "longitude": -82.753966
@@ -819,7 +630,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0052",
+    "id": "us_junction_0049",
     "coordinate": {
       "latitude": 30.27136,
       "longitude": -95.137227
@@ -828,7 +639,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0053",
+    "id": "us_junction_0050",
     "coordinate": {
       "latitude": 30.302574,
       "longitude": -89.74307
@@ -837,7 +648,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0054",
+    "id": "us_junction_0051",
     "coordinate": {
       "latitude": 30.302758,
       "longitude": -89.730083
@@ -846,7 +657,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0055",
+    "id": "us_junction_0052",
     "coordinate": {
       "latitude": 30.324967,
       "longitude": -81.679187
@@ -855,16 +666,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0056",
-    "coordinate": {
-      "latitude": 30.338663,
-      "longitude": -81.66813
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0057",
+    "id": "us_junction_0053",
     "coordinate": {
       "latitude": 30.418416,
       "longitude": -91.119789
@@ -873,7 +675,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0058",
+    "id": "us_junction_0054",
     "coordinate": {
       "latitude": 30.479416,
       "longitude": -90.489384
@@ -882,7 +684,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0059",
+    "id": "us_junction_0055",
     "coordinate": {
       "latitude": 30.630716,
       "longitude": -88.117214
@@ -891,7 +693,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0060",
+    "id": "us_junction_0056",
     "coordinate": {
       "latitude": 30.683275,
       "longitude": -95.534039
@@ -900,7 +702,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0061",
+    "id": "us_junction_0057",
     "coordinate": {
       "latitude": 30.804897,
       "longitude": -95.687738
@@ -909,7 +711,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0062",
+    "id": "us_junction_0058",
     "coordinate": {
       "latitude": 31.048958,
       "longitude": -97.462701
@@ -918,7 +720,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0063",
+    "id": "us_junction_0059",
     "coordinate": {
       "latitude": 31.085423,
       "longitude": -104.066567
@@ -927,7 +729,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0064",
+    "id": "us_junction_0060",
     "coordinate": {
       "latitude": 31.121486,
       "longitude": -97.844026
@@ -936,7 +738,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0065",
+    "id": "us_junction_0061",
     "coordinate": {
       "latitude": 31.333668,
       "longitude": -110.94483
@@ -945,16 +747,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0066",
-    "coordinate": {
-      "latitude": 31.78064,
-      "longitude": -106.40798
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0067",
+    "id": "us_junction_0062",
     "coordinate": {
       "latitude": 32.051469,
       "longitude": -97.093839
@@ -963,7 +756,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0068",
+    "id": "us_junction_0063",
     "coordinate": {
       "latitude": 32.071348,
       "longitude": -81.105174
@@ -972,7 +765,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0069",
+    "id": "us_junction_0064",
     "coordinate": {
       "latitude": 32.074128,
       "longitude": -81.246202
@@ -981,7 +774,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0070",
+    "id": "us_junction_0065",
     "coordinate": {
       "latitude": 32.191283,
       "longitude": -110.978364
@@ -990,7 +783,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0071",
+    "id": "us_junction_0066",
     "coordinate": {
       "latitude": 32.246408,
       "longitude": -106.722001
@@ -999,7 +792,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0072",
+    "id": "us_junction_0067",
     "coordinate": {
       "latitude": 32.260258,
       "longitude": -106.731913
@@ -1008,7 +801,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0073",
+    "id": "us_junction_0068",
     "coordinate": {
       "latitude": 32.276224,
       "longitude": -90.180442
@@ -1017,7 +810,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0074",
+    "id": "us_junction_0069",
     "coordinate": {
       "latitude": 32.35096,
       "longitude": -88.741877
@@ -1026,7 +819,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0075",
+    "id": "us_junction_0070",
     "coordinate": {
       "latitude": 32.367426,
       "longitude": -86.323162
@@ -1035,7 +828,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0076",
+    "id": "us_junction_0071",
     "coordinate": {
       "latitude": 32.493665,
       "longitude": -93.758089
@@ -1044,7 +837,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0077",
+    "id": "us_junction_0072",
     "coordinate": {
       "latitude": 32.499151,
       "longitude": -95.591027
@@ -1053,7 +846,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0078",
+    "id": "us_junction_0073",
     "coordinate": {
       "latitude": 32.512386,
       "longitude": -95.674645
@@ -1062,7 +855,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0079",
+    "id": "us_junction_0074",
     "coordinate": {
       "latitude": 32.54175,
       "longitude": -93.795346
@@ -1071,7 +864,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0080",
+    "id": "us_junction_0075",
     "coordinate": {
       "latitude": 32.543485,
       "longitude": -117.030559
@@ -1080,7 +873,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0081",
+    "id": "us_junction_0076",
     "coordinate": {
       "latitude": 32.60528,
       "longitude": -98.117961
@@ -1089,7 +882,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0082",
+    "id": "us_junction_0077",
     "coordinate": {
       "latitude": 32.617225,
       "longitude": -98.098625
@@ -1098,7 +891,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0083",
+    "id": "us_junction_0078",
     "coordinate": {
       "latitude": 32.643498,
       "longitude": -96.822901
@@ -1107,7 +900,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0084",
+    "id": "us_junction_0079",
     "coordinate": {
       "latitude": 32.661817,
       "longitude": -96.726363
@@ -1116,7 +909,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0085",
+    "id": "us_junction_0080",
     "coordinate": {
       "latitude": 32.667368,
       "longitude": -97.320111
@@ -1125,7 +918,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0086",
+    "id": "us_junction_0081",
     "coordinate": {
       "latitude": 32.72491,
       "longitude": -97.58111
@@ -1134,7 +927,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0087",
+    "id": "us_junction_0082",
     "coordinate": {
       "latitude": 32.746011,
       "longitude": -97.320977
@@ -1143,7 +936,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0088",
+    "id": "us_junction_0083",
     "coordinate": {
       "latitude": 32.754482,
       "longitude": -117.236254
@@ -1152,7 +945,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0089",
+    "id": "us_junction_0084",
     "coordinate": {
       "latitude": 32.757166,
       "longitude": -117.20307
@@ -1161,7 +954,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0090",
+    "id": "us_junction_0085",
     "coordinate": {
       "latitude": 32.759427,
       "longitude": -97.035168
@@ -1170,7 +963,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0091",
+    "id": "us_junction_0086",
     "coordinate": {
       "latitude": 32.75952,
       "longitude": -97.060464
@@ -1179,7 +972,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0092",
+    "id": "us_junction_0087",
     "coordinate": {
       "latitude": 32.759567,
       "longitude": -97.106128
@@ -1188,7 +981,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0093",
+    "id": "us_junction_0088",
     "coordinate": {
       "latitude": 32.759867,
       "longitude": -97.079769
@@ -1197,7 +990,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0094",
+    "id": "us_junction_0089",
     "coordinate": {
       "latitude": 32.765297,
       "longitude": -97.319535
@@ -1206,7 +999,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0095",
+    "id": "us_junction_0090",
     "coordinate": {
       "latitude": 32.769057,
       "longitude": -96.807283
@@ -1215,7 +1008,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0096",
+    "id": "us_junction_0091",
     "coordinate": {
       "latitude": 32.776286,
       "longitude": -117.112487
@@ -1224,7 +1017,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0097",
+    "id": "us_junction_0092",
     "coordinate": {
       "latitude": 32.777971,
       "longitude": -96.78157
@@ -1233,7 +1026,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0098",
+    "id": "us_junction_0093",
     "coordinate": {
       "latitude": 32.789351,
       "longitude": -96.761393
@@ -1242,7 +1035,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0099",
+    "id": "us_junction_0094",
     "coordinate": {
       "latitude": 32.795016,
       "longitude": -79.945446
@@ -1251,7 +1044,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0100",
+    "id": "us_junction_0095",
     "coordinate": {
       "latitude": 32.82052,
       "longitude": -117.118368
@@ -1260,7 +1053,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0101",
+    "id": "us_junction_0096",
     "coordinate": {
       "latitude": 32.820892,
       "longitude": -111.686758
@@ -1269,16 +1062,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0102",
-    "coordinate": {
-      "latitude": 32.830492,
-      "longitude": -117.119823
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0103",
+    "id": "us_junction_0097",
     "coordinate": {
       "latitude": 32.852204,
       "longitude": -117.115323
@@ -1287,7 +1071,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0104",
+    "id": "us_junction_0098",
     "coordinate": {
       "latitude": 32.855558,
       "longitude": -83.637647
@@ -1296,7 +1080,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0105",
+    "id": "us_junction_0099",
     "coordinate": {
       "latitude": 32.875472,
       "longitude": -117.108143
@@ -1305,7 +1089,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0106",
+    "id": "us_junction_0100",
     "coordinate": {
       "latitude": 32.882418,
       "longitude": -97.316244
@@ -1314,7 +1098,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0107",
+    "id": "us_junction_0101",
     "coordinate": {
       "latitude": 32.893557,
       "longitude": -117.226666
@@ -1323,7 +1107,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0108",
+    "id": "us_junction_0102",
     "coordinate": {
       "latitude": 32.924662,
       "longitude": -117.114367
@@ -1332,7 +1116,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0109",
+    "id": "us_junction_0103",
     "coordinate": {
       "latitude": 32.929634,
       "longitude": -117.240158
@@ -1341,7 +1125,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0110",
+    "id": "us_junction_0104",
     "coordinate": {
       "latitude": 32.981596,
       "longitude": -117.084851
@@ -1350,7 +1134,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0111",
+    "id": "us_junction_0105",
     "coordinate": {
       "latitude": 33.046962,
       "longitude": -117.072266
@@ -1359,7 +1143,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0112",
+    "id": "us_junction_0106",
     "coordinate": {
       "latitude": 33.065784,
       "longitude": -117.068976
@@ -1368,7 +1152,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0113",
+    "id": "us_junction_0107",
     "coordinate": {
       "latitude": 33.217429,
       "longitude": -97.169321
@@ -1377,7 +1161,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0114",
+    "id": "us_junction_0108",
     "coordinate": {
       "latitude": 33.31422,
       "longitude": -80.544131
@@ -1386,7 +1170,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0115",
+    "id": "us_junction_0109",
     "coordinate": {
       "latitude": 33.426545,
       "longitude": -112.03275
@@ -1395,7 +1179,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0116",
+    "id": "us_junction_0110",
     "coordinate": {
       "latitude": 33.462158,
       "longitude": -112.10925
@@ -1404,7 +1188,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0117",
+    "id": "us_junction_0111",
     "coordinate": {
       "latitude": 33.481184,
       "longitude": -93.987389
@@ -1413,7 +1197,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0118",
+    "id": "us_junction_0112",
     "coordinate": {
       "latitude": 33.517402,
       "longitude": -94.043359
@@ -1422,7 +1206,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0119",
+    "id": "us_junction_0113",
     "coordinate": {
       "latitude": 33.52152,
       "longitude": -86.826076
@@ -1431,7 +1215,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0120",
+    "id": "us_junction_0114",
     "coordinate": {
       "latitude": 33.536169,
       "longitude": -101.844408
@@ -1440,7 +1224,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0121",
+    "id": "us_junction_0115",
     "coordinate": {
       "latitude": 33.54311,
       "longitude": -117.177124
@@ -1449,7 +1233,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0122",
+    "id": "us_junction_0116",
     "coordinate": {
       "latitude": 33.547131,
       "longitude": -86.7556
@@ -1458,7 +1242,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0123",
+    "id": "us_junction_0117",
     "coordinate": {
       "latitude": 33.572819,
       "longitude": -112.117256
@@ -1467,7 +1251,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0124",
+    "id": "us_junction_0118",
     "coordinate": {
       "latitude": 33.573815,
       "longitude": -86.816879
@@ -1476,7 +1260,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0125",
+    "id": "us_junction_0119",
     "coordinate": {
       "latitude": 33.687036,
       "longitude": -84.401714
@@ -1485,7 +1269,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0126",
+    "id": "us_junction_0120",
     "coordinate": {
       "latitude": 33.69685,
       "longitude": -84.402807
@@ -1494,7 +1278,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0127",
+    "id": "us_junction_0121",
     "coordinate": {
       "latitude": 33.706762,
       "longitude": -84.403004
@@ -1503,7 +1287,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0128",
+    "id": "us_junction_0122",
     "coordinate": {
       "latitude": 33.743569,
       "longitude": -84.390985
@@ -1512,7 +1296,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0129",
+    "id": "us_junction_0123",
     "coordinate": {
       "latitude": 33.745346,
       "longitude": -84.431512
@@ -1521,7 +1305,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0130",
+    "id": "us_junction_0124",
     "coordinate": {
       "latitude": 33.756363,
       "longitude": -84.379956
@@ -1530,7 +1314,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0131",
+    "id": "us_junction_0125",
     "coordinate": {
       "latitude": 33.791618,
       "longitude": -84.392857
@@ -1539,7 +1323,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0132",
+    "id": "us_junction_0126",
     "coordinate": {
       "latitude": 33.827288,
       "longitude": -101.840932
@@ -1548,7 +1332,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0133",
+    "id": "us_junction_0127",
     "coordinate": {
       "latitude": 33.907006,
       "longitude": -98.500726
@@ -1557,7 +1341,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0134",
+    "id": "us_junction_0128",
     "coordinate": {
       "latitude": 33.927328,
       "longitude": -81.065516
@@ -1566,7 +1350,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0135",
+    "id": "us_junction_0129",
     "coordinate": {
       "latitude": 34.012549,
       "longitude": -118.490517
@@ -1575,7 +1359,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0136",
+    "id": "us_junction_0130",
     "coordinate": {
       "latitude": 34.034749,
       "longitude": -118.220965
@@ -1584,7 +1368,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0137",
+    "id": "us_junction_0131",
     "coordinate": {
       "latitude": 34.036734,
       "longitude": -81.110463
@@ -1593,7 +1377,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0138",
+    "id": "us_junction_0132",
     "coordinate": {
       "latitude": 34.054175,
       "longitude": -118.216939
@@ -1602,7 +1386,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0139",
+    "id": "us_junction_0133",
     "coordinate": {
       "latitude": 34.054775,
       "longitude": -118.237779
@@ -1611,7 +1395,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0140",
+    "id": "us_junction_0134",
     "coordinate": {
       "latitude": 34.064136,
       "longitude": -117.296736
@@ -1620,7 +1404,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0141",
+    "id": "us_junction_0135",
     "coordinate": {
       "latitude": 34.064682,
       "longitude": -117.814694
@@ -1629,7 +1413,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0142",
+    "id": "us_junction_0136",
     "coordinate": {
       "latitude": 34.06795,
       "longitude": -117.545537
@@ -1638,7 +1422,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0143",
+    "id": "us_junction_0137",
     "coordinate": {
       "latitude": 34.069051,
       "longitude": -117.851347
@@ -1647,7 +1431,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0144",
+    "id": "us_junction_0138",
     "coordinate": {
       "latitude": 34.069668,
       "longitude": -118.147881
@@ -1656,7 +1440,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0145",
+    "id": "us_junction_0139",
     "coordinate": {
       "latitude": 34.070067,
       "longitude": -80.926807
@@ -1665,7 +1449,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0146",
+    "id": "us_junction_0140",
     "coordinate": {
       "latitude": 34.071698,
       "longitude": -117.87055
@@ -1674,7 +1458,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0147",
+    "id": "us_junction_0141",
     "coordinate": {
       "latitude": 34.072247,
       "longitude": -118.053124
@@ -1683,7 +1467,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0148",
+    "id": "us_junction_0142",
     "coordinate": {
       "latitude": 34.081846,
       "longitude": -117.71015
@@ -1692,7 +1476,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0149",
+    "id": "us_junction_0143",
     "coordinate": {
       "latitude": 34.192474,
       "longitude": -79.841814
@@ -1701,7 +1485,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0150",
+    "id": "us_junction_0144",
     "coordinate": {
       "latitude": 34.240818,
       "longitude": -117.431445
@@ -1710,7 +1494,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0151",
+    "id": "us_junction_0145",
     "coordinate": {
       "latitude": 34.271716,
       "longitude": -77.868335
@@ -1719,7 +1503,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0152",
+    "id": "us_junction_0146",
     "coordinate": {
       "latitude": 34.31422,
       "longitude": -118.488863
@@ -1728,7 +1512,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0153",
+    "id": "us_junction_0147",
     "coordinate": {
       "latitude": 34.338735,
       "longitude": -118.5163
@@ -1737,7 +1521,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0154",
+    "id": "us_junction_0148",
     "coordinate": {
       "latitude": 34.581594,
       "longitude": -79.051902
@@ -1746,7 +1530,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0155",
+    "id": "us_junction_0149",
     "coordinate": {
       "latitude": 34.59367,
       "longitude": -79.112183
@@ -1755,7 +1539,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0156",
+    "id": "us_junction_0150",
     "coordinate": {
       "latitude": 34.751573,
       "longitude": -79.351225
@@ -1764,7 +1548,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0157",
+    "id": "us_junction_0151",
     "coordinate": {
       "latitude": 34.774776,
       "longitude": -92.260947
@@ -1773,7 +1557,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0158",
+    "id": "us_junction_0152",
     "coordinate": {
       "latitude": 34.81784,
       "longitude": -118.881399
@@ -1782,7 +1566,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0159",
+    "id": "us_junction_0153",
     "coordinate": {
       "latitude": 34.861634,
       "longitude": -89.987036
@@ -1791,7 +1575,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0160",
+    "id": "us_junction_0154",
     "coordinate": {
       "latitude": 34.864682,
       "longitude": -90.242133
@@ -1800,7 +1584,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0161",
+    "id": "us_junction_0155",
     "coordinate": {
       "latitude": 34.878175,
       "longitude": -89.724125
@@ -1809,7 +1593,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0162",
+    "id": "us_junction_0156",
     "coordinate": {
       "latitude": 34.886092,
       "longitude": -117.013784
@@ -1818,7 +1602,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0163",
+    "id": "us_junction_0157",
     "coordinate": {
       "latitude": 34.967412,
       "longitude": -85.452175
@@ -1827,7 +1611,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0164",
+    "id": "us_junction_0158",
     "coordinate": {
       "latitude": 34.977042,
       "longitude": -82.010863
@@ -1836,7 +1620,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0165",
+    "id": "us_junction_0159",
     "coordinate": {
       "latitude": 35.0062,
       "longitude": -85.207738
@@ -1845,7 +1629,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0166",
+    "id": "us_junction_0160",
     "coordinate": {
       "latitude": 35.038534,
       "longitude": -79.768475
@@ -1854,16 +1638,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0167",
-    "coordinate": {
-      "latitude": 35.072436,
-      "longitude": -90.025687
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0168",
+    "id": "us_junction_0161",
     "coordinate": {
       "latitude": 35.104694,
       "longitude": -106.628768
@@ -1872,16 +1647,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0169",
-    "coordinate": {
-      "latitude": 35.105226,
-      "longitude": -106.646788
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0170",
+    "id": "us_junction_0162",
     "coordinate": {
       "latitude": 35.155399,
       "longitude": -90.147822
@@ -1890,7 +1656,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0171",
+    "id": "us_junction_0163",
     "coordinate": {
       "latitude": 35.174095,
       "longitude": -111.662891
@@ -1899,7 +1665,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0172",
+    "id": "us_junction_0164",
     "coordinate": {
       "latitude": 35.182857,
       "longitude": -101.005297
@@ -1908,7 +1674,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0173",
+    "id": "us_junction_0165",
     "coordinate": {
       "latitude": 35.18319,
       "longitude": -100.866509
@@ -1917,7 +1683,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0174",
+    "id": "us_junction_0166",
     "coordinate": {
       "latitude": 35.196514,
       "longitude": -101.836028
@@ -1926,7 +1692,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0175",
+    "id": "us_junction_0167",
     "coordinate": {
       "latitude": 35.224971,
       "longitude": -80.862122
@@ -1935,7 +1701,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0176",
+    "id": "us_junction_0168",
     "coordinate": {
       "latitude": 35.272448,
       "longitude": -80.845447
@@ -1944,7 +1710,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0177",
+    "id": "us_junction_0169",
     "coordinate": {
       "latitude": 35.389072,
       "longitude": -78.515947
@@ -1953,16 +1719,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0178",
-    "coordinate": {
-      "latitude": 35.457057,
-      "longitude": -97.516252
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0179",
+    "id": "us_junction_0170",
     "coordinate": {
       "latitude": 35.459439,
       "longitude": -97.490498
@@ -1971,7 +1728,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0180",
+    "id": "us_junction_0171",
     "coordinate": {
       "latitude": 35.461521,
       "longitude": -97.577415
@@ -1980,7 +1737,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0181",
+    "id": "us_junction_0172",
     "coordinate": {
       "latitude": 35.466838,
       "longitude": -97.469517
@@ -1989,7 +1746,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0182",
+    "id": "us_junction_0173",
     "coordinate": {
       "latitude": 35.48139,
       "longitude": -94.245775
@@ -1998,7 +1755,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0183",
+    "id": "us_junction_0174",
     "coordinate": {
       "latitude": 35.512179,
       "longitude": -79.781577
@@ -2007,7 +1764,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0184",
+    "id": "us_junction_0175",
     "coordinate": {
       "latitude": 35.554693,
       "longitude": -82.611497
@@ -2016,7 +1773,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0185",
+    "id": "us_junction_0176",
     "coordinate": {
       "latitude": 35.589437,
       "longitude": -97.435383
@@ -2025,7 +1782,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0186",
+    "id": "us_junction_0177",
     "coordinate": {
       "latitude": 35.604519,
       "longitude": -79.818906
@@ -2034,7 +1791,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0187",
+    "id": "us_junction_0178",
     "coordinate": {
       "latitude": 35.638768,
       "longitude": -79.833203
@@ -2043,7 +1800,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0188",
+    "id": "us_junction_0179",
     "coordinate": {
       "latitude": 35.660017,
       "longitude": -79.836053
@@ -2052,7 +1809,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0189",
+    "id": "us_junction_0180",
     "coordinate": {
       "latitude": 35.669179,
       "longitude": -79.832527
@@ -2061,7 +1818,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0190",
+    "id": "us_junction_0181",
     "coordinate": {
       "latitude": 35.678792,
       "longitude": -79.828505
@@ -2070,7 +1827,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0191",
+    "id": "us_junction_0182",
     "coordinate": {
       "latitude": 35.700712,
       "longitude": -79.831784
@@ -2079,7 +1836,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0192",
+    "id": "us_junction_0183",
     "coordinate": {
       "latitude": 35.764406,
       "longitude": -88.477208
@@ -2088,7 +1845,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0193",
+    "id": "us_junction_0184",
     "coordinate": {
       "latitude": 35.785565,
       "longitude": -79.828809
@@ -2097,7 +1854,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0194",
+    "id": "us_junction_0185",
     "coordinate": {
       "latitude": 35.789624,
       "longitude": -119.782222
@@ -2106,7 +1863,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0195",
+    "id": "us_junction_0186",
     "coordinate": {
       "latitude": 35.810088,
       "longitude": -80.861517
@@ -2115,7 +1872,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0196",
+    "id": "us_junction_0187",
     "coordinate": {
       "latitude": 35.817665,
       "longitude": -88.186808
@@ -2124,7 +1881,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0197",
+    "id": "us_junction_0188",
     "coordinate": {
       "latitude": 35.869009,
       "longitude": -84.255847
@@ -2133,7 +1890,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0198",
+    "id": "us_junction_0189",
     "coordinate": {
       "latitude": 35.928582,
       "longitude": -79.926275
@@ -2142,7 +1899,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0199",
+    "id": "us_junction_0190",
     "coordinate": {
       "latitude": 35.956294,
       "longitude": -83.972482
@@ -2151,7 +1908,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0200",
+    "id": "us_junction_0191",
     "coordinate": {
       "latitude": 35.971962,
       "longitude": -83.930616
@@ -2160,7 +1917,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0201",
+    "id": "us_junction_0192",
     "coordinate": {
       "latitude": 36.00286,
       "longitude": -79.828356
@@ -2169,7 +1926,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0202",
+    "id": "us_junction_0193",
     "coordinate": {
       "latitude": 36.003053,
       "longitude": -83.962288
@@ -2178,7 +1935,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0203",
+    "id": "us_junction_0194",
     "coordinate": {
       "latitude": 36.01115,
       "longitude": -114.774948
@@ -2187,7 +1944,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0204",
+    "id": "us_junction_0195",
     "coordinate": {
       "latitude": 36.033179,
       "longitude": -115.017539
@@ -2196,7 +1953,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0205",
+    "id": "us_junction_0196",
     "coordinate": {
       "latitude": 36.037941,
       "longitude": -80.098838
@@ -2205,7 +1962,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0206",
+    "id": "us_junction_0197",
     "coordinate": {
       "latitude": 36.058806,
       "longitude": -79.126362
@@ -2214,7 +1971,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0207",
+    "id": "us_junction_0198",
     "coordinate": {
       "latitude": 36.059079,
       "longitude": -79.6688
@@ -2223,7 +1980,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0208",
+    "id": "us_junction_0199",
     "coordinate": {
       "latitude": 36.06603,
       "longitude": -115.184952
@@ -2232,7 +1989,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0209",
+    "id": "us_junction_0200",
     "coordinate": {
       "latitude": 36.066629,
       "longitude": -83.390051
@@ -2241,7 +1998,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0210",
+    "id": "us_junction_0201",
     "coordinate": {
       "latitude": 36.067203,
       "longitude": -79.919719
@@ -2250,7 +2007,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0211",
+    "id": "us_junction_0202",
     "coordinate": {
       "latitude": 36.122294,
       "longitude": -86.727331
@@ -2259,7 +2016,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0212",
+    "id": "us_junction_0203",
     "coordinate": {
       "latitude": 36.150387,
       "longitude": -86.78088
@@ -2268,7 +2025,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0213",
+    "id": "us_junction_0204",
     "coordinate": {
       "latitude": 36.154072,
       "longitude": -86.75795
@@ -2277,7 +2034,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0214",
+    "id": "us_junction_0205",
     "coordinate": {
       "latitude": 36.160314,
       "longitude": -86.791868
@@ -2286,7 +2043,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0215",
+    "id": "us_junction_0206",
     "coordinate": {
       "latitude": 36.162675,
       "longitude": -95.759041
@@ -2295,7 +2052,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0216",
+    "id": "us_junction_0207",
     "coordinate": {
       "latitude": 36.169001,
       "longitude": -86.796196
@@ -2304,7 +2061,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0217",
+    "id": "us_junction_0208",
     "coordinate": {
       "latitude": 36.174801,
       "longitude": -115.151504
@@ -2313,7 +2070,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0218",
+    "id": "us_junction_0209",
     "coordinate": {
       "latitude": 36.20713,
       "longitude": -86.774275
@@ -2322,7 +2079,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0219",
+    "id": "us_junction_0210",
     "coordinate": {
       "latitude": 36.238525,
       "longitude": -95.670223
@@ -2331,7 +2088,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0220",
+    "id": "us_junction_0211",
     "coordinate": {
       "latitude": 36.440354,
       "longitude": -80.538208
@@ -2340,7 +2097,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0221",
+    "id": "us_junction_0212",
     "coordinate": {
       "latitude": 36.454135,
       "longitude": -82.523259
@@ -2349,7 +2106,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0222",
+    "id": "us_junction_0213",
     "coordinate": {
       "latitude": 36.497071,
       "longitude": -80.741689
@@ -2358,7 +2115,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0223",
+    "id": "us_junction_0214",
     "coordinate": {
       "latitude": 36.594599,
       "longitude": -82.572134
@@ -2367,7 +2124,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0224",
+    "id": "us_junction_0215",
     "coordinate": {
       "latitude": 36.722414,
       "longitude": -88.684494
@@ -2376,7 +2133,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0225",
+    "id": "us_junction_0216",
     "coordinate": {
       "latitude": 36.78479,
       "longitude": -76.399517
@@ -2385,7 +2142,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0226",
+    "id": "us_junction_0217",
     "coordinate": {
       "latitude": 36.844566,
       "longitude": -76.196313
@@ -2394,7 +2151,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0227",
+    "id": "us_junction_0218",
     "coordinate": {
       "latitude": 36.847411,
       "longitude": -75.985923
@@ -2403,7 +2160,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0228",
+    "id": "us_junction_0219",
     "coordinate": {
       "latitude": 36.870951,
       "longitude": -89.533094
@@ -2412,7 +2169,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0229",
+    "id": "us_junction_0220",
     "coordinate": {
       "latitude": 36.946533,
       "longitude": -80.920121
@@ -2421,7 +2178,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0230",
+    "id": "us_junction_0221",
     "coordinate": {
       "latitude": 36.959659,
       "longitude": -81.062104
@@ -2430,7 +2187,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0231",
+    "id": "us_junction_0222",
     "coordinate": {
       "latitude": 36.991066,
       "longitude": -88.341187
@@ -2439,7 +2196,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0232",
+    "id": "us_junction_0223",
     "coordinate": {
       "latitude": 37.056663,
       "longitude": -94.425149
@@ -2448,7 +2205,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0233",
+    "id": "us_junction_0224",
     "coordinate": {
       "latitude": 37.07551,
       "longitude": -88.128916
@@ -2457,7 +2214,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0234",
+    "id": "us_junction_0225",
     "coordinate": {
       "latitude": 37.081763,
       "longitude": -94.311918
@@ -2466,7 +2223,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0235",
+    "id": "us_junction_0226",
     "coordinate": {
       "latitude": 37.216239,
       "longitude": -87.44609
@@ -2475,7 +2232,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0236",
+    "id": "us_junction_0227",
     "coordinate": {
       "latitude": 37.218239,
       "longitude": -77.390799
@@ -2484,7 +2241,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0237",
+    "id": "us_junction_0228",
     "coordinate": {
       "latitude": 37.255614,
       "longitude": -80.175686
@@ -2493,7 +2250,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0238",
+    "id": "us_junction_0229",
     "coordinate": {
       "latitude": 37.292997,
       "longitude": -80.101582
@@ -2502,7 +2259,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0239",
+    "id": "us_junction_0230",
     "coordinate": {
       "latitude": 37.311015,
       "longitude": -80.062293
@@ -2511,7 +2268,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0240",
+    "id": "us_junction_0231",
     "coordinate": {
       "latitude": 37.319913,
       "longitude": -121.940835
@@ -2520,7 +2277,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0241",
+    "id": "us_junction_0232",
     "coordinate": {
       "latitude": 37.339629,
       "longitude": -121.851765
@@ -2529,7 +2286,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0242",
+    "id": "us_junction_0233",
     "coordinate": {
       "latitude": 37.363025,
       "longitude": -79.945727
@@ -2538,7 +2295,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0243",
+    "id": "us_junction_0234",
     "coordinate": {
       "latitude": 37.503278,
       "longitude": -87.475177
@@ -2547,7 +2304,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0244",
+    "id": "us_junction_0235",
     "coordinate": {
       "latitude": 37.559987,
       "longitude": -77.453312
@@ -2556,7 +2313,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0245",
+    "id": "us_junction_0236",
     "coordinate": {
       "latitude": 37.581764,
       "longitude": -77.468732
@@ -2565,7 +2322,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0246",
+    "id": "us_junction_0237",
     "coordinate": {
       "latitude": 37.598128,
       "longitude": -88.993404
@@ -2574,7 +2331,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0247",
+    "id": "us_junction_0238",
     "coordinate": {
       "latitude": 37.736682,
       "longitude": -81.205871
@@ -2583,7 +2340,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0248",
+    "id": "us_junction_0239",
     "coordinate": {
       "latitude": 37.77339,
       "longitude": -122.400111
@@ -2592,7 +2349,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0249",
+    "id": "us_junction_0240",
     "coordinate": {
       "latitude": 37.775318,
       "longitude": -122.406041
@@ -2601,7 +2358,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0250",
+    "id": "us_junction_0241",
     "coordinate": {
       "latitude": 37.819405,
       "longitude": -122.348075
@@ -2610,7 +2367,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0251",
+    "id": "us_junction_0242",
     "coordinate": {
       "latitude": 37.823612,
       "longitude": -79.378994
@@ -2619,7 +2376,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0252",
+    "id": "us_junction_0243",
     "coordinate": {
       "latitude": 37.827426,
       "longitude": -87.566922
@@ -2628,7 +2385,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0253",
+    "id": "us_junction_0244",
     "coordinate": {
       "latitude": 37.830472,
       "longitude": -122.297995
@@ -2637,7 +2394,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0254",
+    "id": "us_junction_0245",
     "coordinate": {
       "latitude": 37.947187,
       "longitude": -87.556126
@@ -2646,7 +2403,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0255",
+    "id": "us_junction_0246",
     "coordinate": {
       "latitude": 37.973342,
       "longitude": -87.450099
@@ -2655,7 +2412,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0256",
+    "id": "us_junction_0247",
     "coordinate": {
       "latitude": 38.081151,
       "longitude": -84.459361
@@ -2664,7 +2421,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0257",
+    "id": "us_junction_0248",
     "coordinate": {
       "latitude": 38.115082,
       "longitude": -84.525477
@@ -2673,7 +2430,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0258",
+    "id": "us_junction_0249",
     "coordinate": {
       "latitude": 38.119805,
       "longitude": -79.047178
@@ -2682,7 +2439,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0259",
+    "id": "us_junction_0250",
     "coordinate": {
       "latitude": 38.167187,
       "longitude": -87.470367
@@ -2691,7 +2448,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0260",
+    "id": "us_junction_0251",
     "coordinate": {
       "latitude": 38.168443,
       "longitude": -122.201596
@@ -2700,7 +2457,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0261",
+    "id": "us_junction_0252",
     "coordinate": {
       "latitude": 38.190793,
       "longitude": -85.728196
@@ -2709,7 +2466,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0262",
+    "id": "us_junction_0253",
     "coordinate": {
       "latitude": 38.214854,
       "longitude": -122.138132
@@ -2718,7 +2475,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0263",
+    "id": "us_junction_0254",
     "coordinate": {
       "latitude": 38.237729,
       "longitude": -85.624164
@@ -2727,7 +2484,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0264",
+    "id": "us_junction_0255",
     "coordinate": {
       "latitude": 38.264621,
       "longitude": -85.741878
@@ -2736,7 +2493,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0265",
+    "id": "us_junction_0256",
     "coordinate": {
       "latitude": 38.274465,
       "longitude": -85.808463
@@ -2745,7 +2502,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0266",
+    "id": "us_junction_0257",
     "coordinate": {
       "latitude": 38.287928,
       "longitude": -85.644507
@@ -2754,7 +2511,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0267",
+    "id": "us_junction_0258",
     "coordinate": {
       "latitude": 38.322713,
       "longitude": -88.954854
@@ -2763,7 +2520,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0268",
+    "id": "us_junction_0259",
     "coordinate": {
       "latitude": 38.358358,
       "longitude": -81.631519
@@ -2772,7 +2529,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0269",
+    "id": "us_junction_0260",
     "coordinate": {
       "latitude": 38.370633,
       "longitude": -81.608758
@@ -2781,7 +2538,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0270",
+    "id": "us_junction_0261",
     "coordinate": {
       "latitude": 38.520955,
       "longitude": -77.37188
@@ -2790,7 +2547,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0271",
+    "id": "us_junction_0262",
     "coordinate": {
       "latitude": 38.526339,
       "longitude": -121.761278
@@ -2799,7 +2556,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0272",
+    "id": "us_junction_0263",
     "coordinate": {
       "latitude": 38.537467,
       "longitude": -121.738731
@@ -2808,7 +2565,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0273",
+    "id": "us_junction_0264",
     "coordinate": {
       "latitude": 38.574621,
       "longitude": -112.602708
@@ -2817,16 +2574,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0274",
-    "coordinate": {
-      "latitude": 38.580485,
-      "longitude": -121.504789
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0275",
+    "id": "us_junction_0265",
     "coordinate": {
       "latitude": 38.610697,
       "longitude": -90.209009
@@ -2835,7 +2583,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0276",
+    "id": "us_junction_0266",
     "coordinate": {
       "latitude": 38.61994,
       "longitude": -90.189811
@@ -2844,7 +2592,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0277",
+    "id": "us_junction_0267",
     "coordinate": {
       "latitude": 38.62419,
       "longitude": -121.517727
@@ -2853,7 +2601,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0278",
+    "id": "us_junction_0268",
     "coordinate": {
       "latitude": 38.631684,
       "longitude": -90.244321
@@ -2862,7 +2610,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0279",
+    "id": "us_junction_0269",
     "coordinate": {
       "latitude": 38.633794,
       "longitude": -90.143208
@@ -2871,7 +2619,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0280",
+    "id": "us_junction_0270",
     "coordinate": {
       "latitude": 38.645306,
       "longitude": -90.182313
@@ -2880,7 +2628,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0281",
+    "id": "us_junction_0271",
     "coordinate": {
       "latitude": 38.672255,
       "longitude": -77.245673
@@ -2889,7 +2637,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0282",
+    "id": "us_junction_0272",
     "coordinate": {
       "latitude": 38.747574,
       "longitude": -89.908987
@@ -2898,7 +2646,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0283",
+    "id": "us_junction_0273",
     "coordinate": {
       "latitude": 38.805645,
       "longitude": -90.838483
@@ -2907,7 +2655,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0284",
+    "id": "us_junction_0274",
     "coordinate": {
       "latitude": 38.877826,
       "longitude": -84.625381
@@ -2916,7 +2664,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0285",
+    "id": "us_junction_0275",
     "coordinate": {
       "latitude": 38.90066,
       "longitude": -77.054923
@@ -2925,7 +2673,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0286",
+    "id": "us_junction_0276",
     "coordinate": {
       "latitude": 38.950368,
       "longitude": -94.539329
@@ -2934,7 +2682,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0287",
+    "id": "us_junction_0277",
     "coordinate": {
       "latitude": 39.008566,
       "longitude": -78.299171
@@ -2943,7 +2691,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0288",
+    "id": "us_junction_0278",
     "coordinate": {
       "latitude": 39.034474,
       "longitude": -84.595548
@@ -2952,7 +2700,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0289",
+    "id": "us_junction_0279",
     "coordinate": {
       "latitude": 39.092332,
       "longitude": -84.522485
@@ -2961,7 +2709,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0290",
+    "id": "us_junction_0280",
     "coordinate": {
       "latitude": 39.106356,
       "longitude": -94.575189
@@ -2970,7 +2718,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0291",
+    "id": "us_junction_0281",
     "coordinate": {
       "latitude": 39.109567,
       "longitude": -86.559805
@@ -2979,7 +2727,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0292",
+    "id": "us_junction_0282",
     "coordinate": {
       "latitude": 39.12638,
       "longitude": -94.565398
@@ -2988,7 +2736,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0293",
+    "id": "us_junction_0283",
     "coordinate": {
       "latitude": 39.13014,
       "longitude": -88.565215
@@ -2997,16 +2745,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0294",
-    "coordinate": {
-      "latitude": 39.133746,
-      "longitude": -84.49398
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0295",
+    "id": "us_junction_0284",
     "coordinate": {
       "latitude": 39.141672,
       "longitude": -88.551852
@@ -3015,7 +2754,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0296",
+    "id": "us_junction_0285",
     "coordinate": {
       "latitude": 39.142587,
       "longitude": -94.563302
@@ -3024,7 +2763,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0297",
+    "id": "us_junction_0286",
     "coordinate": {
       "latitude": 39.15717,
       "longitude": -84.529932
@@ -3033,7 +2772,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0298",
+    "id": "us_junction_0287",
     "coordinate": {
       "latitude": 39.183568,
       "longitude": -84.792291
@@ -3042,7 +2781,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0299",
+    "id": "us_junction_0288",
     "coordinate": {
       "latitude": 39.21424,
       "longitude": -84.682812
@@ -3051,7 +2790,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0300",
+    "id": "us_junction_0289",
     "coordinate": {
       "latitude": 39.214362,
       "longitude": -84.726912
@@ -3060,7 +2799,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0301",
+    "id": "us_junction_0290",
     "coordinate": {
       "latitude": 39.269914,
       "longitude": -84.350596
@@ -3069,7 +2808,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0302",
+    "id": "us_junction_0291",
     "coordinate": {
       "latitude": 39.288048,
       "longitude": -84.43993
@@ -3078,7 +2817,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0303",
+    "id": "us_junction_0292",
     "coordinate": {
       "latitude": 39.290685,
       "longitude": -76.606737
@@ -3087,7 +2826,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0304",
+    "id": "us_junction_0293",
     "coordinate": {
       "latitude": 39.301452,
       "longitude": -76.711205
@@ -3096,7 +2835,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0305",
+    "id": "us_junction_0294",
     "coordinate": {
       "latitude": 39.51266,
       "longitude": -119.646988
@@ -3105,7 +2844,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0306",
+    "id": "us_junction_0295",
     "coordinate": {
       "latitude": 39.56797,
       "longitude": -119.530827
@@ -3114,7 +2853,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0307",
+    "id": "us_junction_0296",
     "coordinate": {
       "latitude": 39.578669,
       "longitude": -79.973856
@@ -3123,7 +2862,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0308",
+    "id": "us_junction_0297",
     "coordinate": {
       "latitude": 39.615065,
       "longitude": -119.212935
@@ -3132,7 +2871,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0309",
+    "id": "us_junction_0298",
     "coordinate": {
       "latitude": 39.617713,
       "longitude": -77.786017
@@ -3141,7 +2880,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0310",
+    "id": "us_junction_0299",
     "coordinate": {
       "latitude": 39.701175,
       "longitude": -86.107711
@@ -3150,7 +2889,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0311",
+    "id": "us_junction_0300",
     "coordinate": {
       "latitude": 39.708999,
       "longitude": -78.185505
@@ -3159,7 +2898,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0312",
+    "id": "us_junction_0301",
     "coordinate": {
       "latitude": 39.713787,
       "longitude": -86.264237
@@ -3168,7 +2907,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0313",
+    "id": "us_junction_0302",
     "coordinate": {
       "latitude": 39.714694,
       "longitude": -91.392015
@@ -3177,7 +2916,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0314",
+    "id": "us_junction_0303",
     "coordinate": {
       "latitude": 39.739507,
       "longitude": -104.631786
@@ -3186,7 +2925,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0315",
+    "id": "us_junction_0304",
     "coordinate": {
       "latitude": 39.740153,
       "longitude": -104.678303
@@ -3195,7 +2934,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0316",
+    "id": "us_junction_0305",
     "coordinate": {
       "latitude": 39.750539,
       "longitude": -89.620256
@@ -3204,7 +2943,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0317",
+    "id": "us_junction_0306",
     "coordinate": {
       "latitude": 39.775138,
       "longitude": -104.88006
@@ -3213,16 +2952,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0318",
-    "coordinate": {
-      "latitude": 39.776556,
-      "longitude": -86.144027
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0319",
+    "id": "us_junction_0307",
     "coordinate": {
       "latitude": 39.78057,
       "longitude": -104.99007
@@ -3231,7 +2961,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0320",
+    "id": "us_junction_0308",
     "coordinate": {
       "latitude": 39.782406,
       "longitude": -86.143501
@@ -3240,7 +2970,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0321",
+    "id": "us_junction_0309",
     "coordinate": {
       "latitude": 39.789225,
       "longitude": -105.067574
@@ -3249,7 +2979,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0322",
+    "id": "us_junction_0310",
     "coordinate": {
       "latitude": 39.801947,
       "longitude": -89.59542
@@ -3258,7 +2988,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0323",
+    "id": "us_junction_0311",
     "coordinate": {
       "latitude": 39.818232,
       "longitude": -104.98301
@@ -3267,7 +2997,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0324",
+    "id": "us_junction_0312",
     "coordinate": {
       "latitude": 39.867859,
       "longitude": -84.189249
@@ -3276,7 +3006,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0325",
+    "id": "us_junction_0313",
     "coordinate": {
       "latitude": 39.892342,
       "longitude": -86.05693
@@ -3285,7 +3015,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0326",
+    "id": "us_junction_0314",
     "coordinate": {
       "latitude": 39.899172,
       "longitude": -75.11089
@@ -3294,7 +3024,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0327",
+    "id": "us_junction_0315",
     "coordinate": {
       "latitude": 39.908633,
       "longitude": -75.149639
@@ -3303,7 +3033,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0328",
+    "id": "us_junction_0316",
     "coordinate": {
       "latitude": 39.931799,
       "longitude": -82.811501
@@ -3312,7 +3042,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0329",
+    "id": "us_junction_0317",
     "coordinate": {
       "latitude": 39.950501,
       "longitude": -83.015875
@@ -3321,7 +3051,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0330",
+    "id": "us_junction_0318",
     "coordinate": {
       "latitude": 39.954964,
       "longitude": -78.818847
@@ -3330,7 +3060,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0331",
+    "id": "us_junction_0319",
     "coordinate": {
       "latitude": 39.955561,
       "longitude": -82.984543
@@ -3339,7 +3069,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0332",
+    "id": "us_junction_0320",
     "coordinate": {
       "latitude": 39.978008,
       "longitude": -104.987898
@@ -3348,16 +3078,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0333",
-    "coordinate": {
-      "latitude": 39.978128,
-      "longitude": -75.110217
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0334",
+    "id": "us_junction_0321",
     "coordinate": {
       "latitude": 39.989582,
       "longitude": -78.242695
@@ -3366,7 +3087,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0335",
+    "id": "us_junction_0322",
     "coordinate": {
       "latitude": 39.997601,
       "longitude": -78.230618
@@ -3375,7 +3096,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0336",
+    "id": "us_junction_0323",
     "coordinate": {
       "latitude": 39.998215,
       "longitude": -81.559857
@@ -3384,7 +3105,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0337",
+    "id": "us_junction_0324",
     "coordinate": {
       "latitude": 39.998492,
       "longitude": -118.680378
@@ -3393,7 +3114,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0338",
+    "id": "us_junction_0325",
     "coordinate": {
       "latitude": 40.029323,
       "longitude": -104.980777
@@ -3402,7 +3123,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0339",
+    "id": "us_junction_0326",
     "coordinate": {
       "latitude": 40.042305,
       "longitude": -79.112777
@@ -3411,7 +3132,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0340",
+    "id": "us_junction_0327",
     "coordinate": {
       "latitude": 40.048933,
       "longitude": -78.515774
@@ -3420,7 +3141,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0341",
+    "id": "us_junction_0328",
     "coordinate": {
       "latitude": 40.116494,
       "longitude": -88.281697
@@ -3429,7 +3150,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0342",
+    "id": "us_junction_0329",
     "coordinate": {
       "latitude": 40.116928,
       "longitude": -88.30456
@@ -3438,7 +3159,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0343",
+    "id": "us_junction_0330",
     "coordinate": {
       "latitude": 40.134943,
       "longitude": -82.971561
@@ -3447,7 +3168,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0344",
+    "id": "us_junction_0331",
     "coordinate": {
       "latitude": 40.145962,
       "longitude": -88.283644
@@ -3456,7 +3177,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0345",
+    "id": "us_junction_0332",
     "coordinate": {
       "latitude": 40.161981,
       "longitude": -80.193927
@@ -3465,7 +3186,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0346",
+    "id": "us_junction_0333",
     "coordinate": {
       "latitude": 40.184481,
       "longitude": -80.228562
@@ -3474,7 +3195,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0347",
+    "id": "us_junction_0334",
     "coordinate": {
       "latitude": 40.215288,
       "longitude": -76.881199
@@ -3483,7 +3204,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0348",
+    "id": "us_junction_0335",
     "coordinate": {
       "latitude": 40.219328,
       "longitude": -79.602153
@@ -3492,7 +3213,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0349",
+    "id": "us_junction_0336",
     "coordinate": {
       "latitude": 40.227213,
       "longitude": -77.139339
@@ -3501,7 +3222,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0350",
+    "id": "us_junction_0337",
     "coordinate": {
       "latitude": 40.306726,
       "longitude": -76.831873
@@ -3510,7 +3231,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0351",
+    "id": "us_junction_0338",
     "coordinate": {
       "latitude": 40.423512,
       "longitude": -80.105113
@@ -3519,7 +3240,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0352",
+    "id": "us_junction_0339",
     "coordinate": {
       "latitude": 40.428336,
       "longitude": -76.515994
@@ -3528,16 +3249,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0353",
-    "coordinate": {
-      "latitude": 40.435201,
-      "longitude": -79.975242
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0354",
+    "id": "us_junction_0340",
     "coordinate": {
       "latitude": 40.43872,
       "longitude": -79.750692
@@ -3546,7 +3258,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0355",
+    "id": "us_junction_0341",
     "coordinate": {
       "latitude": 40.442217,
       "longitude": -80.008893
@@ -3555,7 +3267,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0356",
+    "id": "us_junction_0342",
     "coordinate": {
       "latitude": 40.446704,
       "longitude": -89.021247
@@ -3564,7 +3276,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0357",
+    "id": "us_junction_0343",
     "coordinate": {
       "latitude": 40.53432,
       "longitude": -89.025555
@@ -3573,7 +3285,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0358",
+    "id": "us_junction_0344",
     "coordinate": {
       "latitude": 40.538312,
       "longitude": -89.003061
@@ -3582,7 +3294,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0359",
+    "id": "us_junction_0345",
     "coordinate": {
       "latitude": 40.588568,
       "longitude": -80.098779
@@ -3591,7 +3303,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0360",
+    "id": "us_junction_0346",
     "coordinate": {
       "latitude": 40.612294,
       "longitude": -122.363251
@@ -3600,7 +3312,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0361",
+    "id": "us_junction_0347",
     "coordinate": {
       "latitude": 40.633847,
       "longitude": -81.457023
@@ -3609,7 +3321,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0362",
+    "id": "us_junction_0348",
     "coordinate": {
       "latitude": 40.63671,
       "longitude": -111.903757
@@ -3618,7 +3330,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0363",
+    "id": "us_junction_0349",
     "coordinate": {
       "latitude": 40.66107,
       "longitude": -80.090714
@@ -3627,7 +3339,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0364",
+    "id": "us_junction_0350",
     "coordinate": {
       "latitude": 40.662916,
       "longitude": -81.438698
@@ -3636,7 +3348,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0365",
+    "id": "us_junction_0351",
     "coordinate": {
       "latitude": 40.674123,
       "longitude": -80.097639
@@ -3645,7 +3357,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0366",
+    "id": "us_junction_0352",
     "coordinate": {
       "latitude": 40.707008,
       "longitude": -74.338514
@@ -3654,7 +3366,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0367",
+    "id": "us_junction_0353",
     "coordinate": {
       "latitude": 40.708444,
       "longitude": -74.1578
@@ -3663,7 +3375,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0368",
+    "id": "us_junction_0354",
     "coordinate": {
       "latitude": 40.711232,
       "longitude": -111.801639
@@ -3672,7 +3384,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0369",
+    "id": "us_junction_0355",
     "coordinate": {
       "latitude": 40.713868,
       "longitude": -74.302896
@@ -3681,7 +3393,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0370",
+    "id": "us_junction_0356",
     "coordinate": {
       "latitude": 40.718174,
       "longitude": -111.903412
@@ -3690,7 +3402,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0371",
+    "id": "us_junction_0357",
     "coordinate": {
       "latitude": 40.72165,
       "longitude": -74.007442
@@ -3699,7 +3411,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0372",
+    "id": "us_junction_0358",
     "coordinate": {
       "latitude": 40.742088,
       "longitude": -74.122895
@@ -3708,7 +3420,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0373",
+    "id": "us_junction_0359",
     "coordinate": {
       "latitude": 40.747149,
       "longitude": -111.906492
@@ -3717,7 +3429,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0374",
+    "id": "us_junction_0360",
     "coordinate": {
       "latitude": 40.753803,
       "longitude": -74.119818
@@ -3726,7 +3438,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0375",
+    "id": "us_junction_0361",
     "coordinate": {
       "latitude": 40.764448,
       "longitude": -111.931
@@ -3735,7 +3447,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0376",
+    "id": "us_junction_0362",
     "coordinate": {
       "latitude": 40.764457,
       "longitude": -111.951864
@@ -3744,7 +3456,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0377",
+    "id": "us_junction_0363",
     "coordinate": {
       "latitude": 40.804858,
       "longitude": -73.911383
@@ -3753,7 +3465,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0378",
+    "id": "us_junction_0364",
     "coordinate": {
       "latitude": 40.821826,
       "longitude": -111.916421
@@ -3762,7 +3474,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0379",
+    "id": "us_junction_0365",
     "coordinate": {
       "latitude": 40.831111,
       "longitude": -73.832353
@@ -3771,7 +3483,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0380",
+    "id": "us_junction_0366",
     "coordinate": {
       "latitude": 40.835462,
       "longitude": -80.370328
@@ -3780,7 +3492,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0381",
+    "id": "us_junction_0367",
     "coordinate": {
       "latitude": 40.836801,
       "longitude": -74.019773
@@ -3789,7 +3501,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0382",
+    "id": "us_junction_0368",
     "coordinate": {
       "latitude": 40.84181,
       "longitude": -111.91524
@@ -3798,7 +3510,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0383",
+    "id": "us_junction_0369",
     "coordinate": {
       "latitude": 40.844636,
       "longitude": -73.909592
@@ -3807,7 +3519,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0384",
+    "id": "us_junction_0370",
     "coordinate": {
       "latitude": 40.845622,
       "longitude": -73.928515
@@ -3816,7 +3528,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0385",
+    "id": "us_junction_0371",
     "coordinate": {
       "latitude": 40.852481,
       "longitude": -77.80268
@@ -3825,7 +3537,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0386",
+    "id": "us_junction_0372",
     "coordinate": {
       "latitude": 40.859069,
       "longitude": -74.376185
@@ -3834,7 +3546,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0387",
+    "id": "us_junction_0373",
     "coordinate": {
       "latitude": 40.865403,
       "longitude": -74.007836
@@ -3843,7 +3555,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0388",
+    "id": "us_junction_0374",
     "coordinate": {
       "latitude": 40.871097,
       "longitude": -111.897451
@@ -3852,7 +3564,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0389",
+    "id": "us_junction_0375",
     "coordinate": {
       "latitude": 40.872966,
       "longitude": -77.776996
@@ -3861,7 +3573,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0390",
+    "id": "us_junction_0376",
     "coordinate": {
       "latitude": 40.938496,
       "longitude": -77.730684
@@ -3870,7 +3582,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0391",
+    "id": "us_junction_0377",
     "coordinate": {
       "latitude": 40.958006,
       "longitude": -80.640038
@@ -3879,7 +3591,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0392",
+    "id": "us_junction_0378",
     "coordinate": {
       "latitude": 40.97302,
       "longitude": -111.435045
@@ -3888,7 +3600,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0393",
+    "id": "us_junction_0379",
     "coordinate": {
       "latitude": 40.988781,
       "longitude": -111.904223
@@ -3897,7 +3609,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0394",
+    "id": "us_junction_0380",
     "coordinate": {
       "latitude": 41.008495,
       "longitude": -111.933192
@@ -3906,7 +3618,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0395",
+    "id": "us_junction_0381",
     "coordinate": {
       "latitude": 41.026365,
       "longitude": -102.153355
@@ -3915,7 +3627,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0396",
+    "id": "us_junction_0382",
     "coordinate": {
       "latitude": 41.030712,
       "longitude": -81.890936
@@ -3924,7 +3636,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0397",
+    "id": "us_junction_0383",
     "coordinate": {
       "latitude": 41.033387,
       "longitude": -102.142093
@@ -3933,7 +3645,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0398",
+    "id": "us_junction_0384",
     "coordinate": {
       "latitude": 41.041239,
       "longitude": -80.127337
@@ -3942,7 +3654,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0399",
+    "id": "us_junction_0385",
     "coordinate": {
       "latitude": 41.046163,
       "longitude": -76.013176
@@ -3951,7 +3663,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0400",
+    "id": "us_junction_0386",
     "coordinate": {
       "latitude": 41.060356,
       "longitude": -81.504871
@@ -3960,7 +3672,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0401",
+    "id": "us_junction_0387",
     "coordinate": {
       "latitude": 41.110063,
       "longitude": -80.837973
@@ -3969,7 +3681,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0402",
+    "id": "us_junction_0388",
     "coordinate": {
       "latitude": 41.113591,
       "longitude": -104.851313
@@ -3978,7 +3690,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0403",
+    "id": "us_junction_0389",
     "coordinate": {
       "latitude": 41.124112,
       "longitude": -80.754818
@@ -3987,7 +3699,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0404",
+    "id": "us_junction_0390",
     "coordinate": {
       "latitude": 41.137229,
       "longitude": -111.914991
@@ -3996,7 +3708,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0405",
+    "id": "us_junction_0391",
     "coordinate": {
       "latitude": 41.138111,
       "longitude": -111.862618
@@ -4005,7 +3717,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0406",
+    "id": "us_junction_0392",
     "coordinate": {
       "latitude": 41.182251,
       "longitude": -80.443065
@@ -4014,7 +3726,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0407",
+    "id": "us_junction_0393",
     "coordinate": {
       "latitude": 41.184924,
       "longitude": -122.28837
@@ -4023,7 +3735,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0408",
+    "id": "us_junction_0394",
     "coordinate": {
       "latitude": 41.186176,
       "longitude": -80.337988
@@ -4032,7 +3744,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0409",
+    "id": "us_junction_0395",
     "coordinate": {
       "latitude": 41.198085,
       "longitude": -80.160875
@@ -4041,7 +3753,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0410",
+    "id": "us_junction_0396",
     "coordinate": {
       "latitude": 41.202331,
       "longitude": -111.995944
@@ -4050,7 +3762,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0411",
+    "id": "us_junction_0397",
     "coordinate": {
       "latitude": 41.228077,
       "longitude": -96.086991
@@ -4059,7 +3771,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0412",
+    "id": "us_junction_0398",
     "coordinate": {
       "latitude": 41.232734,
       "longitude": -95.880535
@@ -4068,16 +3780,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0413",
-    "coordinate": {
-      "latitude": 41.26443,
-      "longitude": -96.075419
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0414",
+    "id": "us_junction_0399",
     "coordinate": {
       "latitude": 41.277138,
       "longitude": -81.638166
@@ -4086,7 +3789,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0415",
+    "id": "us_junction_0400",
     "coordinate": {
       "latitude": 41.302799,
       "longitude": -72.913534
@@ -4095,7 +3798,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0416",
+    "id": "us_junction_0401",
     "coordinate": {
       "latitude": 41.311989,
       "longitude": -74.12434
@@ -4104,7 +3807,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0417",
+    "id": "us_junction_0402",
     "coordinate": {
       "latitude": 41.332692,
       "longitude": -81.816143
@@ -4113,7 +3816,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0418",
+    "id": "us_junction_0403",
     "coordinate": {
       "latitude": 41.345751,
       "longitude": -95.957074
@@ -4122,7 +3825,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0419",
+    "id": "us_junction_0404",
     "coordinate": {
       "latitude": 41.354439,
       "longitude": -95.90019
@@ -4131,7 +3834,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0420",
+    "id": "us_junction_0405",
     "coordinate": {
       "latitude": 41.367958,
       "longitude": -89.060015
@@ -4140,7 +3843,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0421",
+    "id": "us_junction_0406",
     "coordinate": {
       "latitude": 41.386868,
       "longitude": -95.901592
@@ -4149,7 +3852,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0422",
+    "id": "us_junction_0407",
     "coordinate": {
       "latitude": 41.38897,
       "longitude": -82.16388
@@ -4158,7 +3861,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0423",
+    "id": "us_junction_0408",
     "coordinate": {
       "latitude": 41.424947,
       "longitude": -75.614254
@@ -4167,7 +3870,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0424",
+    "id": "us_junction_0409",
     "coordinate": {
       "latitude": 41.440326,
       "longitude": -90.329863
@@ -4176,7 +3879,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0425",
+    "id": "us_junction_0410",
     "coordinate": {
       "latitude": 41.447388,
       "longitude": -74.36559
@@ -4185,7 +3888,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0426",
+    "id": "us_junction_0411",
     "coordinate": {
       "latitude": 41.458897,
       "longitude": -90.495268
@@ -4194,7 +3897,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0427",
+    "id": "us_junction_0412",
     "coordinate": {
       "latitude": 41.477277,
       "longitude": -81.69357
@@ -4203,16 +3906,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0428",
-    "coordinate": {
-      "latitude": 41.48166,
-      "longitude": -81.691759
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0429",
+    "id": "us_junction_0413",
     "coordinate": {
       "latitude": 41.486193,
       "longitude": -88.197097
@@ -4221,7 +3915,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0430",
+    "id": "us_junction_0414",
     "coordinate": {
       "latitude": 41.48941,
       "longitude": -95.900557
@@ -4230,7 +3924,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0431",
+    "id": "us_junction_0415",
     "coordinate": {
       "latitude": 41.493634,
       "longitude": -81.676681
@@ -4239,7 +3933,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0432",
+    "id": "us_junction_0416",
     "coordinate": {
       "latitude": 41.498296,
       "longitude": -95.587137
@@ -4248,7 +3942,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0433",
+    "id": "us_junction_0417",
     "coordinate": {
       "latitude": 41.517459,
       "longitude": -74.073768
@@ -4257,7 +3951,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0434",
+    "id": "us_junction_0418",
     "coordinate": {
       "latitude": 41.526633,
       "longitude": -83.462881
@@ -4266,7 +3960,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0435",
+    "id": "us_junction_0419",
     "coordinate": {
       "latitude": 41.535439,
       "longitude": -90.343989
@@ -4275,7 +3969,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0436",
+    "id": "us_junction_0420",
     "coordinate": {
       "latitude": 41.559302,
       "longitude": -74.425823
@@ -4284,7 +3978,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0437",
+    "id": "us_junction_0421",
     "coordinate": {
       "latitude": 41.565813,
       "longitude": -87.742288
@@ -4293,7 +3987,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0438",
+    "id": "us_junction_0422",
     "coordinate": {
       "latitude": 41.568733,
       "longitude": -83.581312
@@ -4302,7 +3996,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0439",
+    "id": "us_junction_0423",
     "coordinate": {
       "latitude": 41.569868,
       "longitude": -87.30128
@@ -4311,7 +4005,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0440",
+    "id": "us_junction_0424",
     "coordinate": {
       "latitude": 41.580216,
       "longitude": -87.582839
@@ -4320,7 +4014,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0441",
+    "id": "us_junction_0425",
     "coordinate": {
       "latitude": 41.589412,
       "longitude": -87.224722
@@ -4329,7 +4023,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0442",
+    "id": "us_junction_0426",
     "coordinate": {
       "latitude": 41.593868,
       "longitude": -90.524399
@@ -4338,7 +4032,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0443",
+    "id": "us_junction_0427",
     "coordinate": {
       "latitude": 41.598123,
       "longitude": -87.30721
@@ -4347,7 +4041,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0444",
+    "id": "us_junction_0428",
     "coordinate": {
       "latitude": 41.59922,
       "longitude": -90.676615
@@ -4356,7 +4050,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0445",
+    "id": "us_junction_0429",
     "coordinate": {
       "latitude": 41.648016,
       "longitude": -93.772156
@@ -4365,7 +4059,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0446",
+    "id": "us_junction_0430",
     "coordinate": {
       "latitude": 41.650826,
       "longitude": -93.654442
@@ -4374,7 +4068,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0447",
+    "id": "us_junction_0431",
     "coordinate": {
       "latitude": 41.689085,
       "longitude": -83.516727
@@ -4383,7 +4077,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0448",
+    "id": "us_junction_0432",
     "coordinate": {
       "latitude": 41.703912,
       "longitude": -112.192425
@@ -4392,7 +4086,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0449",
+    "id": "us_junction_0433",
     "coordinate": {
       "latitude": 41.715669,
       "longitude": -87.627811
@@ -4401,7 +4095,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0450",
+    "id": "us_junction_0434",
     "coordinate": {
       "latitude": 41.736165,
       "longitude": -85.003154
@@ -4410,7 +4104,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0451",
+    "id": "us_junction_0435",
     "coordinate": {
       "latitude": 41.768632,
       "longitude": -72.668241
@@ -4419,7 +4113,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0452",
+    "id": "us_junction_0436",
     "coordinate": {
       "latitude": 41.774084,
       "longitude": -87.62674
@@ -4428,7 +4122,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0453",
+    "id": "us_junction_0437",
     "coordinate": {
       "latitude": 41.835621,
       "longitude": -87.684264
@@ -4437,7 +4131,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0454",
+    "id": "us_junction_0438",
     "coordinate": {
       "latitude": 41.843625,
       "longitude": -87.61044
@@ -4446,7 +4140,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0455",
+    "id": "us_junction_0439",
     "coordinate": {
       "latitude": 41.847012,
       "longitude": -87.638152
@@ -4455,7 +4149,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0456",
+    "id": "us_junction_0440",
     "coordinate": {
       "latitude": 41.873702,
       "longitude": -87.90309
@@ -4464,7 +4158,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0457",
+    "id": "us_junction_0441",
     "coordinate": {
       "latitude": 41.905189,
       "longitude": -89.019425
@@ -4473,7 +4167,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0458",
+    "id": "us_junction_0442",
     "coordinate": {
       "latitude": 41.916366,
       "longitude": -87.669319
@@ -4482,7 +4176,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0459",
+    "id": "us_junction_0443",
     "coordinate": {
       "latitude": 41.945717,
       "longitude": -87.720066
@@ -4491,7 +4185,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0460",
+    "id": "us_junction_0444",
     "coordinate": {
       "latitude": 41.955192,
       "longitude": -87.732073
@@ -4500,7 +4194,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0461",
+    "id": "us_junction_0445",
     "coordinate": {
       "latitude": 41.965823,
       "longitude": -87.746705
@@ -4509,7 +4203,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0462",
+    "id": "us_junction_0446",
     "coordinate": {
       "latitude": 41.995627,
       "longitude": -83.328013
@@ -4518,7 +4212,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0463",
+    "id": "us_junction_0447",
     "coordinate": {
       "latitude": 41.999756,
       "longitude": -77.135389
@@ -4527,7 +4221,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0464",
+    "id": "us_junction_0448",
     "coordinate": {
       "latitude": 42.026815,
       "longitude": -71.256447
@@ -4536,7 +4230,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0465",
+    "id": "us_junction_0449",
     "coordinate": {
       "latitude": 42.032199,
       "longitude": -80.120792
@@ -4545,7 +4239,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0466",
+    "id": "us_junction_0450",
     "coordinate": {
       "latitude": 42.066426,
       "longitude": -88.263639
@@ -4554,7 +4248,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0467",
+    "id": "us_junction_0451",
     "coordinate": {
       "latitude": 42.067794,
       "longitude": -76.108381
@@ -4563,7 +4257,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0468",
+    "id": "us_junction_0452",
     "coordinate": {
       "latitude": 42.074147,
       "longitude": -75.648609
@@ -4572,7 +4266,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0469",
+    "id": "us_junction_0453",
     "coordinate": {
       "latitude": 42.102321,
       "longitude": -75.82703
@@ -4581,7 +4275,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0470",
+    "id": "us_junction_0454",
     "coordinate": {
       "latitude": 42.111047,
       "longitude": -80.120128
@@ -4590,7 +4284,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0471",
+    "id": "us_junction_0455",
     "coordinate": {
       "latitude": 42.129911,
       "longitude": -72.062738
@@ -4599,7 +4293,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0472",
+    "id": "us_junction_0456",
     "coordinate": {
       "latitude": 42.134306,
       "longitude": -76.965505
@@ -4608,7 +4302,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0473",
+    "id": "us_junction_0457",
     "coordinate": {
       "latitude": 42.143586,
       "longitude": -75.897934
@@ -4617,7 +4311,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0474",
+    "id": "us_junction_0458",
     "coordinate": {
       "latitude": 42.153126,
       "longitude": -79.889107
@@ -4626,7 +4320,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0475",
+    "id": "us_junction_0459",
     "coordinate": {
       "latitude": 42.153515,
       "longitude": -72.647368
@@ -4635,7 +4329,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0476",
+    "id": "us_junction_0460",
     "coordinate": {
       "latitude": 42.155983,
       "longitude": -77.096052
@@ -4644,7 +4338,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0477",
+    "id": "us_junction_0461",
     "coordinate": {
       "latitude": 42.160564,
       "longitude": -76.854134
@@ -4653,7 +4347,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0478",
+    "id": "us_junction_0462",
     "coordinate": {
       "latitude": 42.208736,
       "longitude": -71.141785
@@ -4662,7 +4356,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0479",
+    "id": "us_junction_0463",
     "coordinate": {
       "latitude": 42.222511,
       "longitude": -83.415367
@@ -4671,7 +4365,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0480",
+    "id": "us_junction_0464",
     "coordinate": {
       "latitude": 42.226304,
       "longitude": -71.177699
@@ -4680,7 +4374,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0481",
+    "id": "us_junction_0465",
     "coordinate": {
       "latitude": 42.249039,
       "longitude": -88.960766
@@ -4689,7 +4383,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0482",
+    "id": "us_junction_0466",
     "coordinate": {
       "latitude": 42.297506,
       "longitude": -84.995993
@@ -4698,7 +4392,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0483",
+    "id": "us_junction_0467",
     "coordinate": {
       "latitude": 42.318664,
       "longitude": -83.083906
@@ -4707,7 +4401,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0484",
+    "id": "us_junction_0468",
     "coordinate": {
       "latitude": 42.341304,
       "longitude": -71.259465
@@ -4716,7 +4410,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0485",
+    "id": "us_junction_0469",
     "coordinate": {
       "latitude": 42.347598,
       "longitude": -71.057074
@@ -4725,7 +4419,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0486",
+    "id": "us_junction_0470",
     "coordinate": {
       "latitude": 42.347712,
       "longitude": -71.035249
@@ -4734,7 +4428,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0487",
+    "id": "us_junction_0471",
     "coordinate": {
       "latitude": 42.349492,
       "longitude": -83.098872
@@ -4743,7 +4437,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0488",
+    "id": "us_junction_0472",
     "coordinate": {
       "latitude": 42.368281,
       "longitude": -83.058156
@@ -4752,7 +4446,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0489",
+    "id": "us_junction_0473",
     "coordinate": {
       "latitude": 42.379323,
       "longitude": -71.025297
@@ -4761,7 +4455,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0490",
+    "id": "us_junction_0474",
     "coordinate": {
       "latitude": 42.388379,
       "longitude": -83.069571
@@ -4770,7 +4464,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0491",
+    "id": "us_junction_0475",
     "coordinate": {
       "latitude": 42.409799,
       "longitude": -83.423919
@@ -4779,7 +4473,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0492",
+    "id": "us_junction_0476",
     "coordinate": {
       "latitude": 42.470975,
       "longitude": -83.430866
@@ -4788,7 +4482,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0493",
+    "id": "us_junction_0477",
     "coordinate": {
       "latitude": 42.481769,
       "longitude": -87.947538
@@ -4797,7 +4491,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0494",
+    "id": "us_junction_0478",
     "coordinate": {
       "latitude": 42.502586,
       "longitude": -71.119517
@@ -4806,7 +4500,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0495",
+    "id": "us_junction_0479",
     "coordinate": {
       "latitude": 42.524451,
       "longitude": -88.9756
@@ -4815,7 +4509,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0496",
+    "id": "us_junction_0480",
     "coordinate": {
       "latitude": 42.570271,
       "longitude": -113.532017
@@ -4824,7 +4518,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0497",
+    "id": "us_junction_0481",
     "coordinate": {
       "latitude": 42.570769,
       "longitude": -113.518409
@@ -4833,7 +4527,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0498",
+    "id": "us_junction_0482",
     "coordinate": {
       "latitude": 42.691308,
       "longitude": -84.667205
@@ -4842,7 +4536,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0499",
+    "id": "us_junction_0483",
     "coordinate": {
       "latitude": 42.699093,
       "longitude": -73.842605
@@ -4851,7 +4545,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0500",
+    "id": "us_junction_0484",
     "coordinate": {
       "latitude": 42.70815,
       "longitude": -73.859171
@@ -4860,7 +4554,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0501",
+    "id": "us_junction_0485",
     "coordinate": {
       "latitude": 42.768671,
       "longitude": -84.669311
@@ -4869,7 +4563,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0502",
+    "id": "us_junction_0486",
     "coordinate": {
       "latitude": 42.789437,
       "longitude": -74.017752
@@ -4878,7 +4572,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0503",
+    "id": "us_junction_0487",
     "coordinate": {
       "latitude": 42.843534,
       "longitude": -87.950944
@@ -4887,7 +4581,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0504",
+    "id": "us_junction_0488",
     "coordinate": {
       "latitude": 42.913697,
       "longitude": -112.44354
@@ -4896,7 +4590,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0505",
+    "id": "us_junction_0489",
     "coordinate": {
       "latitude": 42.962103,
       "longitude": -87.99004
@@ -4905,7 +4599,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0506",
+    "id": "us_junction_0490",
     "coordinate": {
       "latitude": 42.96306,
       "longitude": -87.934107
@@ -4914,7 +4608,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0507",
+    "id": "us_junction_0491",
     "coordinate": {
       "latitude": 42.968412,
       "longitude": -82.462367
@@ -4923,7 +4617,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0508",
+    "id": "us_junction_0492",
     "coordinate": {
       "latitude": 42.975707,
       "longitude": -82.479074
@@ -4932,7 +4626,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0509",
+    "id": "us_junction_0493",
     "coordinate": {
       "latitude": 42.98371,
       "longitude": -83.733321
@@ -4941,7 +4635,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0510",
+    "id": "us_junction_0494",
     "coordinate": {
       "latitude": 42.998876,
       "longitude": -82.423526
@@ -4950,7 +4644,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0511",
+    "id": "us_junction_0495",
     "coordinate": {
       "latitude": 43.02816,
       "longitude": -88.033812
@@ -4959,7 +4653,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0512",
+    "id": "us_junction_0496",
     "coordinate": {
       "latitude": 43.03162,
       "longitude": -87.923006
@@ -4968,7 +4662,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0513",
+    "id": "us_junction_0497",
     "coordinate": {
       "latitude": 43.093459,
       "longitude": -76.161332
@@ -4977,7 +4671,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0514",
+    "id": "us_junction_0498",
     "coordinate": {
       "latitude": 43.105614,
       "longitude": -89.282335
@@ -4986,7 +4680,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0515",
+    "id": "us_junction_0499",
     "coordinate": {
       "latitude": 43.170901,
       "longitude": -71.529317
@@ -4995,7 +4689,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0516",
+    "id": "us_junction_0500",
     "coordinate": {
       "latitude": 43.174316,
       "longitude": -86.21114
@@ -5004,7 +4698,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0517",
+    "id": "us_junction_0501",
     "coordinate": {
       "latitude": 43.29417,
       "longitude": -89.417665
@@ -5013,7 +4707,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0518",
+    "id": "us_junction_0502",
     "coordinate": {
       "latitude": 43.443727,
       "longitude": -89.490549
@@ -5022,7 +4716,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0519",
+    "id": "us_junction_0503",
     "coordinate": {
       "latitude": 43.488904,
       "longitude": -89.494307
@@ -5031,7 +4725,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0520",
+    "id": "us_junction_0504",
     "coordinate": {
       "latitude": 43.612322,
       "longitude": -96.770738
@@ -5040,7 +4734,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0521",
+    "id": "us_junction_0505",
     "coordinate": {
       "latitude": 43.641009,
       "longitude": -72.33989
@@ -5049,7 +4743,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0522",
+    "id": "us_junction_0506",
     "coordinate": {
       "latitude": 43.683783,
       "longitude": -93.32166
@@ -5058,7 +4752,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0523",
+    "id": "us_junction_0507",
     "coordinate": {
       "latitude": 43.943042,
       "longitude": -90.312277
@@ -5067,7 +4761,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0524",
+    "id": "us_junction_0508",
     "coordinate": {
       "latitude": 43.98524,
       "longitude": -90.447057
@@ -5076,7 +4770,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0525",
+    "id": "us_junction_0509",
     "coordinate": {
       "latitude": 43.993785,
       "longitude": -90.460871
@@ -5085,7 +4779,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0526",
+    "id": "us_junction_0510",
     "coordinate": {
       "latitude": 44.005708,
       "longitude": -90.480147
@@ -5094,7 +4788,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0527",
+    "id": "us_junction_0511",
     "coordinate": {
       "latitude": 44.030304,
       "longitude": -90.511734
@@ -5103,7 +4797,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0528",
+    "id": "us_junction_0512",
     "coordinate": {
       "latitude": 44.115995,
       "longitude": -72.606496
@@ -5112,7 +4806,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0529",
+    "id": "us_junction_0513",
     "coordinate": {
       "latitude": 44.159434,
       "longitude": -72.583273
@@ -5121,7 +4815,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0530",
+    "id": "us_junction_0514",
     "coordinate": {
       "latitude": 44.347231,
       "longitude": -75.983612
@@ -5130,7 +4824,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0531",
+    "id": "us_junction_0515",
     "coordinate": {
       "latitude": 44.370128,
       "longitude": -106.688974
@@ -5139,7 +4833,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0532",
+    "id": "us_junction_0516",
     "coordinate": {
       "latitude": 44.397551,
       "longitude": -72.015701
@@ -5148,7 +4842,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0533",
+    "id": "us_junction_0517",
     "coordinate": {
       "latitude": 44.554687,
       "longitude": -88.06275
@@ -5157,7 +4851,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0534",
+    "id": "us_junction_0518",
     "coordinate": {
       "latitude": 44.560931,
       "longitude": -88.05388
@@ -5166,7 +4860,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0535",
+    "id": "us_junction_0519",
     "coordinate": {
       "latitude": 44.737201,
       "longitude": -93.283186
@@ -5175,7 +4869,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0536",
+    "id": "us_junction_0520",
     "coordinate": {
       "latitude": 44.800129,
       "longitude": -93.290006
@@ -5184,7 +4878,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0537",
+    "id": "us_junction_0521",
     "coordinate": {
       "latitude": 44.832043,
       "longitude": -69.287681
@@ -5193,7 +4887,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0538",
+    "id": "us_junction_0522",
     "coordinate": {
       "latitude": 44.897488,
       "longitude": -89.640497
@@ -5202,7 +4896,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0539",
+    "id": "us_junction_0523",
     "coordinate": {
       "latitude": 44.904359,
       "longitude": -93.138879
@@ -5211,7 +4905,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0540",
+    "id": "us_junction_0524",
     "coordinate": {
       "latitude": 44.951381,
       "longitude": -93.097839
@@ -5220,7 +4914,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0541",
+    "id": "us_junction_0525",
     "coordinate": {
       "latitude": 44.963631,
       "longitude": -93.269679
@@ -5229,7 +4923,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0542",
+    "id": "us_junction_0526",
     "coordinate": {
       "latitude": 44.966018,
       "longitude": -93.261562
@@ -5238,7 +4932,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0543",
+    "id": "us_junction_0527",
     "coordinate": {
       "latitude": 45.005863,
       "longitude": -72.088267
@@ -5247,7 +4941,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0544",
+    "id": "us_junction_0528",
     "coordinate": {
       "latitude": 45.00886,
       "longitude": -73.451971
@@ -5256,7 +4950,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0545",
+    "id": "us_junction_0529",
     "coordinate": {
       "latitude": 45.015473,
       "longitude": -73.084908
@@ -5265,7 +4959,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0546",
+    "id": "us_junction_0530",
     "coordinate": {
       "latitude": 45.124,
       "longitude": -93.049572
@@ -5274,7 +4968,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0547",
+    "id": "us_junction_0531",
     "coordinate": {
       "latitude": 45.124379,
       "longitude": -93.188559
@@ -5283,7 +4977,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0548",
+    "id": "us_junction_0532",
     "coordinate": {
       "latitude": 45.221617,
       "longitude": -93.028492
@@ -5292,7 +4986,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0549",
+    "id": "us_junction_0533",
     "coordinate": {
       "latitude": 45.525455,
       "longitude": -122.662964
@@ -5301,16 +4995,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0550",
-    "coordinate": {
-      "latitude": 45.529699,
-      "longitude": -122.646916
-    },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_junction_0551",
+    "id": "us_junction_0534",
     "coordinate": {
       "latitude": 45.795427,
       "longitude": -119.392899
@@ -5319,7 +5004,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0552",
+    "id": "us_junction_0535",
     "coordinate": {
       "latitude": 45.823516,
       "longitude": -108.402278
@@ -5328,7 +5013,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0553",
+    "id": "us_junction_0536",
     "coordinate": {
       "latitude": 45.851586,
       "longitude": -68.426576
@@ -5337,7 +5022,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0554",
+    "id": "us_junction_0537",
     "coordinate": {
       "latitude": 45.979938,
       "longitude": -112.480794
@@ -5346,7 +5031,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0555",
+    "id": "us_junction_0538",
     "coordinate": {
       "latitude": 46.007824,
       "longitude": -112.635633
@@ -5355,7 +5040,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0556",
+    "id": "us_junction_0539",
     "coordinate": {
       "latitude": 46.134898,
       "longitude": -67.781245
@@ -5364,7 +5049,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0557",
+    "id": "us_junction_0540",
     "coordinate": {
       "latitude": 46.508462,
       "longitude": -84.360765
@@ -5373,7 +5058,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0558",
+    "id": "us_junction_0541",
     "coordinate": {
       "latitude": 46.703334,
       "longitude": -92.30149
@@ -5382,7 +5067,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0559",
+    "id": "us_junction_0542",
     "coordinate": {
       "latitude": 46.847794,
       "longitude": -96.840131
@@ -5391,7 +5076,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0560",
+    "id": "us_junction_0543",
     "coordinate": {
       "latitude": 46.970513,
       "longitude": -120.51104
@@ -5400,7 +5085,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0561",
+    "id": "us_junction_0544",
     "coordinate": {
       "latitude": 46.971351,
       "longitude": -120.525693
@@ -5409,7 +5094,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0562",
+    "id": "us_junction_0545",
     "coordinate": {
       "latitude": 47.538975,
       "longitude": -122.036172
@@ -5418,7 +5103,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0563",
+    "id": "us_junction_0546",
     "coordinate": {
       "latitude": 47.579198,
       "longitude": -122.209992
@@ -5427,7 +5112,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0564",
+    "id": "us_junction_0547",
     "coordinate": {
       "latitude": 47.594003,
       "longitude": -122.320313
@@ -5436,7 +5121,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0565",
+    "id": "us_junction_0548",
     "coordinate": {
       "latitude": 47.617313,
       "longitude": -122.329992
@@ -5445,7 +5130,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0566",
+    "id": "us_junction_0549",
     "coordinate": {
       "latitude": 48.998392,
       "longitude": -111.960761
@@ -5454,7 +5139,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0567",
+    "id": "us_junction_0550",
     "coordinate": {
       "latitude": 49.000461,
       "longitude": -97.238021
@@ -5463,7 +5148,7 @@
     "cityID": null
   },
   {
-    "id": "us_junction_0568",
+    "id": "us_junction_0551",
     "coordinate": {
       "latitude": 49.002086,
       "longitude": -122.757044

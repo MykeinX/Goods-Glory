@@ -22,23 +22,20 @@ struct FinanceView: View {
     private var delivered: Int { session.state?.stats.deliveredJobs ?? 0 }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    ScreenHeader(title: "Finance")
-
-                    heroCard
-                    revenueCostRow
-                    expenseBreakdown
-                    cashCard
-
-                    Color.clear.frame(height: Layout.tabBarClearance)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                heroCard
+                revenueCostRow
+                expenseBreakdown
+                cashCard
+                Color.clear.frame(height: Layout.tabBarClearance)
             }
-            .background(Theme.backgroundBottom.ignoresSafeArea())
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
         }
+        .background(Theme.backgroundBottom.ignoresSafeArea())
+        .navigationTitle("Finance")
+        .navigationBarTitleDisplayMode(.inline)
         .tint(accent)
     }
 

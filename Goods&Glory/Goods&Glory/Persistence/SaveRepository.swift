@@ -16,7 +16,7 @@ struct SaveEnvelope: Codable {
 }
 
 struct SaveRepository {
-    static let currentSaveVersion = 4
+    static let currentSaveVersion = 7
 
     private let fileURL: URL
 

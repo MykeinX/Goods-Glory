@@ -586,7 +586,6 @@ def build_geography(
             }
             for index, ring in enumerate(lake_rings, 1)
         ],
-        "rivers": [],
         "boundaries": [
             {
                 "id": f"world_border_{index:04d}",

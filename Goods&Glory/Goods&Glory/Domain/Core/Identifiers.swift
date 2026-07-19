@@ -43,12 +43,15 @@ enum RoadTag {}
 enum RoadNodeTag {}
 enum VehicleTypeTag {}
 enum ProductTag {}
+enum FirmTag {}
 
 typealias CityID = CatalogID<CityTag>
 typealias RoadID = CatalogID<RoadTag>
 typealias RoadNodeID = CatalogID<RoadNodeTag>
 typealias VehicleTypeID = CatalogID<VehicleTypeTag>
 typealias ProductID = CatalogID<ProductTag>
+/// Derived catalog entity: one trading firm per (city, product, role).
+typealias FirmID = CatalogID<FirmTag>
 
 /// A type-safe wrapper around a deterministic sequential integer for live entities.
 /// Issued via `GameState.issueID()` so identical command sequences yield identical IDs.
@@ -77,6 +80,10 @@ extension RuntimeID: CustomStringConvertible {
 
 enum VehicleTag {}
 enum JobTag {}
+enum ContractTag {}
+enum RouteTag {}
 
 typealias VehicleID = RuntimeID<VehicleTag>
 typealias JobID = RuntimeID<JobTag>
+typealias ContractID = RuntimeID<ContractTag>
+typealias RouteID = RuntimeID<RouteTag>

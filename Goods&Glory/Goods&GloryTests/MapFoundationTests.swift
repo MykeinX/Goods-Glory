@@ -2,7 +2,7 @@
 //  MapFoundationTests.swift
 //  Goods&GloryTests
 //
-//  Verifies the contract between canonical road geometry and map rendering.
+//  Verifies map geography decoding and city-to-city arc rendering.
 //
 
 import Foundation
@@ -27,7 +27,6 @@ struct MapFoundationTests {
                 }
               ],
               "waterBodies": [],
-              "rivers": [],
               "boundaries": []
             }
             """.utf8
@@ -55,7 +54,7 @@ struct MapFoundationTests {
         #expect((longitudes.max() ?? 0) > 100)
     }
 
-    @Test func movingVehicleIsSampledOnRoadGeometryRatherThanCityChord() throws {
+    @Test func movingVehicleIsSampledOnCityChordAtHalfProgress() throws {
         let cityA = CityID("alpha")
         let cityB = CityID("beta")
         let nodeA = RoadNodeID("node_alpha")
@@ -65,16 +64,14 @@ struct MapFoundationTests {
         let jobID = JobID(rawValue: 2)
         let vehicleTypeID = VehicleTypeID("van")
         let productID = ProductID("cargo")
-        let economy = EconomyConfig(
-            startingCash: 10_000,
+        let economy = TestEconomy.make(
+            startingCash: 15_000,
             loadingMinutes: 0,
             unloadingMinutes: 0,
             offerGenerationIntervalMinutes: 60,
             offerLifetimeMinutes: 60,
             offerChancePercent: 0,
-            maxOpenOffersPerCity: 1,
-            offerMinimumProfit: 1,
-            offerProfitMarginPercent: 20
+            maxOpenOffersPerCity: 1
         )
         let catalog = try GameCatalog(
             cities: [
@@ -82,14 +79,14 @@ struct MapFoundationTests {
                     id: cityA, roadNodeID: nodeA, name: "Alpha", country: "TST",
                     latitude: 0, longitude: 0, population: 1,
                     hasRailFreightAccess: false, hasAirCargoAccess: false, hasSeaPortAccess: false,
-                    costIndex: 1_000, trafficDelayIndex: 1_000,
+                    costIndex: 250, trafficDelayIndex: 1_000,
                     isStarterCity: true
                 ),
                 CityDefinition(
                     id: cityB, roadNodeID: nodeB, name: "Beta", country: "TST",
                     latitude: 1, longitude: 1, population: 1,
                     hasRailFreightAccess: false, hasAirCargoAccess: false, hasSeaPortAccess: false,
-                    costIndex: 1_000, trafficDelayIndex: 1_000,
+                    costIndex: 250, trafficDelayIndex: 1_000,
                     isStarterCity: false
                 )
             ],
@@ -112,12 +109,7 @@ struct MapFoundationTests {
                     id: roadID,
                     from: nodeA,
                     to: nodeB,
-                    distanceKm: 200,
-                    geometry: [
-                        GeoCoordinate(latitude: 0, longitude: 0),
-                        GeoCoordinate(latitude: 0, longitude: 1),
-                        GeoCoordinate(latitude: 1, longitude: 1)
-                    ]
+                    distanceKm: 200
                 )
             ],
             vehicleTypes: [
@@ -125,7 +117,8 @@ struct MapFoundationTests {
                     id: vehicleTypeID, name: "Van", symbol: "box.truck",
                     capacity: LoadSize(massKg: 1, volumeM3: 1),
                     speedKmh: 100, purchasePrice: 1,
-                    costPerKm: 1, driverCostPerHour: 1
+                    costPerKm: 1, driverCostPerHour: 1,
+                    freightRatePerKm: 2.0, fixedCostPerDay: 10
                 )
             ],
             products: [
@@ -150,6 +143,11 @@ struct MapFoundationTests {
             load: LoadSize(massKg: 1, volumeM3: 1),
             payout: 1,
             distanceKm: 200,
+            urgency: .normal,
+            source: .spot,
+            contractID: nil,
+            originFirmID: nil,
+            destinationFirmID: nil,
             createdAt: .start,
             expiresAt: .start + 500
         )
@@ -190,10 +188,63 @@ struct MapFoundationTests {
             MapSceneAdapter.snapshot(state: state, catalog: catalog, projection: projection)
                 .vehicles.first
         )
-        let roadCorner = projection.point(latitude: 0, longitude: 1)
-        let cityChordMidpoint = projection.point(latitude: 0.5, longitude: 0.5)
-        #expect(hypot(marker.position.x - roadCorner.x, marker.position.y - roadCorner.y) < 1)
-        #expect(hypot(marker.position.x - cityChordMidpoint.x, marker.position.y - cityChordMidpoint.y) > 50)
+        // Current map adapter interpolates along the projected city-to-city MapArc.
+        let originPt = projection.point(latitude: 0, longitude: 0)
+        let destPt = projection.point(latitude: 1, longitude: 1)
+        let expected = MapArc.point(originPt, destPt, 0.5)
+        #expect(hypot(marker.position.x - expected.x, marker.position.y - expected.y) < 1)
+    }
+
+    @Test func routePreviewClosesTheLoopAndGroupsRepeatedCityMarkers() throws {
+        let catalog = try GameCatalog.load(from: .main)
+        let cities = try #require(catalog.cities.count >= 3 ? Array(catalog.cities.prefix(3)) : nil)
+        let cityA = cities[0].id
+        let cityB = cities[1].id
+        let cityC = cities[2].id
+        let contractID = ContractID(rawValue: 91)
+        let route = Route(
+            id: RouteID(rawValue: 92),
+            name: "Preview",
+            contractID: nil,
+            stops: [
+                RouteStop(id: 1, cityID: cityA, task: .travel),
+                RouteStop(id: 2, cityID: cityB, task: .pickupContract(contractID)),
+                RouteStop(id: 3, cityID: cityB, task: .deliverContract(contractID)),
+                RouteStop(id: 4, cityID: cityC, task: .travel),
+                RouteStop(id: 5, cityID: cityA, task: .deliverContract(contractID))
+            ],
+            vehicleIDs: [],
+            isRunning: false
+        )
+        let state = GameState.newCampaign(
+            config: CampaignConfig(
+                seed: 1,
+                identity: CompanyIdentity(name: "Test", colorHex: "#FFFFFF", emblemSymbol: "star"),
+                hqCity: cityA
+            ),
+            economy: catalog.economy
+        )
+        let projection = MapProjection()
+
+        let snapshot = MapSceneAdapter.snapshot(
+            state: state,
+            catalog: catalog,
+            projection: projection,
+            previewRoute: route
+        )
+        let planned = try #require(snapshot.routes.first { $0.kind == .planned })
+        let markerA = try #require(snapshot.plannedVisits.first { $0.id == cityA })
+        let markerB = try #require(snapshot.plannedVisits.first { $0.id == cityB })
+
+        #expect(planned.anchors.count == 4)
+        #expect(planned.anchors.first == planned.anchors.last)
+        #expect(snapshot.plannedVisits.count == 3)
+        #expect(markerA.stepNumbers == [1, 4])
+        #expect(markerA.hasDelivery)
+        #expect(!markerA.hasPickup)
+        #expect(markerB.stepNumbers == [2])
+        #expect(markerB.hasPickup)
+        #expect(markerB.hasDelivery)
     }
 
     @Test func pathSimplifierKeepsEndpointsAndDropsColinearPoints() {
@@ -218,20 +269,5 @@ struct MapFoundationTests {
         let simplified = MapPathSimplifier.simplify(points, tolerance: 4)
         #expect(simplified.count == 3)
         #expect(simplified[1] == points[1])
-    }
-
-    @Test func pathSimplifierReducesBundledRoadDisplayBudget() throws {
-        let catalog = try GameCatalog.load(from: .main)
-        let projection = MapProjection()
-        var raw = 0
-        var simplified = 0
-        for road in catalog.roads {
-            let points = road.geometry.map(projection.point(for:))
-            raw += points.count
-            simplified += MapPathSimplifier.simplify(points).count
-        }
-        #expect(raw > 5_000)
-        #expect(simplified < raw / 2)
-        #expect(simplified > 500)
     }
 }

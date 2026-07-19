@@ -3,7 +3,7 @@
 //  Goods&Glory
 //
 //  Lightweight, presentation-only geography. It gives the strategic map
-//  recognizable water, river and regional-boundary silhouettes without
+//  recognizable land, water and country-boundary silhouettes without
 //  introducing a live map service into the simulation or renderer.
 //
 
@@ -14,7 +14,6 @@ struct MapGeographyDefinition: Decodable, Sendable {
     let source: String
     let landMasses: [MapPolygonDefinition]
     let waterBodies: [MapPolygonDefinition]
-    let rivers: [MapPolylineDefinition]
     let boundaries: [MapPolylineDefinition]
 
     static let empty = MapGeographyDefinition(
@@ -22,14 +21,12 @@ struct MapGeographyDefinition: Decodable, Sendable {
         source: "fallback",
         landMasses: [],
         waterBodies: [],
-        rivers: [],
         boundaries: []
     )
 
     var allCoordinates: [GeoCoordinate] {
         landMasses.flatMap(\.points)
             + waterBodies.flatMap(\.points)
-            + rivers.flatMap(\.points)
             + boundaries.flatMap(\.points)
     }
 
@@ -38,14 +35,12 @@ struct MapGeographyDefinition: Decodable, Sendable {
         source: String,
         landMasses: [MapPolygonDefinition],
         waterBodies: [MapPolygonDefinition],
-        rivers: [MapPolylineDefinition],
         boundaries: [MapPolylineDefinition]
     ) {
         self.version = version
         self.source = source
         self.landMasses = landMasses
         self.waterBodies = waterBodies
-        self.rivers = rivers
         self.boundaries = boundaries
     }
 
@@ -58,7 +53,6 @@ struct MapGeographyDefinition: Decodable, Sendable {
             forKey: .landMasses
         ) ?? []
         waterBodies = try container.decode([MapPolygonDefinition].self, forKey: .waterBodies)
-        rivers = try container.decode([MapPolylineDefinition].self, forKey: .rivers)
         boundaries = try container.decode([MapPolylineDefinition].self, forKey: .boundaries)
     }
 
@@ -67,7 +61,6 @@ struct MapGeographyDefinition: Decodable, Sendable {
         case source
         case landMasses
         case waterBodies
-        case rivers
         case boundaries
     }
 

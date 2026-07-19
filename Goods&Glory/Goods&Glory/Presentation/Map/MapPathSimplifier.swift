@@ -3,8 +3,8 @@
 //  Goods&Glory
 //
 //  Display-budget polyline simplification for the strategic map. Simulation
-//  still uses the full road graph (nodes + distanceKm); only projected drawing
-//  and vehicle sampling along polylines are thinned so SpriteKit stays light.
+//  uses the road graph (nodes + distanceKm); only projected geography drawing
+//  is thinned so SpriteKit stays light.
 //
 
 import CoreGraphics

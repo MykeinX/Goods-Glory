@@ -43,6 +43,12 @@ enum Format {
     static func volume(m3: Double) -> String {
         String(localized: "\(m3.formatted(.number.precision(.fractionLength(0...1)))) m³")
     }
+
+    /// Fleet / map vehicle code, e.g. `VAN-03` from type name + runtime id.
+    static func vehicleCode(typeName: String, id: VehicleID) -> String {
+        let prefix = typeName.prefix(3).uppercased()
+        return "\(prefix)-\(String(format: "%02d", id.rawValue))"
+    }
 }
 
 extension Color {
@@ -74,8 +80,28 @@ extension LogEntry {
             return String(localized: "Purchased \(String(localized: String.LocalizationValue(typeName))) in \(cityName(city)).")
         case .jobAccepted(_, let origin, let destination):
             return String(localized: "Accepted job: \(cityName(origin)) → \(cityName(destination)).")
+        case .jobPickedUp(_, let origin, let destination):
+            return String(localized: "Picked up cargo: \(cityName(origin)) → \(cityName(destination)).")
         case .jobDelivered(_, let destination, let revenue, let cost):
             return String(localized: "Delivered in \(cityName(destination)): \(Format.money(revenue)) revenue, \(Format.money(cost)) cost.")
+        case .contractSigned(_, let origin, let destination):
+            return String(localized: "Signed contract: \(cityName(origin)) → \(cityName(destination)).")
+        case .vehicleAssignedToRoute(let vehicleID, _):
+            return String(localized: "Vehicle #\(vehicleID.rawValue) assigned to a route.")
+        case .vehicleUnassignedFromRoute(let vehicleID, _):
+            return String(localized: "Vehicle #\(vehicleID.rawValue) released from its route.")
+        case .routeStarted:
+            return String(localized: "Route started.")
+        case .routeStopped:
+            return String(localized: "Route stopped.")
+        case .routeShipmentDelivered(_, _, let destination, let revenue):
+            return String(localized: "Route delivery in \(cityName(destination)): \(Format.money(revenue)) revenue.")
+        case .routeShipmentSkipped:
+            return String(localized: "A route pickup was skipped (cargo missing or vehicle full).")
+        case .contractShipmentMissed(_, let penalty):
+            return String(localized: "Contract shipment missed. Compensation paid: \(Format.money(penalty)).")
+        case .contractEnded(_, let completed, let missed):
+            return String(localized: "Contract ended: \(completed) delivered, \(missed) missed.")
         }
     }
 }

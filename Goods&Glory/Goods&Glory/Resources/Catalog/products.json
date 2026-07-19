@@ -4,7 +4,7 @@
     "name": "Consumer Goods",
     "symbol": "shippingbox",
     "densityM3PerTon": 3.5,
-    "minimumShipmentMassKg": 400,
+    "minimumShipmentMassKg": 200,
     "maximumShipmentMassKg": 12000
   },
   {
@@ -12,23 +12,103 @@
     "name": "Processed Food",
     "symbol": "basket",
     "densityM3PerTon": 2.5,
-    "minimumShipmentMassKg": 600,
+    "minimumShipmentMassKg": 300,
     "maximumShipmentMassKg": 15000
+  },
+  {
+    "id": "fresh_produce",
+    "name": "Fresh Produce",
+    "symbol": "leaf",
+    "densityM3PerTon": 3.2,
+    "minimumShipmentMassKg": 250,
+    "maximumShipmentMassKg": 10000
+  },
+  {
+    "id": "beverages",
+    "name": "Beverages",
+    "symbol": "cup.and.saucer",
+    "densityM3PerTon": 1.2,
+    "minimumShipmentMassKg": 400,
+    "maximumShipmentMassKg": 18000
   },
   {
     "id": "construction_materials",
     "name": "Construction Materials",
     "symbol": "hammer",
     "densityM3PerTon": 0.8,
-    "minimumShipmentMassKg": 1500,
-    "maximumShipmentMassKg": 20000
+    "minimumShipmentMassKg": 800,
+    "maximumShipmentMassKg": 22000
   },
   {
     "id": "consumer_electronics",
     "name": "Consumer Electronics",
     "symbol": "tv",
     "densityM3PerTon": 4.0,
-    "minimumShipmentMassKg": 300,
+    "minimumShipmentMassKg": 150,
     "maximumShipmentMassKg": 5000
+  },
+  {
+    "id": "automotive_parts",
+    "name": "Automotive Parts",
+    "symbol": "wrench.and.screwdriver",
+    "densityM3PerTon": 2.0,
+    "minimumShipmentMassKg": 300,
+    "maximumShipmentMassKg": 12000
+  },
+  {
+    "id": "pharmaceuticals",
+    "name": "Pharmaceuticals",
+    "symbol": "cross.case",
+    "densityM3PerTon": 3.8,
+    "minimumShipmentMassKg": 100,
+    "maximumShipmentMassKg": 4000
+  },
+  {
+    "id": "apparel",
+    "name": "Apparel",
+    "symbol": "tshirt",
+    "densityM3PerTon": 5.5,
+    "minimumShipmentMassKg": 150,
+    "maximumShipmentMassKg": 6000
+  },
+  {
+    "id": "paper_packaging",
+    "name": "Paper & Packaging",
+    "symbol": "doc.plaintext",
+    "densityM3PerTon": 4.2,
+    "minimumShipmentMassKg": 300,
+    "maximumShipmentMassKg": 14000
+  },
+  {
+    "id": "industrial_chemicals",
+    "name": "Industrial Chemicals",
+    "symbol": "flask",
+    "densityM3PerTon": 1.1,
+    "minimumShipmentMassKg": 500,
+    "maximumShipmentMassKg": 20000
+  },
+  {
+    "id": "furniture",
+    "name": "Furniture",
+    "symbol": "sofa",
+    "densityM3PerTon": 6.0,
+    "minimumShipmentMassKg": 200,
+    "maximumShipmentMassKg": 8000
+  },
+  {
+    "id": "industrial_machinery",
+    "name": "Industrial Machinery",
+    "symbol": "gearshape.2",
+    "densityM3PerTon": 1.4,
+    "minimumShipmentMassKg": 600,
+    "maximumShipmentMassKg": 20000
+  },
+  {
+    "id": "refrigerated_goods",
+    "name": "Refrigerated Goods",
+    "symbol": "thermometer.snowflake",
+    "densityM3PerTon": 2.8,
+    "minimumShipmentMassKg": 250,
+    "maximumShipmentMassKg": 12000
   }
 ]

@@ -120,21 +120,6 @@
     "isStarterCity": true
   },
   {
-    "id": "us_philadelphia",
-    "name": "Philadelphia",
-    "country": "USA",
-    "latitude": 40.009376,
-    "longitude": -75.133346,
-    "roadNodeID": "us_city_philadelphia",
-    "population": 6329118,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": true,
-    "hasSeaPortAccess": true,
-    "costIndex": 1035,
-    "trafficDelayIndex": 1230,
-    "isStarterCity": true
-  },
-  {
     "id": "us_phoenix",
     "name": "Phoenix",
     "country": "USA",
@@ -162,7 +147,7 @@
     "hasSeaPortAccess": true,
     "costIndex": 1116,
     "trafficDelayIndex": 1270,
-    "isStarterCity": false
+    "isStarterCity": true
   },
   {
     "id": "us_san_francisco",
@@ -225,36 +210,6 @@
     "isStarterCity": false
   },
   {
-    "id": "us_tampa",
-    "name": "Tampa",
-    "country": "USA",
-    "latitude": 27.970086,
-    "longitude": -82.479673,
-    "roadNodeID": "us_city_tampa",
-    "population": 3418895,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": true,
-    "hasSeaPortAccess": true,
-    "costIndex": 1034,
-    "trafficDelayIndex": 1280,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_san_diego",
-    "name": "San Diego",
-    "country": "USA",
-    "latitude": 32.830391,
-    "longitude": -117.120923,
-    "roadNodeID": "us_city_san_diego",
-    "population": 3282248,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": true,
-    "costIndex": 1115,
-    "trafficDelayIndex": 1240,
-    "isStarterCity": false
-  },
-  {
     "id": "us_denver",
     "name": "Denver",
     "country": "USA",
@@ -268,21 +223,6 @@
     "costIndex": 1055,
     "trafficDelayIndex": 1280,
     "isStarterCity": true
-  },
-  {
-    "id": "us_orlando",
-    "name": "Orlando",
-    "country": "USA",
-    "latitude": 28.5383,
-    "longitude": -81.3792,
-    "roadNodeID": "us_city_orlando",
-    "population": 2957672,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": true,
-    "hasSeaPortAccess": false,
-    "costIndex": 1011,
-    "trafficDelayIndex": 1190,
-    "isStarterCity": false
   },
   {
     "id": "us_charlotte",
@@ -315,66 +255,6 @@
     "isStarterCity": false
   },
   {
-    "id": "us_san_antonio",
-    "name": "San Antonio",
-    "country": "USA",
-    "latitude": 29.462809,
-    "longitude": -98.524635,
-    "roadNodeID": "us_city_san_antonio",
-    "population": 2813140,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": false,
-    "costIndex": 937,
-    "trafficDelayIndex": 1220,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_portland",
-    "name": "Portland",
-    "country": "USA",
-    "latitude": 45.536951,
-    "longitude": -122.649971,
-    "roadNodeID": "us_city_portland",
-    "population": 2542282,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": true,
-    "hasSeaPortAccess": true,
-    "costIndex": 1066,
-    "trafficDelayIndex": 1340,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_sacramento",
-    "name": "Sacramento",
-    "country": "USA",
-    "latitude": 38.567694,
-    "longitude": -121.468161,
-    "roadNodeID": "us_city_sacramento",
-    "population": 2477274,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": false,
-    "costIndex": 1089,
-    "trafficDelayIndex": 1200,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_pittsburgh",
-    "name": "Pittsburgh",
-    "country": "USA",
-    "latitude": 40.439936,
-    "longitude": -79.975676,
-    "roadNodeID": "us_city_pittsburgh",
-    "population": 2421992,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": false,
-    "costIndex": 944,
-    "trafficDelayIndex": 1090,
-    "isStarterCity": false
-  },
-  {
     "id": "us_las_vegas",
     "name": "Las Vegas",
     "country": "USA",
@@ -387,21 +267,6 @@
     "hasSeaPortAccess": false,
     "costIndex": 974,
     "trafficDelayIndex": 1220,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_cincinnati",
-    "name": "Cincinnati",
-    "country": "USA",
-    "latitude": 39.140183,
-    "longitude": -84.505829,
-    "roadNodeID": "us_city_cincinnati",
-    "population": 2312858,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": true,
-    "hasSeaPortAccess": false,
-    "costIndex": 941,
-    "trafficDelayIndex": 1170,
     "isStarterCity": false
   },
   {
@@ -420,21 +285,6 @@
     "isStarterCity": false
   },
   {
-    "id": "us_indianapolis",
-    "name": "Indianapolis",
-    "country": "USA",
-    "latitude": 39.776664,
-    "longitude": -86.145935,
-    "roadNodeID": "us_city_indianapolis",
-    "population": 2205695,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": true,
-    "hasSeaPortAccess": false,
-    "costIndex": 946,
-    "trafficDelayIndex": 1160,
-    "isStarterCity": false
-  },
-  {
     "id": "us_nashville",
     "name": "Nashville",
     "country": "USA",
@@ -447,81 +297,6 @@
     "hasSeaPortAccess": false,
     "costIndex": 974,
     "trafficDelayIndex": 1220,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_cleveland",
-    "name": "Cleveland",
-    "country": "USA",
-    "latitude": 41.478462,
-    "longitude": -81.679435,
-    "roadNodeID": "us_city_cleveland",
-    "population": 2165775,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": true,
-    "costIndex": 930,
-    "trafficDelayIndex": 1070,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_virginia_beach",
-    "name": "Virginia Beach",
-    "country": "USA",
-    "latitude": 36.8529,
-    "longitude": -75.978,
-    "roadNodeID": "us_city_virginia_beach",
-    "population": 1797213,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": true,
-    "costIndex": 974,
-    "trafficDelayIndex": 1160,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_jacksonville",
-    "name": "Jacksonville",
-    "country": "USA",
-    "latitude": 30.336864,
-    "longitude": -81.661603,
-    "roadNodeID": "us_city_jacksonville",
-    "population": 1785500,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": true,
-    "costIndex": 992,
-    "trafficDelayIndex": 1140,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_oklahoma_city",
-    "name": "Oklahoma City",
-    "country": "USA",
-    "latitude": 35.467079,
-    "longitude": -97.513657,
-    "roadNodeID": "us_city_oklahoma_city",
-    "population": 1512813,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": false,
-    "costIndex": 910,
-    "trafficDelayIndex": 1110,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_memphis",
-    "name": "Memphis",
-    "country": "USA",
-    "latitude": 35.109164,
-    "longitude": -89.968511,
-    "roadNodeID": "us_city_memphis",
-    "population": 1341412,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": true,
-    "hasSeaPortAccess": false,
-    "costIndex": 924,
-    "trafficDelayIndex": 1120,
     "isStarterCity": false
   },
   {
@@ -540,21 +315,6 @@
     "isStarterCity": false
   },
   {
-    "id": "us_omaha",
-    "name": "Omaha",
-    "country": "USA",
-    "latitude": 41.262705,
-    "longitude": -96.053475,
-    "roadNodeID": "us_city_omaha",
-    "population": 1009836,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": false,
-    "costIndex": 925,
-    "trafficDelayIndex": 1280,
-    "isStarterCity": false
-  },
-  {
     "id": "us_new_orleans",
     "name": "New Orleans",
     "country": "USA",
@@ -567,36 +327,6 @@
     "hasSeaPortAccess": true,
     "costIndex": 911,
     "trafficDelayIndex": 1170,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_albuquerque",
-    "name": "Albuquerque",
-    "country": "USA",
-    "latitude": 35.10478,
-    "longitude": -106.646809,
-    "roadNodeID": "us_city_albuquerque",
-    "population": 925279,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": false,
-    "costIndex": 930,
-    "trafficDelayIndex": 1280,
-    "isStarterCity": false
-  },
-  {
-    "id": "us_el_paso",
-    "name": "El Paso",
-    "country": "USA",
-    "latitude": 31.84778,
-    "longitude": -106.431106,
-    "roadNodeID": "us_city_el_paso",
-    "population": 881291,
-    "hasRailFreightAccess": true,
-    "hasAirCargoAccess": false,
-    "hasSeaPortAccess": false,
-    "costIndex": 902,
-    "trafficDelayIndex": 1280,
     "isStarterCity": false
   }
 ]

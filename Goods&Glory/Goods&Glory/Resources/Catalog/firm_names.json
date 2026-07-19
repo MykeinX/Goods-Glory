@@ -1,0 +1,18 @@
+{
+  "stems": [
+    "Atlas", "Nova", "Summit", "Harbor", "Cedar", "Union", "Pioneer", "Crown",
+    "Granite", "Beacon", "Liberty", "Cascade", "Sterling", "Meridian", "Frontier",
+    "Anchor", "Redwood", "Falcon", "Prairie", "Keystone", "Horizon", "Bluffside",
+    "Ironwood", "Silverline", "Northgate", "Eastbay", "Westfield", "Lakeshore",
+    "Riverbend", "Stonebridge", "Fairmont", "Oakland", "Vanguard", "Regent",
+    "Empire", "Delta", "Pacific", "Continental", "Monarch", "Sentinel"
+  ],
+  "supplierSuffixes": [
+    "Industries", "Works", "Manufacturing", "Mills", "Foods", "Supply",
+    "Producers", "Packing"
+  ],
+  "receiverSuffixes": [
+    "Distribution", "Market", "Trading", "Retail", "Depot", "Wholesale",
+    "Outlet", "Stores"
+  ]
+}

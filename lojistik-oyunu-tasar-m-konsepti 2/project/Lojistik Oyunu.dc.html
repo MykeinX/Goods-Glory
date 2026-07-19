@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900;1000&display=swap" rel="stylesheet">
+<script src="./europe-map.js"></script>
+<style>
+body{margin:0;background:#0A1120;font-family:Nunito,system-ui,sans-serif}
+a{color:#FFB037;text-decoration:none}a:hover{color:#FFC966}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(255,255,255,.07);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#FFB037;color:#241500;border-radius:4px;text-decoration:none}
+.dv-tname{font:800 14px/1.2 Nunito,sans-serif;color:#F2EDE3}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(255,255,255,.1);color:#F2EDE3;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:600 12px/1.3 Nunito,sans-serif;color:rgba(240,235,225,.6)}
+.dv-opt:target .dv-oid{background:#FFB037;color:#241500}
+.dv-next{margin:26px 0 0;font:600 12px/1.5 Nunito,sans-serif;color:rgba(240,235,225,.45)}
+</style>
+</helmet>
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Revizyonlar: ölçeklenebilir İşler, sekmeli Filo, harita başlıklı Şehir Detayı</span></div>
+<div style="max-width:760px;margin:0 0 26px;padding:18px 22px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;color:rgba(240,235,225,.72);font-size:13px;line-height:1.65;font-weight:600">
+<div style="font-weight:900;color:#F2EDE3;margin-bottom:6px;font-size:13.5px">Bu turdaki değişiklikler</div>
+<a href="#3a">3a</a> İşler yüzlerce işe ölçeklenir: Aktif/Pazar üst sekmesi, filtre çipleri ve tek satırlık kompakt iş satırları — büyük kartlar yok. <a href="#3b">3b</a> Filo üç sekmeye bölündü: Rotalar / Araçlar / Mağaza; araç listesi de filtre çipleriyle kompakt. <a href="#3c">3c</a> Şehir detayının üst yarısı artık şehrin odakta olduğu harita — finans uygulaması hissi gitti, alt kısım rota kurucudaki gibi kaydırılabilir panel.
+</div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="3a"><div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>İşler v2 — kompakt satırlar, filtreler, ölçeklenebilir</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="İşler v2" style="position:relative;width:100%;height:100%;background:#0C1626;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column;padding:60px 14px 0;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 4px 10px">
+<div style="font-size:26px;font-weight:1000;color:#F2EDE3">İşler</div>
+<div style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.5)">İtibar <b style="color:{{ brand }}">54</b> / 100</div>
+</div>
+<div style="display:flex;gap:5px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:99px;padding:5px">
+<sc-for list="{{ jobsModeTabs }}" as="t" hint-placeholder-count="2"><div onClick="{{ t.pick }}" style="flex:1;height:38px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:1000;cursor:pointer;background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}</div></sc-for>
+</div>
+<sc-if value="{{ jobsShowActive }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;padding:12px 0 120px">
+<div style="display:flex;gap:6px;overflow-x:auto;padding:0 2px">
+<sc-for list="{{ activeFilters }}" as="f" hint-placeholder-count="4"><span style="flex:none;font-size:11.5px;font-weight:900;color:{{ f.fg }};background:{{ f.bg }};border:1px solid {{ f.bd }};padding:7px 13px;border-radius:99px;cursor:pointer">{{ f.t }}</span></sc-for>
+</div>
+<sc-for list="{{ activeRows }}" as="a" hint-placeholder-count="6">
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:16px;padding:11px 14px;display:flex;flex-direction:column;gap:7px;cursor:pointer">
+<div style="display:flex;align-items:center;gap:9px">
+<span style="flex:1;min-width:0;font-size:13px;font-weight:900;color:#F2EDE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.title }}</span>
+<span style="font-size:9px;font-weight:1000;letter-spacing:.7px;padding:3px 8px;border-radius:99px;background:{{ a.tagBg }};color:{{ a.tagColor }};flex:none">{{ a.tag }}</span>
+<span style="font-size:11px;font-weight:900;color:{{ a.statusColor }};flex:none">{{ a.status }}</span>
+</div>
+<div style="height:4px;border-radius:99px;background:rgba(140,170,215,.12)"><div style="height:100%;border-radius:99px;background:{{ a.barColor }};width:{{ a.w }}"></div></div>
+</div>
+</sc-for>
+<div style="text-align:center;font-size:11px;font-weight:800;color:rgba(240,235,225,.4);padding:4px 0">18 iş daha…</div>
+</div>
+</sc-if>
+<sc-if value="{{ jobsShowMarket }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:9px;overflow-y:auto;flex:1;padding:12px 0 120px">
+<div style="display:flex;gap:5px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:99px;padding:5px">
+<sc-for list="{{ jobTabs }}" as="t" hint-placeholder-count="3"><div onClick="{{ t.pick }}" style="flex:1;height:34px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:1000;cursor:pointer;background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}</div></sc-for>
+</div>
+<div style="padding:0 4px;font-size:11px;font-weight:800;color:rgba(240,235,225,.45)">{{ jobTabHint }}</div>
+<sc-for list="{{ jobs }}" as="j" hint-placeholder-count="3">
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+<span style="font-size:15px;font-weight:1000;color:#F2EDE3">{{ j.title }}</span>
+<span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;padding:4px 9px;border-radius:99px;background:{{ j.tagBg }};color:{{ j.tagColor }};flex:none">{{ j.tag }}</span>
+</div>
+<div style="font-size:12px;font-weight:800;color:rgba(240,235,225,.6)">{{ j.sub1 }}</div>
+<div style="font-size:11.5px;font-weight:700;color:rgba(240,235,225,.45)">{{ j.sub2 }}</div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding-top:3px">
+<span style="font-size:17px;font-weight:1000;color:#4FD6A4">{{ j.pay }}</span>
+<span style="font-size:12.5px;font-weight:1000;color:#241500;background:{{ brand }};padding:8px 16px;border-radius:99px;cursor:pointer">{{ j.cta }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<div style="position:absolute;left:14px;right:14px;bottom:8px;display:flex;background:rgba(20,32,54,.97);border:1px solid rgba(140,170,215,.16);border-radius:22px;padding:8px 6px 26px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="3" transform="rotate(45 10 10)" fill="none" stroke="#7A90AC" stroke-width="1.8"></rect><circle cx="10" cy="10" r="2" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Harita</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="6" width="10" height="7" rx="2" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><path d="M12 8h3l2.4 2.6V13H12z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="6" cy="14.6" r="1.7" fill="#7A90AC"></circle><circle cx="14.6" cy="14.6" r="1.7" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Filo</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="3" width="12" height="14" rx="3" fill="none" stroke="{{ brand }}" stroke-width="1.7"></rect><rect x="7" y="7" width="6" height="1.6" rx="0.8" fill="{{ brand }}"></rect><rect x="7" y="10.5" width="6" height="1.6" rx="0.8" fill="{{ brand }}"></rect></svg><span style="font-size:9.5px;font-weight:900;color:{{ brand }}">İşler</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Tesis</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="5" y="3.5" width="10" height="13.5" rx="1.8" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7.5" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="7.5" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="8.6" y="13" width="2.8" height="4" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Şirket</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="3b"><div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>Filo v2 — Rotalar / Araçlar / Mağaza sekmeleri</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Filo v2" style="position:relative;width:100%;height:100%;background:#0C1626;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column;padding:60px 14px 0;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 4px 10px">
+<div style="font-size:26px;font-weight:1000;color:#F2EDE3">Filo</div>
+<div style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.5)"><b style="color:#F2EDE3">24</b> araç • <b style="color:#F2EDE3">3</b> rota</div>
+</div>
+<div style="display:flex;gap:5px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:99px;padding:5px">
+<sc-for list="{{ fleetTabs }}" as="t" hint-placeholder-count="3"><div onClick="{{ t.pick }}" style="flex:1;height:38px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:1000;cursor:pointer;background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}</div></sc-for>
+</div>
+<sc-if value="{{ fleetShowRoutes }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;padding:12px 0 120px">
+<sc-for list="{{ routeRows }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px;cursor:pointer">
+<svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 10a7 7 0 0112.4-4.4M17 10a7 7 0 01-12.4 4.4" fill="none" stroke="{{ brand }}" stroke-width="1.9" stroke-linecap="round"></path><path d="M15.5 2v3.6h-3.6M4.5 18v-3.6h3.6" fill="none" stroke="{{ brand }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">{{ r.name }}</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">{{ r.sub }}</div></div>
+<span style="font-size:11.5px;font-weight:900;color:{{ brand }}">Düzenle →</span>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border-radius:18px;border:1.5px dashed rgba(140,170,215,.3);color:rgba(240,235,225,.55);font-size:12.5px;font-weight:900;cursor:pointer"><span style="font-size:15px;color:{{ brand }}">+</span>Yeni rota kur</div>
+</div>
+</sc-if>
+<sc-if value="{{ fleetShowVehicles }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;padding:12px 0 120px">
+<div style="display:flex;gap:6px;overflow-x:auto;padding:0 2px">
+<sc-for list="{{ vehFilters }}" as="f" hint-placeholder-count="4"><span style="flex:none;font-size:11.5px;font-weight:900;color:{{ f.fg }};background:{{ f.bg }};border:1px solid {{ f.bd }};padding:7px 13px;border-radius:99px;cursor:pointer">{{ f.t }}</span></sc-for>
+</div>
+<sc-for list="{{ vehRows }}" as="v" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:16px;padding:11px 14px;cursor:pointer">
+<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900;color:#F2EDE3">{{ v.id }}</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ v.sub }}</div></div>
+<span style="font-size:9px;font-weight:1000;letter-spacing:.7px;color:{{ v.badgeColor }};background:{{ v.badgeBg }};padding:4px 9px;border-radius:99px;flex:none">{{ v.badge }}</span>
+</div>
+</sc-for>
+<div style="text-align:center;font-size:11px;font-weight:800;color:rgba(240,235,225,.4);padding:4px 0">18 araç daha…</div>
+</div>
+</sc-if>
+<sc-if value="{{ fleetShowShop }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:9px;overflow-y:auto;flex:1;padding:12px 0 120px">
+<div style="padding:0 4px;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">ARAÇLAR</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px">
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Atlas 440 Çekici</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">24t kapasite • uzun yol</div></div>
+<span style="font-size:12.5px;font-weight:1000;color:#241500;background:{{ brand }};padding:8px 16px;border-radius:99px;cursor:pointer">$86K</span>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px">
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Sprinter L2 Van</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">3.5t kapasite • şehir içi</div></div>
+<span style="font-size:12.5px;font-weight:1000;color:#241500;background:{{ brand }};padding:8px 16px;border-radius:99px;cursor:pointer">$38K</span>
+</div>
+<div style="padding:6px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">EKLENTİLER</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px">
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Soğutucu ünite</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">Soğuk zincir işleri açar</div></div>
+<span style="font-size:12.5px;font-weight:1000;color:#241500;background:{{ brand }};padding:8px 16px;border-radius:99px;cursor:pointer">$14K</span>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px">
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Kuru yük dorsesi</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">Standart paletli yükler</div></div>
+<span style="font-size:12.5px;font-weight:1000;color:#241500;background:{{ brand }};padding:8px 16px;border-radius:99px;cursor:pointer">$9K</span>
+</div>
+</div>
+</sc-if>
+<div style="position:absolute;left:14px;right:14px;bottom:8px;display:flex;background:rgba(20,32,54,.97);border:1px solid rgba(140,170,215,.16);border-radius:22px;padding:8px 6px 26px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="3" transform="rotate(45 10 10)" fill="none" stroke="#7A90AC" stroke-width="1.8"></rect><circle cx="10" cy="10" r="2" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Harita</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="6" width="10" height="7" rx="2" fill="none" stroke="{{ brand }}" stroke-width="1.7"></rect><path d="M12 8h3l2.4 2.6V13H12z" fill="none" stroke="{{ brand }}" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="6" cy="14.6" r="1.7" fill="{{ brand }}"></circle><circle cx="14.6" cy="14.6" r="1.7" fill="{{ brand }}"></circle></svg><span style="font-size:9.5px;font-weight:900;color:{{ brand }}">Filo</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="3" width="12" height="14" rx="3" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7" y="7" width="6" height="1.6" rx="0.8" fill="#7A90AC"></rect><rect x="7" y="10.5" width="6" height="1.6" rx="0.8" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">İşler</span><div style="position:absolute;top:-2px;right:24%;min-width:16px;height:16px;border-radius:99px;background:#FF6B5E;color:#fff;font-size:9.5px;font-weight:1000;display:flex;align-items:center;justify-content:center">3</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Tesis</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="5" y="3.5" width="10" height="13.5" rx="1.8" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7.5" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="7.5" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="8.6" y="13" width="2.8" height="4" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Şirket</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="3c"><div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>Şehir detayı v2 — harita başlıklı</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Şehir Detayı v2" style="position:relative;width:100%;height:100%;background:#0A1220;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column">
+<div style="position:relative;height:330px;flex:none">
+<div style="position:absolute;inset:0">{{ cityMap }}</div>
+<div style="position:absolute;top:0;left:0;right:0;height:120px;background:linear-gradient(#0A1220 15%,transparent);pointer-events:none"></div>
+<div style="position:absolute;top:60px;left:14px;right:14px;display:flex;align-items:center;gap:10px">
+<div style="width:36px;height:36px;flex:none;border-radius:99px;background:rgba(20,32,54,.9);border:1px solid rgba(140,170,215,.16);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M9 2L4 7l5 5" stroke="#F2EDE3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+<div style="display:flex;align-items:center;gap:9px"><span style="font-size:24px;font-weight:1000;color:#F2EDE3">Berlin</span><span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;padding:4px 9px;border-radius:99px;background:rgba(87,178,255,.12);color:#57B2FF">ŞEHİR</span></div>
+</div>
+</div>
+<div style="flex:1;margin-top:-26px;background:#101D31;border-radius:26px 26px 0 0;border-top:1px solid rgba(140,170,215,.16);display:flex;flex-direction:column;padding:14px 14px 0;gap:9px;position:relative;z-index:5;overflow:hidden">
+<div style="width:44px;height:5px;border-radius:99px;background:rgba(140,170,215,.25);margin:0 auto"></div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 2px">
+<span style="font-size:12px;font-weight:800;color:rgba(240,235,225,.55)">Almanya • 3,6M nüfus • merkezine 289 km</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:9px;overflow-y:auto;flex:1;padding-bottom:36px">
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:20px;padding:13px 15px;display:flex;gap:14px">
+<div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:800;letter-spacing:.6px;color:rgba(240,235,225,.5)">PAZAR BÜYÜKLÜĞÜ</span><div style="height:6px;border-radius:99px;background:rgba(140,170,215,.14);overflow:hidden"><div style="height:100%;border-radius:99px;background:#4FD6A4;width:85%"></div></div></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:800;letter-spacing:.6px;color:rgba(240,235,225,.5)">REKABET</span><div style="height:6px;border-radius:99px;background:rgba(140,170,215,.14);overflow:hidden"><div style="height:100%;border-radius:99px;background:#FF6B5E;width:70%"></div></div></div>
+</div>
+<div style="padding:2px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">ALINACAK YÜKLER <b style="color:{{ brand }}">2</b></div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(255,176,55,.22);border-radius:18px;padding:12px 14px">
+<div style="width:34px;height:34px;flex:none;border-radius:12px;background:rgba(255,176,55,.12);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2.5" y="4" width="11" height="9" rx="2" fill="none" stroke="{{ brand }}" stroke-width="1.6"></rect><path d="M2.5 7.2h11M8 4v3.2" stroke="{{ brand }}" stroke-width="1.6"></path></svg></div>
+<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900;color:#F2EDE3">Nordwind Mobilya — 12t mobilya</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">Sözleşme yükü • firma adresinden • 2 gün içinde</div></div>
+<span style="font-size:11.5px;font-weight:1000;color:{{ brand }};flex:none">Rotaya ekle</span>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(255,176,55,.22);border-radius:18px;padding:12px 14px">
+<div style="width:34px;height:34px;flex:none;border-radius:12px;background:rgba(255,176,55,.12);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2.5" y="4" width="11" height="9" rx="2" fill="none" stroke="{{ brand }}" stroke-width="1.6"></rect><path d="M2.5 7.2h11M8 4v3.2" stroke="{{ brand }}" stroke-width="1.6"></path></svg></div>
+<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900;color:#F2EDE3">Spree Elektronik — 4t elektronik</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">Spot iş • firma adresinden • $1.480</div></div>
+<span style="font-size:11.5px;font-weight:1000;color:{{ brand }};flex:none">Rotaya ekle</span>
+</div>
+<div style="padding:2px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">YAPILARIN</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:12px 14px">
+<div style="width:34px;height:34px;flex:none;border-radius:12px;background:rgba(87,178,255,.1);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#57B2FF" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#57B2FF"></rect></svg></div>
+<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900;color:#F2EDE3">Küçük Depo</div><div style="height:5px;border-radius:99px;background:rgba(140,170,215,.14);margin:6px 0 4px"><div style="height:100%;width:38%;border-radius:99px;background:#57B2FF"></div></div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">46 / 120t dolu • $480/ay gider</div></div>
+<span style="font-size:11.5px;font-weight:900;color:{{ brand }};flex:none">Detay →</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border-radius:18px;border:1.5px dashed rgba(140,170,215,.3);color:rgba(240,235,225,.55);font-size:12.5px;font-weight:900;cursor:pointer"><span style="font-size:15px;color:{{ brand }}">+</span>Yeni tesis kur</div>
+<div style="padding:2px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">ŞEHİRDEKİ ARAÇLAR</div>
+<div style="display:flex;flex-wrap:wrap;gap:7px">
+<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:#F2EDE3;background:rgba(140,170,215,.12);border:1px solid rgba(140,170,215,.2);padding:8px 13px;border-radius:99px"><span style="width:7px;height:7px;border-radius:99px;background:#7A90AC"></span>VAN-05 • boşta</span>
+<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:#F2EDE3;background:rgba(140,170,215,.12);border:1px solid rgba(140,170,215,.2);padding:8px 13px;border-radius:99px"><span style="width:7px;height:7px;border-radius:99px;background:#4FD6A4"></span>TIR-02 • yükleniyor</span>
+</div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+<p class="dv-next">Sonraki adım önerileri: "tesis detay sayfası" · "araç / eklenti satın alma akışı" · "logo ve renk seçme kuruluş adımı"</p>
+</section>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Yeni sekme yapısı + 5 yeni sayfa: Şehir Detayı, Filo, İşler, Tesis, Şirket</span></div>
+<div style="max-width:760px;margin:0 0 26px;padding:18px 22px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;color:rgba(240,235,225,.72);font-size:13px;line-height:1.65;font-weight:600">
+<div style="font-weight:900;color:#F2EDE3;margin-bottom:6px;font-size:13.5px">Bu turdaki değişiklikler</div>
+Alt bar yeniden kurgulandı: <b style="color:#FFB037">Harita · Filo · İşler · Tesis · Şirket</b> — Finans artık Şirket altında bir detay sayfası. <a href="#1b">1b</a>'de alınacak yükü olan şehirler haritada kehribar koli rozeti taşıyor (yük daima o şehirdeki firmanın adresinden alınır); şehir kartı kuruluş ekranıyla aynı dile getirildi (pazar/rekabet çubukları + şehir detayına git). <a href="#1c">1c</a>'de adım mantığı düzeltildi: al → teslim et → al → teslim et; araç hiçbir bacakta boş dönmüyor, rota bitince başa sarıyor.
+</div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Şehir detayı — yapılar, alınacak yükler, araçlar</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Şehir Detayı" style="position:relative;width:100%;height:100%;background:#0C1626;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column;padding:60px 14px 0;box-sizing:border-box">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 0 12px">
+<div style="width:36px;height:36px;flex:none;border-radius:99px;background:#14243A;border:1px solid rgba(140,170,215,.16);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M9 2L4 7l5 5" stroke="#F2EDE3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+<div style="flex:1"><div style="display:flex;align-items:center;gap:9px"><span style="font-size:26px;font-weight:1000;color:#F2EDE3">Berlin</span><span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;padding:4px 9px;border-radius:99px;background:rgba(87,178,255,.12);color:#57B2FF">ŞEHİR</span></div><div style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.5)">Almanya • 3,6M nüfus • merkezine 289 km</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:9px;overflow-y:auto;flex:1;padding-bottom:36px">
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:11px">
+<div style="display:flex;gap:14px">
+<div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:10.5px;font-weight:800;letter-spacing:.6px;color:rgba(240,235,225,.5)">PAZAR BÜYÜKLÜĞÜ</span><div style="height:7px;border-radius:99px;background:rgba(140,170,215,.14);overflow:hidden"><div style="height:100%;border-radius:99px;background:#4FD6A4;width:85%"></div></div></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:10.5px;font-weight:800;letter-spacing:.6px;color:rgba(240,235,225,.5)">REKABET</span><div style="height:7px;border-radius:99px;background:rgba(140,170,215,.14);overflow:hidden"><div style="height:100%;border-radius:99px;background:#FF6B5E;width:70%"></div></div></div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<span style="font-size:11px;font-weight:800;color:rgba(240,235,225,.75);background:rgba(140,170,215,.1);border:1px solid rgba(140,170,215,.14);padding:5px 11px;border-radius:99px">Talep: mobilya, elektronik</span>
+<span style="font-size:11px;font-weight:800;color:rgba(240,235,225,.75);background:rgba(140,170,215,.1);border:1px solid rgba(140,170,215,.14);padding:5px 11px;border-radius:99px">Ort. navlun $178/ton</span>
+</div>
+</div>
+<div style="padding:6px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">ALINACAK YÜKLER <b style="color:{{ brand }}">2</b></div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(255,176,55,.22);border-radius:18px;padding:12px 14px">
+<div style="width:34px;height:34px;flex:none;border-radius:12px;background:rgba(255,176,55,.12);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2.5" y="4" width="11" height="9" rx="2" fill="none" stroke="{{ brand }}" stroke-width="1.6"></rect><path d="M2.5 7.2h11M8 4v3.2" stroke="{{ brand }}" stroke-width="1.6"></path></svg></div>
+<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900;color:#F2EDE3">Nordwind Mobilya — 12t mobilya</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">Sözleşme yükü • firma adresinden • 2 gün içinde</div></div>
+<span style="font-size:11.5px;font-weight:1000;color:{{ brand }};flex:none">Rotaya ekle</span>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(255,176,55,.22);border-radius:18px;padding:12px 14px">
+<div style="width:34px;height:34px;flex:none;border-radius:12px;background:rgba(255,176,55,.12);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2.5" y="4" width="11" height="9" rx="2" fill="none" stroke="{{ brand }}" stroke-width="1.6"></rect><path d="M2.5 7.2h11M8 4v3.2" stroke="{{ brand }}" stroke-width="1.6"></path></svg></div>
+<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900;color:#F2EDE3">Spree Elektronik — 4t elektronik</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">Spot iş • firma adresinden • $1.480</div></div>
+<span style="font-size:11.5px;font-weight:1000;color:{{ brand }};flex:none">Rotaya ekle</span>
+</div>
+<div style="padding:6px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">YAPILARIN</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:12px 14px">
+<div style="width:34px;height:34px;flex:none;border-radius:12px;background:rgba(87,178,255,.1);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#57B2FF" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#57B2FF"></rect></svg></div>
+<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900;color:#F2EDE3">Küçük Depo</div><div style="height:5px;border-radius:99px;background:rgba(140,170,215,.14);margin:6px 0 4px"><div style="height:100%;width:38%;border-radius:99px;background:#57B2FF"></div></div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">46 / 120t dolu • $480/ay gider</div></div>
+<span style="font-size:11.5px;font-weight:900;color:{{ brand }};flex:none">Detay →</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border-radius:18px;border:1.5px dashed rgba(140,170,215,.3);color:rgba(240,235,225,.55);font-size:12.5px;font-weight:900;cursor:pointer"><span style="font-size:15px;color:{{ brand }}">+</span>Yeni tesis kur</div>
+<div style="padding:6px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">ŞEHİRDEKİ ARAÇLAR</div>
+<div style="display:flex;flex-wrap:wrap;gap:7px">
+<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:#F2EDE3;background:rgba(140,170,215,.12);border:1px solid rgba(140,170,215,.2);padding:8px 13px;border-radius:99px"><span style="width:7px;height:7px;border-radius:99px;background:#7A90AC"></span>VAN-05 • boşta</span>
+<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:#F2EDE3;background:rgba(140,170,215,.12);border:1px solid rgba(140,170,215,.2);padding:8px 13px;border-radius:99px"><span style="width:7px;height:7px;border-radius:99px;background:#4FD6A4"></span>TIR-02 • yükleniyor</span>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Filo — rotalar, araçlar, satın alma</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Filo" style="position:relative;width:100%;height:100%;background:#0C1626;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column;padding:60px 14px 0;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 4px 12px">
+<div style="font-size:26px;font-weight:1000;color:#F2EDE3">Filo</div>
+<div style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.5)"><b style="color:#F2EDE3">7</b> araç • <b style="color:#F2EDE3">3</b> rota</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;padding-bottom:120px">
+<div style="padding:2px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">ROTALAR</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px">
+<svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 10a7 7 0 0112.4-4.4M17 10a7 7 0 01-12.4 4.4" fill="none" stroke="{{ brand }}" stroke-width="1.9" stroke-linecap="round"></path><path d="M15.5 2v3.6h-3.6M4.5 18v-3.6h3.6" fill="none" stroke="{{ brand }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Paris Rotası #3</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">4 adım • 2 araç • sefer başına +$4.860</div></div>
+<span style="font-size:11.5px;font-weight:900;color:{{ brand }}">Düzenle →</span>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px">
+<svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 10a7 7 0 0112.4-4.4M17 10a7 7 0 01-12.4 4.4" fill="none" stroke="{{ brand }}" stroke-width="1.9" stroke-linecap="round"></path><path d="M15.5 2v3.6h-3.6M4.5 18v-3.6h3.6" fill="none" stroke="{{ brand }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Kuzey Hattı #1</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">6 adım • 3 araç • sefer başına +$7.120</div></div>
+<span style="font-size:11.5px;font-weight:900;color:{{ brand }}">Düzenle →</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border-radius:18px;border:1.5px dashed rgba(140,170,215,.3);color:rgba(240,235,225,.55);font-size:12.5px;font-weight:900;cursor:pointer"><span style="font-size:15px;color:{{ brand }}">+</span>Yeni rota kur</div>
+<div style="padding:6px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">ARAÇLAR</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:12px 15px;cursor:pointer">
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">TIR-07</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">Atlas 440 • Kuzey Hattı #1 • Berlin yolunda</div></div>
+<span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;color:#4FD6A4;background:rgba(79,214,164,.12);padding:4px 9px;border-radius:99px">ROTADA</span>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:12px 15px;cursor:pointer">
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">TIR-12</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">Atlas 440 • Kuzey Hattı #1 • Amsterdam yolunda</div></div>
+<span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;color:#4FD6A4;background:rgba(79,214,164,.12);padding:4px 9px;border-radius:99px">ROTADA</span>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:12px 15px;cursor:pointer">
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">VAN-03</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">Sprinter L2 • Hamburg'da bekliyor</div></div>
+<span style="font-size:11.5px;font-weight:1000;color:{{ brand }}">Rota ata →</span>
+</div>
+<div style="text-align:center;font-size:11px;font-weight:800;color:rgba(240,235,225,.4);padding:2px 0">4 araç daha — tümünü gör</div>
+<div style="padding:6px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">MAĞAZA</div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;background:rgba(255,176,55,.07);border:1.5px dashed rgba(255,176,55,.35);border-radius:18px;padding:13px 14px;display:flex;flex-direction:column;gap:3px;cursor:pointer"><span style="font-size:13px;font-weight:1000;color:{{ brand }}">+ Araç satın al</span><span style="font-size:10.5px;font-weight:700;color:rgba(240,235,225,.5)">Çekici, kamyon, van • $38K'den</span></div>
+<div style="flex:1;background:rgba(255,176,55,.07);border:1.5px dashed rgba(255,176,55,.35);border-radius:18px;padding:13px 14px;display:flex;flex-direction:column;gap:3px;cursor:pointer"><span style="font-size:13px;font-weight:1000;color:{{ brand }}">+ Eklenti satın al</span><span style="font-size:10.5px;font-weight:700;color:rgba(240,235,225,.5)">Dorse, soğutucu • $9K'den</span></div>
+</div>
+</div>
+<div style="position:absolute;left:14px;right:14px;bottom:8px;display:flex;background:rgba(20,32,54,.97);border:1px solid rgba(140,170,215,.16);border-radius:22px;padding:8px 6px 26px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="3" transform="rotate(45 10 10)" fill="none" stroke="#7A90AC" stroke-width="1.8"></rect><circle cx="10" cy="10" r="2" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Harita</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="6" width="10" height="7" rx="2" fill="none" stroke="{{ brand }}" stroke-width="1.7"></rect><path d="M12 8h3l2.4 2.6V13H12z" fill="none" stroke="{{ brand }}" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="6" cy="14.6" r="1.7" fill="{{ brand }}"></circle><circle cx="14.6" cy="14.6" r="1.7" fill="{{ brand }}"></circle></svg><span style="font-size:9.5px;font-weight:900;color:{{ brand }}">Filo</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="3" width="12" height="14" rx="3" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7" y="7" width="6" height="1.6" rx="0.8" fill="#7A90AC"></rect><rect x="7" y="10.5" width="6" height="1.6" rx="0.8" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">İşler</span><div style="position:absolute;top:-2px;right:24%;min-width:16px;height:16px;border-radius:99px;background:#FF6B5E;color:#fff;font-size:9.5px;font-weight:1000;display:flex;align-items:center;justify-content:center">3</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Tesis</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="5" y="3.5" width="10" height="13.5" rx="1.8" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7.5" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="7.5" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="8.6" y="13" width="2.8" height="4" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Şirket</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>İşler — aktif işler + pazar tek yerde</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="İşler" style="position:relative;width:100%;height:100%;background:#0C1626;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column;padding:60px 14px 0;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 4px 12px">
+<div style="font-size:26px;font-weight:1000;color:#F2EDE3">İşler</div>
+<div style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.5)">İtibar <b style="color:{{ brand }}">54</b> / 100</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:9px;overflow-y:auto;flex:1;padding-bottom:120px">
+<div style="padding:2px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">AKTİF İŞLER <b style="color:{{ brand }}">2</b></div>
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:14.5px;font-weight:1000;color:#F2EDE3">Nordwind Mobilya</span><span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;padding:4px 9px;border-radius:99px;background:rgba(255,176,55,.14);color:{{ brand }}">SÖZLEŞME</span></div>
+<div style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.6)">Hamburg ↔ Berlin • haftalık 60t • hafta 3/12</div>
+<div style="height:6px;border-radius:99px;background:rgba(140,170,215,.14)"><div style="height:100%;width:25%;border-radius:99px;background:{{ brand }}"></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:800;color:rgba(240,235,225,.5)">SLA %96 • ceza yok</span><span style="font-size:11px;font-weight:900;color:{{ brand }}">Berlin'de 12t alınmayı bekliyor</span></div>
+</div>
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:14.5px;font-weight:1000;color:#F2EDE3">Münih → Prag</span><span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;padding:4px 9px;border-radius:99px;background:rgba(140,170,215,.12);color:rgba(240,235,225,.6)">SPOT</span></div>
+<div style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.6)">14t makine parçası • TIR-04 yolda • 9s 20d kaldı</div>
+<div style="height:6px;border-radius:99px;background:rgba(140,170,215,.14)"><div style="height:100%;width:62%;border-radius:99px;background:#4FD6A4"></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:800;color:rgba(240,235,225,.5)">Zamanında teslim yolunda</span><span style="font-size:13px;font-weight:1000;color:#4FD6A4">+$3.150</span></div>
+</div>
+<div style="padding:8px 4px 0;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">PAZAR</div>
+<div style="display:flex;gap:5px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:99px;padding:5px">
+<sc-for list="{{ jobTabs }}" as="t" hint-placeholder-count="3"><div onClick="{{ t.pick }}" style="flex:1;height:38px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:1000;cursor:pointer;background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}</div></sc-for>
+</div>
+<div style="padding:2px 4px 0;font-size:11px;font-weight:800;color:rgba(240,235,225,.45)">{{ jobTabHint }}</div>
+<sc-for list="{{ jobs }}" as="j" hint-placeholder-count="3">
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+<span style="font-size:15px;font-weight:1000;color:#F2EDE3">{{ j.title }}</span>
+<span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;padding:4px 9px;border-radius:99px;background:{{ j.tagBg }};color:{{ j.tagColor }};flex:none">{{ j.tag }}</span>
+</div>
+<div style="font-size:12px;font-weight:800;color:rgba(240,235,225,.6)">{{ j.sub1 }}</div>
+<div style="font-size:11.5px;font-weight:700;color:rgba(240,235,225,.45)">{{ j.sub2 }}</div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding-top:3px">
+<span style="font-size:17px;font-weight:1000;color:#4FD6A4">{{ j.pay }}</span>
+<span style="font-size:12.5px;font-weight:1000;color:#241500;background:{{ brand }};padding:8px 16px;border-radius:99px;cursor:pointer">{{ j.cta }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="position:absolute;left:14px;right:14px;bottom:8px;display:flex;background:rgba(20,32,54,.97);border:1px solid rgba(140,170,215,.16);border-radius:22px;padding:8px 6px 26px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="3" transform="rotate(45 10 10)" fill="none" stroke="#7A90AC" stroke-width="1.8"></rect><circle cx="10" cy="10" r="2" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Harita</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="6" width="10" height="7" rx="2" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><path d="M12 8h3l2.4 2.6V13H12z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="6" cy="14.6" r="1.7" fill="#7A90AC"></circle><circle cx="14.6" cy="14.6" r="1.7" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Filo</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="3" width="12" height="14" rx="3" fill="none" stroke="{{ brand }}" stroke-width="1.7"></rect><rect x="7" y="7" width="6" height="1.6" rx="0.8" fill="{{ brand }}"></rect><rect x="7" y="10.5" width="6" height="1.6" rx="0.8" fill="{{ brand }}"></rect></svg><span style="font-size:9.5px;font-weight:900;color:{{ brand }}">İşler</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Tesis</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="5" y="3.5" width="10" height="13.5" rx="1.8" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7.5" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="7.5" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="8.6" y="13" width="2.8" height="4" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Şirket</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2d"><div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>Tesis — tüm yapıların listesi</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Tesisler" style="position:relative;width:100%;height:100%;background:#0C1626;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column;padding:60px 14px 0;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 4px 12px">
+<div style="font-size:26px;font-weight:1000;color:#F2EDE3">Tesisler</div>
+<div style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.5)"><b style="color:#F2EDE3">3</b> tesis • $2.130/ay gider</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:9px;overflow-y:auto;flex:1;padding-bottom:120px">
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 14px;cursor:pointer">
+<div style="width:38px;height:38px;flex:none;border-radius:13px;background:rgba(87,178,255,.1);display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#57B2FF" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#57B2FF"></rect></svg></div>
+<div style="flex:1;min-width:0"><div style="display:flex;align-items:baseline;gap:7px"><span style="font-size:13.5px;font-weight:900;color:#F2EDE3">Büyük Depo</span><span style="font-size:10.5px;font-weight:800;color:rgba(240,235,225,.45)">Hamburg</span></div><div style="height:5px;border-radius:99px;background:rgba(140,170,215,.14);margin:6px 0 4px"><div style="height:100%;width:64%;border-radius:99px;background:#57B2FF"></div></div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">538 / 840t dolu • $1.240/ay gider</div></div>
+<span style="font-size:11.5px;font-weight:900;color:{{ brand }};flex:none">Detay →</span>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 14px;cursor:pointer">
+<div style="width:38px;height:38px;flex:none;border-radius:13px;background:rgba(87,178,255,.1);display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#57B2FF" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#57B2FF"></rect></svg></div>
+<div style="flex:1;min-width:0"><div style="display:flex;align-items:baseline;gap:7px"><span style="font-size:13.5px;font-weight:900;color:#F2EDE3">Küçük Depo</span><span style="font-size:10.5px;font-weight:800;color:rgba(240,235,225,.45)">Berlin</span></div><div style="height:5px;border-radius:99px;background:rgba(140,170,215,.14);margin:6px 0 4px"><div style="height:100%;width:38%;border-radius:99px;background:#57B2FF"></div></div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">46 / 120t dolu • $480/ay gider</div></div>
+<span style="font-size:11.5px;font-weight:900;color:{{ brand }};flex:none">Detay →</span>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 14px;cursor:pointer">
+<div style="width:38px;height:38px;flex:none;border-radius:13px;background:rgba(155,140,255,.1);display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 20 20"><rect x="2" y="6" width="10" height="7" rx="2" fill="none" stroke="#9B8CFF" stroke-width="1.7"></rect><path d="M12 8h3l2.4 2.6V13H12z" fill="none" stroke="#9B8CFF" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="6" cy="14.6" r="1.7" fill="#9B8CFF"></circle><circle cx="14.6" cy="14.6" r="1.7" fill="#9B8CFF"></circle></svg></div>
+<div style="flex:1;min-width:0"><div style="display:flex;align-items:baseline;gap:7px"><span style="font-size:13.5px;font-weight:900;color:#F2EDE3">Garaj</span><span style="font-size:10.5px;font-weight:800;color:rgba(240,235,225,.45)">Münih</span></div><div style="height:5px;border-radius:99px;background:rgba(140,170,215,.14);margin:6px 0 4px"><div style="height:100%;width:50%;border-radius:99px;background:#9B8CFF"></div></div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">2 / 4 park dolu • $410/ay gider</div></div>
+<span style="font-size:11.5px;font-weight:900;color:{{ brand }};flex:none">Detay →</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border-radius:18px;border:1.5px dashed rgba(140,170,215,.3);color:rgba(240,235,225,.55);font-size:12.5px;font-weight:900;cursor:pointer"><span style="font-size:15px;color:{{ brand }}">+</span>Yeni tesis kur — haritadan şehir seç</div>
+</div>
+<div style="position:absolute;left:14px;right:14px;bottom:8px;display:flex;background:rgba(20,32,54,.97);border:1px solid rgba(140,170,215,.16);border-radius:22px;padding:8px 6px 26px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="3" transform="rotate(45 10 10)" fill="none" stroke="#7A90AC" stroke-width="1.8"></rect><circle cx="10" cy="10" r="2" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Harita</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="6" width="10" height="7" rx="2" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><path d="M12 8h3l2.4 2.6V13H12z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="6" cy="14.6" r="1.7" fill="#7A90AC"></circle><circle cx="14.6" cy="14.6" r="1.7" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Filo</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="3" width="12" height="14" rx="3" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7" y="7" width="6" height="1.6" rx="0.8" fill="#7A90AC"></rect><rect x="7" y="10.5" width="6" height="1.6" rx="0.8" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">İşler</span><div style="position:absolute;top:-2px;right:24%;min-width:16px;height:16px;border-radius:99px;background:#FF6B5E;color:#fff;font-size:9.5px;font-weight:1000;display:flex;align-items:center;justify-content:center">3</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="{{ brand }}" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="{{ brand }}"></rect></svg><span style="font-size:9.5px;font-weight:900;color:{{ brand }}">Tesis</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="5" y="3.5" width="10" height="13.5" rx="1.8" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7.5" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="7.5" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="8.6" y="13" width="2.8" height="4" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Şirket</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2e"><div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>Şirket — özet + detay sayfalarına geçiş</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Şirket" style="position:relative;width:100%;height:100%;background:#0C1626;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column;padding:60px 14px 0;box-sizing:border-box">
+<div style="display:flex;align-items:center;gap:12px;padding:4px 4px 12px">
+<div style="width:46px;height:46px;flex:none;border-radius:14px;background:{{ brand }};display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:1000;color:#241500">{{ brandInitial }}</div>
+<div><div style="font-size:22px;font-weight:1000;color:#F2EDE3">{{ companyName }}</div><div style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.5)">Seviye 4 • Bölgesel Taşıyıcı • Hamburg merkez</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:9px;overflow-y:auto;flex:1;padding-bottom:120px">
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">İTİBAR</span><span style="font-size:13px;font-weight:1000;color:{{ brand }}">54 / 100</span></div>
+<div style="height:8px;border-radius:99px;background:rgba(140,170,215,.14)"><div style="height:100%;width:54%;border-radius:99px;background:{{ brand }}"></div></div>
+<div style="font-size:11px;font-weight:800;color:rgba(240,235,225,.5)">60 puanda büyük ihaleler açılır — 6 puan kaldı</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:16px;padding:12px 14px"><div style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">AKTİF İŞ</div><div style="font-size:19px;font-weight:1000;color:#F2EDE3">6</div></div>
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:16px;padding:12px 14px"><div style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">TAMAMLANAN İŞ</div><div style="font-size:19px;font-weight:1000;color:#F2EDE3">128</div></div>
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:16px;padding:12px 14px"><div style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">TOPLAM MESAFE</div><div style="font-size:19px;font-weight:1000;color:#F2EDE3">412.600 km</div></div>
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:16px;padding:12px 14px"><div style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">ZAMANINDA TESLİM</div><div style="font-size:19px;font-weight:1000;color:#4FD6A4">%94</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px;cursor:pointer">
+<div style="width:34px;height:34px;flex:none;border-radius:12px;background:rgba(79,214,164,.1);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 20 20"><rect x="3" y="10" width="3.4" height="7" rx="1.2" fill="#4FD6A4"></rect><rect x="8.3" y="6" width="3.4" height="11" rx="1.2" fill="#4FD6A4"></rect><rect x="13.6" y="3" width="3.4" height="14" rx="1.2" fill="#4FD6A4"></rect></svg></div>
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Finans</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">Bu ay net +$12.480 • nakit $82.450</div></div>
+<svg width="12" height="12" viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" stroke="#7A90AC" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px;cursor:pointer">
+<div style="width:34px;height:34px;flex:none;border-radius:12px;background:rgba(87,178,255,.1);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#57B2FF" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#57B2FF"></rect></svg></div>
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Tesisler</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">3 tesis • $2.130/ay gider</div></div>
+<svg width="12" height="12" viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" stroke="#7A90AC" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px;cursor:pointer">
+<div style="width:34px;height:34px;flex:none;border-radius:12px;background:rgba(155,140,255,.1);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 20 20"><circle cx="10" cy="7" r="3.2" fill="none" stroke="#9B8CFF" stroke-width="1.7"></circle><path d="M4.5 16.5a5.5 5.5 0 0111 0" fill="none" stroke="#9B8CFF" stroke-width="1.7" stroke-linecap="round"></path></svg></div>
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Personel</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">9 çalışan • 2 boş vardiya</div></div>
+<svg width="12" height="12" viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" stroke="#7A90AC" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px;cursor:pointer">
+<div style="width:34px;height:34px;flex:none;border-radius:12px;background:rgba(255,176,55,.1);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 20 20"><rect x="4" y="3" width="12" height="14" rx="3" fill="none" stroke="{{ brand }}" stroke-width="1.7"></rect><rect x="7" y="7" width="6" height="1.6" rx="0.8" fill="{{ brand }}"></rect><rect x="7" y="10.5" width="6" height="1.6" rx="0.8" fill="{{ brand }}"></rect></svg></div>
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Sözleşmeler</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">2 aktif • 1 teklif bekliyor</div></div>
+<svg width="12" height="12" viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" stroke="#7A90AC" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+</div>
+<div style="position:absolute;left:14px;right:14px;bottom:8px;display:flex;background:rgba(20,32,54,.97);border:1px solid rgba(140,170,215,.16);border-radius:22px;padding:8px 6px 26px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="3" transform="rotate(45 10 10)" fill="none" stroke="#7A90AC" stroke-width="1.8"></rect><circle cx="10" cy="10" r="2" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Harita</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="6" width="10" height="7" rx="2" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><path d="M12 8h3l2.4 2.6V13H12z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="6" cy="14.6" r="1.7" fill="#7A90AC"></circle><circle cx="14.6" cy="14.6" r="1.7" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Filo</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="3" width="12" height="14" rx="3" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7" y="7" width="6" height="1.6" rx="0.8" fill="#7A90AC"></rect><rect x="7" y="10.5" width="6" height="1.6" rx="0.8" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">İşler</span><div style="position:absolute;top:-2px;right:24%;min-width:16px;height:16px;border-radius:99px;background:#FF6B5E;color:#fff;font-size:9.5px;font-weight:1000;display:flex;align-items:center;justify-content:center">3</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Tesis</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="5" y="3.5" width="10" height="13.5" rx="1.8" fill="none" stroke="{{ brand }}" stroke-width="1.7"></rect><rect x="7.5" y="6.5" width="1.8" height="1.8" fill="{{ brand }}"></rect><rect x="10.7" y="6.5" width="1.8" height="1.8" fill="{{ brand }}"></rect><rect x="7.5" y="9.7" width="1.8" height="1.8" fill="{{ brand }}"></rect><rect x="10.7" y="9.7" width="1.8" height="1.8" fill="{{ brand }}"></rect><rect x="8.6" y="13" width="2.8" height="4" fill="{{ brand }}"></rect></svg><span style="font-size:9.5px;font-weight:900;color:{{ brand }}">Şirket</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+<p class="dv-next">Sonraki adım önerileri: "tesis detay sayfası" · "araç / eklenti satın alma akışı" · "logo ve renk seçme kuruluş adımı" · "gündüz tema denemesi"</p>
+</section>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Gece Haritası — sıcak &amp; premium tek yön · 6 ekran</span></div>
+<div style="max-width:760px;margin:0 0 26px;padding:18px 22px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;color:rgba(240,235,225,.72);font-size:13px;line-height:1.65;font-weight:600">
+<div style="font-weight:900;color:#F2EDE3;margin-bottom:6px;font-size:13.5px">Tasarım kararları</div>
+Lacivert gece haritası + kehribar marka rengi: harita bir navigasyon aracı gibi değil, oyuncunun <b style="color:#FFB037">imparatorluk panosu</b> gibi hissettirsin diye koyu ve sıcak. Gerçek Avrupa coğrafyası (Natural Earth verisi) stilize edildi — ülke sınırları var, sokak/mikro detay yok. Nunito'nun yuvarlak hatları + iri rakamlar oyuncaklı-premium dengeyi kuruyor. Kartlar yumuşak, köşeler 16–24px, parlama ve gradyan gösterisi yok. Ekranlar interaktif: <a href="#1a">1a</a>'da şehir pinlerine, <a href="#1b">1b</a>'de hız kontrolüne, <a href="#1c">1c</a>'de rota adımlarına, <a href="#1e">1e</a>'de sekmelere dokunabilirsiniz. Marka rengi ve şirket adı Tweaks panelinden tüm ekranlarda değişir.
+</div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Şirket kuruluşu — haritadan şehir seçimi</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Kuruluş" style="position:relative;width:100%;height:100%;background:#0A1220;overflow:hidden;font-family:Nunito,sans-serif">
+<div style="position:absolute;inset:0">{{ foundingMap }}</div>
+<div style="position:absolute;top:0;left:0;right:0;height:190px;background:linear-gradient(#0A1220 30%,transparent);pointer-events:none"></div>
+<div style="position:absolute;bottom:0;left:0;right:0;height:380px;background:linear-gradient(transparent,#0A1220 55%);pointer-events:none"></div>
+<div style="position:absolute;top:64px;left:0;right:0;display:flex;flex-direction:column;gap:6px;padding:0 24px;pointer-events:none">
+<div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:99px;background:{{ brand }}"></div><span style="font-size:11px;font-weight:900;letter-spacing:2px;color:rgba(240,235,225,.55)">{{ companyName }} LOJİSTİK</span></div>
+<div style="font-size:32px;font-weight:1000;color:#F2EDE3;line-height:1.1">Merkezini kur</div>
+<div style="font-size:13.5px;font-weight:700;color:rgba(240,235,225,.55)">Şirketinin doğacağı şehri haritadan seç</div>
+</div>
+<div style="position:absolute;left:14px;right:14px;bottom:24px;display:flex;flex-direction:column;gap:10px">
+<div style="background:rgba(20,32,54,.92);backdrop-filter:blur(14px);border:1px solid rgba(140,170,215,.16);border-radius:24px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:24px;font-weight:1000;color:#F2EDE3">{{ selName }}</span><span style="font-size:10.5px;font-weight:900;letter-spacing:1px;padding:3px 9px;border-radius:99px;background:rgba(255,176,55,.15);color:{{ brand }}">{{ selTag }}</span></div>
+<span style="font-size:17px;font-weight:900;color:#F2EDE3">{{ selCost }}</span>
+</div>
+<div style="display:flex;gap:14px">
+<div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:10.5px;font-weight:800;letter-spacing:.6px;color:rgba(240,235,225,.5)">PAZAR BÜYÜKLÜĞÜ</span><div style="height:7px;border-radius:99px;background:rgba(140,170,215,.14);overflow:hidden"><div style="height:100%;border-radius:99px;background:#4FD6A4;width:{{ selMarketW }}"></div></div></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:10.5px;font-weight:800;letter-spacing:.6px;color:rgba(240,235,225,.5)">REKABET</span><div style="height:7px;border-radius:99px;background:rgba(140,170,215,.14);overflow:hidden"><div style="height:100%;border-radius:99px;background:#FF6B5E;width:{{ selCompW }}"></div></div></div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ selPerks }}" as="p" hint-placeholder-count="3"><span style="font-size:11px;font-weight:800;color:rgba(240,235,225,.75);background:rgba(140,170,215,.1);border:1px solid rgba(140,170,215,.14);padding:5px 11px;border-radius:99px">{{ p.t }}</span></sc-for>
+</div>
+<div style="display:flex;align-items:center;justify-content:center;gap:8px;height:54px;border-radius:18px;background:{{ brand }};color:#241500;font-size:16px;font-weight:1000;cursor:pointer;box-shadow:0 8px 24px rgba(255,176,55,.25)">Merkezi buraya kur<svg width="16" height="16" viewBox="0 0 16 16"><path d="M5 3l6 5-6 5" stroke="#241500" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+</div>
+<div style="text-align:center;font-size:11px;font-weight:800;color:rgba(240,235,225,.4)">Başlangıç nakiti $75.000 • kuruluş maliyeti düşülür</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Ana harita — filo özeti, araç ve şehir etkileşimi</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Ana Harita" style="position:relative;width:100%;height:100%;background:#0A1220;overflow:hidden;font-family:Nunito,sans-serif">
+<div style="position:absolute;inset:0">{{ liveMap }}</div>
+<div style="position:absolute;top:0;left:0;right:0;height:150px;background:linear-gradient(#0A1220 20%,transparent);pointer-events:none"></div>
+<div style="position:absolute;bottom:0;left:0;right:0;height:340px;background:linear-gradient(transparent,#0A1220 60%);pointer-events:none"></div>
+<div style="position:absolute;top:62px;left:14px;right:14px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div style="display:flex;align-items:center;gap:8px;background:rgba(20,32,54,.9);border:1px solid rgba(140,170,215,.16);border-radius:99px;padding:8px 14px 8px 10px"><div style="width:22px;height:22px;border-radius:8px;background:{{ brand }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:1000;color:#241500">{{ brandInitial }}</div><span style="font-size:12.5px;font-weight:900;letter-spacing:1px;color:#F2EDE3">{{ companyName }}</span></div>
+<div style="display:flex;align-items:center;gap:6px;background:rgba(20,32,54,.9);border:1px solid rgba(140,170,215,.16);border-radius:99px;padding:8px 14px"><span style="font-size:15px;font-weight:1000;color:#4FD6A4">$82.450</span><span style="font-size:10px;font-weight:900;color:rgba(79,214,164,.7)">▲</span></div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div style="background:rgba(20,32,54,.9);border:1px solid rgba(140,170,215,.16);border-radius:99px;padding:7px 13px;font-size:11.5px;font-weight:800;color:rgba(240,235,225,.65)">12 Mar 2027 • 14:20</div>
+<div style="display:flex;gap:4px;background:rgba(20,32,54,.9);border:1px solid rgba(140,170,215,.16);border-radius:99px;padding:4px">
+<sc-for list="{{ speedBtns }}" as="b" hint-placeholder-count="4"><div onClick="{{ b.pick }}" style="min-width:34px;height:30px;padding:0 8px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:1000;cursor:pointer;background:{{ b.bg }};color:{{ b.color }}">{{ b.label }}</div></sc-for>
+</div>
+</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;padding:0 0 8px">
+<div style="margin:0 14px;display:flex;align-items:center;gap:10px;background:rgba(58,26,28,.9);border:1px solid rgba(255,107,94,.3);border-radius:16px;padding:11px 14px">
+<svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2L17 16H1z" fill="none" stroke="#FF6B5E" stroke-width="1.8" stroke-linejoin="round"></path><rect x="8.2" y="7" width="1.6" height="4.4" rx="0.8" fill="#FF6B5E"></rect><circle cx="9" cy="13.4" r="1" fill="#FF6B5E"></circle></svg>
+<div style="flex:1"><div style="font-size:12.5px;font-weight:900;color:#FFB4AC">Kuzey Denizi'nde fırtına</div><div style="font-size:11px;font-weight:700;color:rgba(255,180,172,.65)">Liman gecikme riski yükseldi • 2 sevkiyat etkilenebilir</div></div>
+<span style="font-size:11px;font-weight:900;color:#FF6B5E">İncele</span>
+</div>
+<sc-if value="{{ popOn }}" hint-placeholder-val="{{ false }}">
+<div style="margin:0 14px;background:rgba(20,32,54,.96);backdrop-filter:blur(14px);border:1.5px solid {{ popBorder }};border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+<div style="display:flex;align-items:center;gap:9px"><span style="font-size:16px;font-weight:1000;color:#F2EDE3">{{ popTitle }}</span><span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;padding:4px 9px;border-radius:99px;background:{{ popTagBg }};color:{{ popTagColor }}">{{ popTag }}</span></div>
+<div onClick="{{ popClose }}" style="width:26px;height:26px;border-radius:99px;background:rgba(140,170,215,.12);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="rgba(240,235,225,.7)" stroke-width="1.8" stroke-linecap="round"></path></svg></div>
+</div>
+<div style="font-size:12.5px;font-weight:800;color:rgba(240,235,225,.65)">{{ popSub }}</div>
+<sc-if value="{{ popIsCity }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:14px;padding:2px 0">
+<div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:800;letter-spacing:.6px;color:rgba(240,235,225,.5)">PAZAR BÜYÜKLÜĞÜ</span><div style="height:6px;border-radius:99px;background:rgba(140,170,215,.14);overflow:hidden"><div style="height:100%;border-radius:99px;background:#4FD6A4;width:{{ popMarketW }}"></div></div></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:800;letter-spacing:.6px;color:rgba(240,235,225,.5)">REKABET</span><div style="height:6px;border-radius:99px;background:rgba(140,170,215,.14);overflow:hidden"><div style="height:100%;border-radius:99px;background:#FF6B5E;width:{{ popCompW }}"></div></div></div>
+</div>
+</sc-if>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ popChips }}" as="c" hint-placeholder-count="2"><span style="font-size:11px;font-weight:800;color:{{ c.fg }};background:{{ c.bg }};border:1px solid {{ c.bd }};padding:5px 11px;border-radius:99px">{{ c.t }}</span></sc-for>
+</div>
+<div style="display:flex;align-items:center;justify-content:center;gap:6px;height:40px;border-radius:13px;background:rgba(255,176,55,.12);border:1px solid rgba(255,176,55,.3);color:{{ brand }};font-size:12.5px;font-weight:1000;cursor:pointer">{{ popCta }}</div>
+</div>
+</sc-if>
+<sc-if value="{{ popOff }}" hint-placeholder-val="{{ true }}">
+<div style="margin:0 14px;text-align:center;font-size:11px;font-weight:800;color:rgba(240,235,225,.4)">Haritadaki bir araca veya şehre dokun</div>
+</sc-if>
+<div style="margin:0 14px;display:flex;gap:8px">
+<div style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(20,32,54,.92);border:1px solid rgba(140,170,215,.16);border-radius:16px;padding:11px 6px">
+<svg width="17" height="17" viewBox="0 0 20 20"><rect x="2" y="6" width="10" height="7" rx="2" fill="none" stroke="{{ brand }}" stroke-width="1.7"></rect><path d="M12 8h3l2.4 2.6V13H12z" fill="none" stroke="{{ brand }}" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="6" cy="14.6" r="1.7" fill="{{ brand }}"></circle><circle cx="14.6" cy="14.6" r="1.7" fill="{{ brand }}"></circle></svg>
+<span style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.6)"><b style="color:#F2EDE3;font-size:14px">4</b> yolda</span>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(20,32,54,.92);border:1px solid rgba(140,170,215,.16);border-radius:16px;padding:11px 6px">
+<svg width="17" height="17" viewBox="0 0 20 20"><rect x="2" y="6" width="10" height="7" rx="2" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><path d="M12 8h3l2.4 2.6V13H12z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="6" cy="14.6" r="1.7" fill="#7A90AC"></circle><circle cx="14.6" cy="14.6" r="1.7" fill="#7A90AC"></circle></svg>
+<span style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.6)"><b style="color:#F2EDE3;font-size:14px">2</b> boşta</span>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(20,32,54,.92);border:1px solid rgba(140,170,215,.16);border-radius:16px;padding:11px 6px">
+<svg width="17" height="17" viewBox="0 0 20 20"><path d="M3 12.5l2 4h10l2-4z" fill="none" stroke="#57B2FF" stroke-width="1.7" stroke-linejoin="round"></path><path d="M5.5 12.5V9h9v3.5M10 9V5.5h3V9" fill="none" stroke="#57B2FF" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+<span style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.6)"><b style="color:#F2EDE3;font-size:14px">1</b> denizde</span>
+</div>
+</div>
+<div style="margin:0 14px;display:flex;background:rgba(20,32,54,.95);border:1px solid rgba(140,170,215,.16);border-radius:22px;padding:8px 6px 26px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="3" transform="rotate(45 10 10)" fill="none" stroke="{{ brand }}" stroke-width="1.8"></rect><circle cx="10" cy="10" r="2" fill="{{ brand }}"></circle></svg><span style="font-size:9.5px;font-weight:900;color:{{ brand }}">Harita</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="6" width="10" height="7" rx="2" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><path d="M12 8h3l2.4 2.6V13H12z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="6" cy="14.6" r="1.7" fill="#7A90AC"></circle><circle cx="14.6" cy="14.6" r="1.7" fill="#7A90AC"></circle></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Filo</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="3" width="12" height="14" rx="3" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7" y="7" width="6" height="1.6" rx="0.8" fill="#7A90AC"></rect><rect x="7" y="10.5" width="6" height="1.6" rx="0.8" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">İşler</span><div style="position:absolute;top:-2px;right:24%;min-width:16px;height:16px;border-radius:99px;background:#FF6B5E;color:#fff;font-size:9.5px;font-weight:1000;display:flex;align-items:center;justify-content:center">3</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 8l7-4.5L17 8v9H3z" fill="none" stroke="#7A90AC" stroke-width="1.7" stroke-linejoin="round"></path><rect x="8" y="11.5" width="4" height="5.5" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Tesis</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="5" y="3.5" width="10" height="13.5" rx="1.8" fill="none" stroke="#7A90AC" stroke-width="1.7"></rect><rect x="7.5" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="6.5" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="7.5" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="10.7" y="9.7" width="1.8" height="1.8" fill="#7A90AC"></rect><rect x="8.6" y="13" width="2.8" height="4" fill="#7A90AC"></rect></svg><span style="font-size:9.5px;font-weight:800;color:#7A90AC">Şirket</span></div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Rota kurucu — hazır sefer zinciri</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Rota Kurucu" style="position:relative;width:100%;height:100%;background:#0A1220;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column">
+<div style="position:relative;height:360px;flex:none">
+<div style="position:absolute;inset:0">{{ routeMap }}</div>
+<div style="position:absolute;top:0;left:0;right:0;height:120px;background:linear-gradient(#0A1220 15%,transparent);pointer-events:none"></div>
+<div style="position:absolute;top:60px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center">
+<div style="display:flex;align-items:center;gap:9px"><div style="width:36px;height:36px;border-radius:99px;background:rgba(20,32,54,.9);border:1px solid rgba(140,170,215,.16);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M9 2L4 7l5 5" stroke="#F2EDE3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg></div><div><div style="font-size:16px;font-weight:1000;color:#F2EDE3">Rota Kurucu</div><div style="font-size:11px;font-weight:800;color:rgba(240,235,225,.5)">Paris Rotası #3</div></div></div>
+
+</div>
+</div>
+<div style="flex:1;margin-top:-26px;background:#101D31;border-radius:26px 26px 0 0;border-top:1px solid rgba(140,170,215,.16);display:flex;flex-direction:column;padding:14px 14px 10px;gap:9px;position:relative;z-index:5;overflow:hidden">
+<div style="width:44px;height:5px;border-radius:99px;background:rgba(140,170,215,.25);margin:0 auto"></div>
+<div style="display:flex;flex-direction:column;gap:7px;overflow-y:auto;flex:1;padding-bottom:4px">
+<sc-for list="{{ steps }}" as="s" hint-placeholder-count="5">
+<div onClick="{{ s.pick }}" style="display:flex;gap:11px;align-items:center;padding:11px 13px;border-radius:16px;background:{{ s.bg }};border:1.5px solid {{ s.border }};cursor:pointer">
+<div style="width:28px;height:28px;flex:none;border-radius:99px;background:{{ s.numBg }};color:{{ s.numColor }};font-weight:1000;display:flex;align-items:center;justify-content:center;font-size:13px">{{ s.num }}</div>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">{{ s.title }}</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">{{ s.sub }}</div></div>
+<span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;color:{{ s.typeColor }};background:{{ s.typeBg }};padding:4px 8px;border-radius:99px;flex:none">{{ s.type }}</span>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:11px;border-radius:16px;border:1.5px dashed rgba(140,170,215,.3);color:rgba(240,235,225,.55);font-size:12.5px;font-weight:900;cursor:pointer"><span style="font-size:15px;color:{{ brand }}">+</span>Adım ekle — haritada bir noktaya dokun</div>
+</div>
+<div style="display:flex;gap:7px;align-items:center">
+<span style="font-size:10.5px;font-weight:900;letter-spacing:.6px;color:rgba(240,235,225,.45)">ARAÇLAR</span>
+<span style="font-size:11.5px;font-weight:900;color:#F2EDE3;background:rgba(140,170,215,.12);border:1px solid rgba(140,170,215,.18);padding:5px 11px;border-radius:99px">TIR-07</span>
+<span style="font-size:11.5px;font-weight:900;color:#F2EDE3;background:rgba(140,170,215,.12);border:1px solid rgba(140,170,215,.18);padding:5px 11px;border-radius:99px">TIR-12</span>
+<span style="font-size:11.5px;font-weight:900;color:{{ brand }};padding:5px 9px;cursor:pointer">+ Ekle</span>
+</div>
+<div style="display:flex;align-items:center;gap:10px;background:rgba(20,32,54,.8);border:1px solid rgba(140,170,215,.14);border-radius:16px;padding:10px 14px">
+<div style="flex:1;display:flex;flex-direction:column"><span style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">MESAFE</span><span style="font-size:13.5px;font-weight:1000;color:#F2EDE3">3.420 km</span></div>
+<div style="flex:1;display:flex;flex-direction:column"><span style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">SÜRE</span><span style="font-size:13.5px;font-weight:1000;color:#F2EDE3">2g 6s</span></div>
+<div style="flex:1;display:flex;flex-direction:column"><span style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">TAHMİNİ NET</span><span style="font-size:13.5px;font-weight:1000;color:#4FD6A4">+$4.860</span></div>
+</div>
+<div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:17px;background:{{ brand }};color:#241500;font-size:15.5px;font-weight:1000;cursor:pointer;margin-bottom:22px">Rotayı başlat</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Araç detayı — kapasite, eklentiler, rota</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Filo" style="position:relative;width:100%;height:100%;background:#0C1626;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column;padding:60px 14px 0;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 4px 12px">
+<div><div style="font-size:26px;font-weight:1000;color:#F2EDE3">TIR-07</div><div style="font-size:12px;font-weight:800;color:rgba(240,235,225,.5)">Atlas 440 Çekici • 2026 • 84.300 km</div></div>
+<span style="font-size:11px;font-weight:1000;letter-spacing:.8px;color:#4FD6A4;background:rgba(79,214,164,.12);border:1px solid rgba(79,214,164,.3);padding:6px 12px;border-radius:99px">ROTADA</span>
+</div>
+<div style="background:linear-gradient(180deg,#14243A,#101D31);border:1px solid rgba(140,170,215,.14);border-radius:22px;padding:18px 16px 14px;display:flex;flex-direction:column;gap:10px">
+<svg viewBox="0 0 220 84" style="width:78%;margin:0 auto;display:block">
+<rect x="8" y="14" width="128" height="46" rx="9" fill="#1B3050" stroke="rgba(140,170,215,.3)" stroke-width="1.5"></rect>
+<rect x="8" y="40" width="128" height="10" fill="{{ brand }}" opacity="0.9"></rect>
+<text x="72" y="33" text-anchor="middle" font-family="Nunito" font-size="11" font-weight="900" letter-spacing="2" fill="rgba(240,235,225,.75)">{{ companyName }}</text>
+<rect x="142" y="26" width="42" height="34" rx="8" fill="{{ brand }}"></rect>
+<rect x="150" y="31" width="20" height="12" rx="3" fill="#0A1220" opacity="0.85"></rect>
+<circle cx="34" cy="64" r="10" fill="#0A1220" stroke="rgba(140,170,215,.4)" stroke-width="1.5"></circle><circle cx="34" cy="64" r="3.5" fill="#33507A"></circle>
+<circle cx="62" cy="64" r="10" fill="#0A1220" stroke="rgba(140,170,215,.4)" stroke-width="1.5"></circle><circle cx="62" cy="64" r="3.5" fill="#33507A"></circle>
+<circle cx="110" cy="64" r="10" fill="#0A1220" stroke="rgba(140,170,215,.4)" stroke-width="1.5"></circle><circle cx="110" cy="64" r="3.5" fill="#33507A"></circle>
+<circle cx="164" cy="64" r="10" fill="#0A1220" stroke="rgba(140,170,215,.4)" stroke-width="1.5"></circle><circle cx="164" cy="64" r="3.5" fill="#33507A"></circle>
+</svg>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div style="background:rgba(10,18,32,.5);border-radius:14px;padding:10px 12px"><div style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">KONUM</div><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Münih → Saraybosna</div></div>
+<div style="background:rgba(10,18,32,.5);border-radius:14px;padding:10px 12px"><div style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">SÜRÜCÜ</div><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">L. Weber • 2/8s vardiya</div></div>
+<div style="background:rgba(10,18,32,.5);border-radius:14px;padding:10px 12px"><div style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">YÜK</div><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">18 / 24 ton</div><div style="height:5px;border-radius:99px;background:rgba(140,170,215,.14);margin-top:6px"><div style="height:100%;width:75%;border-radius:99px;background:{{ brand }}"></div></div></div>
+<div style="background:rgba(10,18,32,.5);border-radius:14px;padding:10px 12px"><div style="font-size:10px;font-weight:800;color:rgba(240,235,225,.45)">YAKIT</div><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">%62 • 410 km menzil</div><div style="height:5px;border-radius:99px;background:rgba(140,170,215,.14);margin-top:6px"><div style="height:100%;width:62%;border-radius:99px;background:#4FD6A4"></div></div></div>
+</div>
+</div>
+<div style="padding:14px 4px 8px;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">EKLENTİLER</div>
+<div style="display:flex;flex-wrap:wrap;gap:7px">
+<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:#F2EDE3;background:rgba(140,170,215,.12);border:1px solid rgba(140,170,215,.2);padding:8px 13px;border-radius:99px"><span style="width:7px;height:7px;border-radius:99px;background:#4FD6A4"></span>Kuru yük dorsesi</span>
+<span style="font-size:12px;font-weight:900;color:{{ brand }};border:1.5px dashed rgba(255,176,55,.4);padding:8px 13px;border-radius:99px;cursor:pointer">+ Eklenti tak</span>
+</div>
+<div style="padding:16px 4px 8px;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">ATANAN ROTA</div>
+<div style="display:flex;align-items:center;gap:11px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px">
+<svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 10a7 7 0 0112.4-4.4M17 10a7 7 0 01-12.4 4.4" fill="none" stroke="{{ brand }}" stroke-width="1.9" stroke-linecap="round"></path><path d="M15.5 2v3.6h-3.6M4.5 18v-3.6h3.6" fill="none" stroke="{{ brand }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div style="flex:1"><div style="font-size:13.5px;font-weight:900;color:#F2EDE3">Paris Rotası #3</div><div style="font-size:11px;font-weight:700;color:rgba(240,235,225,.5)">4 adım • 2 araç • 4. sefer</div></div>
+<span style="font-size:11.5px;font-weight:900;color:{{ brand }}">Düzenle →</span>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>İş pazarı — spot / sözleşme / ihale</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="İş Pazarı" style="position:relative;width:100%;height:100%;background:#0C1626;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column;padding:60px 14px 0;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 4px 12px">
+<div style="font-size:26px;font-weight:1000;color:#F2EDE3">İş Pazarı</div>
+<div style="font-size:11.5px;font-weight:800;color:rgba(240,235,225,.5)">İtibar <b style="color:{{ brand }}">54</b> / 100</div>
+</div>
+<div style="display:flex;gap:5px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:99px;padding:5px">
+<sc-for list="{{ jobTabs }}" as="t" hint-placeholder-count="3"><div onClick="{{ t.pick }}" style="flex:1;height:38px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:1000;cursor:pointer;background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}</div></sc-for>
+</div>
+<div style="padding:14px 4px 4px;font-size:11px;font-weight:800;color:rgba(240,235,225,.45)">{{ jobTabHint }}</div>
+<div style="display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;padding:6px 0 24px">
+<sc-for list="{{ jobs }}" as="j" hint-placeholder-count="3">
+<div style="background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+<span style="font-size:15px;font-weight:1000;color:#F2EDE3">{{ j.title }}</span>
+<span style="font-size:9.5px;font-weight:1000;letter-spacing:.8px;padding:4px 9px;border-radius:99px;background:{{ j.tagBg }};color:{{ j.tagColor }};flex:none">{{ j.tag }}</span>
+</div>
+<div style="font-size:12px;font-weight:800;color:rgba(240,235,225,.6)">{{ j.sub1 }}</div>
+<div style="font-size:11.5px;font-weight:700;color:rgba(240,235,225,.45)">{{ j.sub2 }}</div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding-top:3px">
+<span style="font-size:17px;font-weight:1000;color:#4FD6A4">{{ j.pay }}</span>
+<span style="font-size:12.5px;font-weight:1000;color:#241500;background:{{ brand }};padding:8px 16px;border-radius:99px;cursor:pointer">{{ j.cta }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="1f"><div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Finans — neden kâr / neden zarar</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div data-screen-label="Finans" style="position:relative;width:100%;height:100%;background:#0C1626;overflow:hidden;font-family:Nunito,sans-serif;display:flex;flex-direction:column;padding:60px 14px 0;box-sizing:border-box">
+<div style="padding:4px 4px 10px;font-size:26px;font-weight:1000;color:#F2EDE3">Finans</div>
+<div style="background:linear-gradient(180deg,#14243A,#101D31);border:1px solid rgba(140,170,215,.14);border-radius:22px;padding:18px 18px 14px;display:flex;flex-direction:column;gap:6px">
+<span style="font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">BU AY NET KÂR</span>
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:38px;font-weight:1000;color:#4FD6A4;line-height:1">+$12.480</span><span style="font-size:12.5px;font-weight:900;color:rgba(79,214,164,.7)">▲ %18</span></div>
+<svg viewBox="0 0 300 54" style="width:100%;height:54px;margin-top:6px">
+<polyline points="0,44 25,40 50,42 75,34 100,37 125,28 150,31 175,22 200,25 225,15 250,18 275,10 300,6" fill="none" stroke="#4FD6A4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+<circle cx="300" cy="6" r="4" fill="#4FD6A4"></circle>
+</svg>
+<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:rgba(240,235,225,.35)"><span>Oca</span><span>Şub</span><span>Mar</span></div>
+</div>
+<div style="display:flex;gap:8px;padding:10px 0">
+<div style="flex:1;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px"><div style="font-size:10.5px;font-weight:800;color:rgba(240,235,225,.45)">GELİR</div><div style="font-size:19px;font-weight:1000;color:#F2EDE3">$86.200</div><div style="font-size:10.5px;font-weight:800;color:rgba(240,235,225,.4)">%71 sözleşme • %29 spot</div></div>
+<div style="flex:1;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px"><div style="font-size:10.5px;font-weight:800;color:rgba(240,235,225,.45)">GİDER</div><div style="font-size:19px;font-weight:1000;color:#F2EDE3">$73.720</div><div style="font-size:10.5px;font-weight:800;color:#FF9C92">gecikme cezası $840</div></div>
+</div>
+<div style="padding:4px 4px 8px;font-size:11px;font-weight:900;letter-spacing:.8px;color:rgba(240,235,225,.45)">GİDER KIRILIMI</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ expenses }}" as="e" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:92px;flex:none;font-size:12px;font-weight:800;color:rgba(240,235,225,.65)">{{ e.label }}</span>
+<div style="flex:1;height:9px;border-radius:99px;background:rgba(140,170,215,.1);overflow:hidden"><div style="height:100%;border-radius:99px;background:{{ e.color }};width:{{ e.w }}"></div></div>
+<span style="width:58px;flex:none;text-align:right;font-size:12px;font-weight:1000;color:#F2EDE3">{{ e.amt }}</span>
+</div>
+</sc-for>
+</div>
+<div style="margin-top:14px;display:flex;align-items:center;gap:12px;background:#14243A;border:1px solid rgba(140,170,215,.14);border-radius:18px;padding:13px 15px">
+<div style="flex:1"><div style="font-size:10.5px;font-weight:800;color:rgba(240,235,225,.45)">NAKİT</div><div style="font-size:16px;font-weight:1000;color:#F2EDE3">$82.450</div></div>
+<div style="width:1px;height:30px;background:rgba(140,170,215,.14)"></div>
+<div style="flex:1.6"><div style="display:flex;justify-content:space-between"><span style="font-size:10.5px;font-weight:800;color:rgba(240,235,225,.45)">KREDİ LİMİTİ</span><span style="font-size:10.5px;font-weight:900;color:rgba(240,235,225,.6)">$30K / $100K</span></div><div style="height:7px;border-radius:99px;background:rgba(140,170,215,.12);margin-top:6px"><div style="height:100%;width:30%;border-radius:99px;background:#57B2FF"></div></div></div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+<p class="dv-next">Sonraki adım önerileri: "<a class="dv-oid" href="#1c">1c</a>'de harita üzerinden adım ekleme etkileşimini akış olarak göster" · "<a class="dv-oid" href="#1a">1a</a> için logo/renk seçme adımını tasarla" · "aynı ekranların açık (gündüz) temasını dene"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;companyName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;MERIDIAN&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Marka&quot;},&quot;brandColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#FF6B5E&quot;,&quot;options&quot;:[&quot;#FFB037&quot;,&quot;#4FD6A4&quot;,&quot;#57B2FF&quot;,&quot;#FF6B5E&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Marka&quot;},&quot;showTraffic&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Harita&quot;}}">
+class Component extends DCLogic {
+  state = { sel: 'Hamburg', speed: 1, step: 0, jobTab: 0, mapReady: false, mapSel: { type: 'vehicle', id: 'TIR-07' }, fleetTab: 0, jobsMode: 0 };
+  componentDidMount() {
+    const poll = () => { if (window.EUROPE_MAP) this.setState({ mapReady: true }); else setTimeout(poll, 120); };
+    poll();
+  }
+  fit(pts, aspect, pad) {
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    pts.forEach(([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); });
+    x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
+    let w = x1 - x0, h = y1 - y0;
+    if (w / h < aspect) { const nw = h * aspect; x0 -= (nw - w) / 2; w = nw; }
+    else { const nh = w / aspect; y0 -= (nh - h) / 2; h = nh; }
+    return `${x0.toFixed(1)} ${y0.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`;
+  }
+  baseMap(viewBox, children, key) {
+    const M = window.EUROPE_MAP;
+    const land = M.paths.map(p => p.d).join('');
+    return React.createElement('svg', { key, viewBox, preserveAspectRatio: 'xMidYMid slice', style: { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' } },
+      React.createElement('path', { d: land, fill: '#16283F', stroke: '#2B4463', strokeWidth: 0.9, strokeLinejoin: 'round' }),
+      ...children);
+  }
+  cityDot(name, opts = {}) {
+    const M = window.EUROPE_MAP; const [x, y] = M.cities[name]; const o = opts;
+    const els = [];
+    if (o.pulse) els.push(React.createElement('circle', { key: 'p', cx: x, cy: y, r: 10, fill: 'none', stroke: o.color, strokeWidth: 1.6 },
+      React.createElement('animate', { attributeName: 'r', values: '9;24', dur: '1.8s', repeatCount: 'indefinite' }),
+      React.createElement('animate', { attributeName: 'opacity', values: '.8;0', dur: '1.8s', repeatCount: 'indefinite' })));
+    els.push(React.createElement('circle', { key: 'c', cx: x, cy: y, r: o.r || 5.5, fill: o.fill || '#1F3654', stroke: o.color || '#7A96B8', strokeWidth: o.sw != null ? o.sw : 1.8 }));
+    if (o.cargo) els.push(React.createElement('g', { key: 'cg', transform: `translate(${x + 9},${y - 9})` },
+      React.createElement('circle', { r: 6.5, fill: '#0A1220', stroke: o.cargo, strokeWidth: 1.2 }),
+      React.createElement('rect', { x: -2.8, y: -2.8, width: 5.6, height: 5.6, rx: 1.2, fill: o.cargo }),
+      React.createElement('rect', { x: -2.8, y: -0.9, width: 5.6, height: 1.2, fill: '#0A1220', opacity: 0.7 })));
+    if (o.label) els.push(React.createElement('text', { key: 't', x, y: y + (o.labelDy != null ? o.labelDy : 17), textAnchor: 'middle', fontFamily: 'Nunito', fontSize: o.fs || 10.5, fontWeight: 800, fill: o.labelColor || 'rgba(240,235,225,.6)' }, name));
+    return React.createElement('g', { key: name + (o.k || ''), onClick: o.onClick, style: o.onClick ? { cursor: 'pointer' } : null }, ...els);
+  }
+  leg(a, b, opts = {}) {
+    const M = window.EUROPE_MAP; const [x1, y1] = M.cities[a]; const [x2, y2] = M.cities[b];
+    const mx = (x1 + x2) / 2 + (y1 - y2) * 0.14, my = (y1 + y2) / 2 + (x2 - x1) * 0.14;
+    const d = `M${x1} ${y1}Q${mx} ${my} ${x2} ${y2}`;
+    const els = [React.createElement('path', { key: 'l', d, fill: 'none', stroke: opts.color, strokeWidth: opts.w || 2.2, strokeDasharray: opts.dash || null, opacity: opts.op != null ? opts.op : 0.85, strokeLinecap: 'round' })];
+    if (opts.truck) {
+      els.push(React.createElement('g', { key: 'tr', onClick: opts.onClick, style: opts.onClick ? { cursor: 'pointer' } : null },
+        opts.selected ? React.createElement('circle', { r: 9, fill: 'none', stroke: opts.color, strokeWidth: 1.4, opacity: 0.7 }) : null,
+        React.createElement('rect', { x: -5.5, y: -3.5, width: 11, height: 7, rx: 2.4, fill: opts.truckColor || opts.color, stroke: '#0A1220', strokeWidth: 1 }),
+        React.createElement('animateMotion', { dur: opts.dur || '9s', repeatCount: 'indefinite', path: d, rotate: 'auto' })));
+      if (opts.id) els.push(React.createElement('g', { key: 'trl', onClick: opts.onClick, style: opts.onClick ? { cursor: 'pointer' } : null },
+        React.createElement('rect', { x: -17, y: -18, width: 34, height: 11, rx: 5.5, fill: '#0A1220', opacity: 0.85 }),
+        React.createElement('text', { y: -9.8, textAnchor: 'middle', fontFamily: 'Nunito', fontSize: 7.5, fontWeight: 900, fill: opts.selected ? opts.color : 'rgba(240,235,225,.85)' }, opts.id),
+        React.createElement('animateMotion', { dur: opts.dur || '9s', repeatCount: 'indefinite', path: d })));
+    }
+    return React.createElement('g', { key: opts.k || a + b }, ...els);
+  }
+  renderVals() {
+    const brand = this.props.brandColor ?? '#FFB037';
+    const companyName = (this.props.companyName ?? 'MERIDIAN').toUpperCase();
+    const traffic = this.props.showTraffic ?? true;
+    const mint = '#4FD6A4', sky = '#57B2FF', coral = '#FF6B5E', violet = '#9B8CFF';
+    const meta = {
+      'Hamburg': { tag: 'LİMAN ŞEHRİ', cost: '$52.000', m: 80, c: 75, perks: ['Liman erişimi', 'Demiryolu terminali', 'Güçlü sanayi'] },
+      'Rotterdam': { tag: 'MEGA LİMAN', cost: '$58.000', m: 95, c: 90, perks: ["Avrupa'nın en büyük limanı", 'Deniz hattı avantajı', 'Çok yoğun rekabet'] },
+      'Paris': { tag: 'TİCARET MERKEZİ', cost: '$60.000', m: 95, c: 80, perks: ['Dev tüketici pazarı', 'Hava kargo yakını', 'Yüksek kira'] },
+      'Milano': { tag: 'SANAYİ BÖLGESİ', cost: '$46.000', m: 75, c: 60, perks: ['Üretim yükleri', 'Alp koridoru'] },
+      'Varşova': { tag: 'YÜKSELEN PAZAR', cost: '$34.000', m: 60, c: 35, perks: ['Düşük maliyet', 'Doğu–batı koridoru', 'Hızlı büyüme'] },
+      'Viyana': { tag: 'KORİDOR KAVŞAĞI', cost: '$44.000', m: 60, c: 55, perks: ['Orta Avrupa kavşağı', 'Tuna nehri hattı'] },
+      'Barselona': { tag: 'AKDENİZ KAPISI', cost: '$42.000', m: 60, c: 55, perks: ['Konteyner limanı', 'İberya pazarı'] },
+      'İstanbul': { tag: 'KITALAR KÖPRÜSÜ', cost: '$38.000', m: 80, c: 60, perks: ['İki kıta pazarı', 'Boğaz geçiş rotaları', 'Genç lojistik pazarı'] },
+    };
+    const sel = this.state.sel, sm = meta[sel];
+    const stepData = [
+      { city: 'Paris', act: 'Yük al', sub: 'Atlas Mobilya • 18t mobilya', type: 'ALIŞ', color: brand },
+      { city: 'Saraybosna', act: 'Teslim et', sub: 'Adria Market • SLA %96 hedef', type: 'TESLİM', color: mint },
+      { city: 'Saraybosna', act: 'Yük al', sub: 'Balkan Tekstil • 12t tekstil • spot iş', type: 'ALIŞ', color: brand },
+      { city: 'Paris', act: 'Teslim et', sub: 'Rive Dağıtım • sonra rota başa sarar', type: 'TESLİM', color: mint },
+    ];
+    const steps = stepData.map((s, i) => {
+      const on = this.state.step === i;
+      return {
+        num: String(i + 1), title: `${s.city} — ${s.act}`, sub: s.sub, type: s.type,
+        typeColor: s.color, typeBg: 'rgba(140,170,215,.08)',
+        bg: on ? 'rgba(255,176,55,.08)' : 'rgba(20,32,54,.75)',
+        border: on ? s.color : 'rgba(140,170,215,.12)',
+        numBg: on ? s.color : 'rgba(140,170,215,.14)', numColor: on ? '#10203A' : 'rgba(240,235,225,.7)',
+        pick: () => this.setState({ step: i }),
+      };
+    });
+    const speeds = ['⏸', '1×', '3×', '5×'];
+    const speedBtns = speeds.map((label, i) => ({
+      label, pick: () => this.setState({ speed: i }),
+      bg: this.state.speed === i ? brand : 'transparent',
+      color: this.state.speed === i ? '#241500' : 'rgba(240,235,225,.6)',
+    }));
+    const tabNames = ['Spot', 'Sözleşme', 'İhale'];
+    const jobTabs = tabNames.map((label, i) => ({
+      label, pick: () => this.setState({ jobTab: i }),
+      bg: this.state.jobTab === i ? brand : 'transparent',
+      color: this.state.jobTab === i ? '#241500' : 'rgba(240,235,225,.6)',
+    }));
+    const jobLists = [
+      [
+        { title: 'Münih → Prag', sub1: '14t makine parçası • standart yük', sub2: 'Teslim: 22 saat • 348 km', pay: '$3.150', tag: 'ACİL', tagBg: 'rgba(255,107,94,.14)', tagColor: coral, cta: 'Kabul et' },
+        { title: 'Berlin → Hamburg', sub1: '8t tekstil • dönüşe uygun', sub2: 'Teslim: 2 gün • 289 km', pay: '$1.480', tag: 'DÖNÜŞ YÜKÜ', tagBg: 'rgba(79,214,164,.14)', tagColor: mint, cta: 'Kabul et' },
+        { title: 'Varşova → Viyana', sub1: '20t beyaz eşya • sigortalı', sub2: 'Teslim: 36 saat • 556 km', pay: '$4.210', tag: 'SPOT', tagBg: 'rgba(140,170,215,.12)', tagColor: 'rgba(240,235,225,.6)', cta: 'Kabul et' },
+      ],
+      [
+        { title: 'Nordwind Mobilya', sub1: 'Hamburg ↔ Berlin • haftalık 60–90t', sub2: '90 gün • min %94 zamanında • gecikme cezası', pay: '$182/ton', tag: 'SÖZLEŞME', tagBg: 'rgba(255,176,55,.14)', tagColor: brand, cta: 'Teklif ver' },
+        { title: 'Baltik Gıda', sub1: 'Hamburg ↔ Kopenhag • haftalık 30t', sub2: '60 gün • soğuk zincir gerekli • min %96', pay: '$310/ton', tag: 'SOĞUK ZİNCİR', tagBg: 'rgba(87,178,255,.14)', tagColor: sky, cta: 'Teklif ver' },
+      ],
+      [
+        { title: 'TechNova Avrupa Dağıtımı', sub1: '5 ülke • 12 şehir • 6 ay', sub2: 'Kapanış: 3 gün • gereken itibar 60+ • 4 rakip teklifte', pay: '≈$420.000', tag: 'İHALE', tagBg: 'rgba(155,140,255,.14)', tagColor: violet, cta: 'İncele' },
+        { title: 'Bavyera Otomotiv', sub1: 'Fabrika parça ağı • Münih merkezli', sub2: 'Kapanış: 9 gün • intermodal avantajlı', pay: '≈$260.000', tag: 'İHALE', tagBg: 'rgba(155,140,255,.14)', tagColor: violet, cta: 'İncele' },
+      ],
+    ];
+    const jobTabHints = ['Tek seferlik işler — boş dönüşleri doldur, fırsatları yakala', 'Düzenli gelir — kapasite ayır, SLA koru, yenile', 'Büyük oyunlar — itibar ve kapasite ile yarış'];
+    const expData = [
+      ['Yakıt', 21900, brand], ['Personel', 18400, sky], ['Terminal', 9300, violet],
+      ['Bakım', 6850, mint], ['Sigorta', 4100, 'rgba(240,235,225,.5)'], ['Kredi faizi', 3200, coral],
+    ];
+    const expenses = expData.map(([label, v, color]) => ({
+      label, color, amt: '$' + v.toLocaleString('tr-TR'), w: Math.round(v / 21900 * 100) + '%',
+    }));
+    let foundingMap = null, liveMap = null, routeMap = null, cityMap = null;
+    if (this.state.mapReady) {
+      const M = window.EUROPE_MAP;
+      const pins = Object.keys(meta);
+      const fvb = this.fit(pins.map(n => M.cities[n]), 402 / 874, 55);
+      foundingMap = this.baseMap(fvb, pins.map(n => this.cityDot(n, {
+        r: n === sel ? 8 : 6, fill: n === sel ? brand : '#1F3654', color: n === sel ? brand : '#7A96B8',
+        sw: n === sel ? 0 : 1.8, pulse: n === sel, label: true, fs: 11.5,
+        labelColor: n === sel ? '#F2EDE3' : 'rgba(240,235,225,.55)', labelDy: 21,
+        onClick: () => this.setState({ sel: n }),
+      })), 'fm');
+      const liveCities = ['Hamburg', 'Berlin', 'Amsterdam', 'Frankfurt', 'Münih', 'Varşova', 'Kopenhag'];
+      const lvb = this.fit(liveCities.map(n => M.cities[n]), 402 / 874, 40);
+      const ms = this.state.mapSel;
+      const pickV = (id) => () => this.setState({ mapSel: { type: 'vehicle', id } });
+      const pickC = (id) => () => this.setState({ mapSel: { type: 'city', id } });
+      const isV = (id) => !!ms && ms.type === 'vehicle' && ms.id === id;
+      const legs = [
+        this.leg('Hamburg', 'Berlin', { color: brand, truck: traffic, dur: '7s', k: 'l1', id: 'TIR-07', onClick: pickV('TIR-07'), selected: isV('TIR-07') }),
+        this.leg('Hamburg', 'Amsterdam', { color: brand, truck: traffic, dur: '10s', k: 'l2', id: 'TIR-12', onClick: pickV('TIR-12'), selected: isV('TIR-12') }),
+        this.leg('Hamburg', 'Frankfurt', { color: brand, op: 0.5, k: 'l3' }),
+        this.leg('Frankfurt', 'Münih', { color: brand, op: 0.5, truck: traffic, dur: '8s', k: 'l4', id: 'VAN-03', onClick: pickV('VAN-03'), selected: isV('VAN-03') }),
+        this.leg('Berlin', 'Varşova', { color: brand, truck: traffic, dur: '11s', k: 'l5', id: 'TIR-09', onClick: pickV('TIR-09'), selected: isV('TIR-09') }),
+        this.leg('Hamburg', 'Kopenhag', { color: sky, dash: '3 6', op: 0.7, k: 'l6' }),
+      ];
+      const hq = M.cities['Hamburg'];
+      const hubs = liveCities.filter(n => n !== 'Hamburg').map(n => this.cityDot(n, {
+        r: ms && ms.type === 'city' && ms.id === n ? 6.5 : 5, color: ms && ms.type === 'city' && ms.id === n ? sky : brand,
+        fill: '#10203A', label: true, k: 'h', pulse: ms && ms.type === 'city' && ms.id === n,
+        cargo: (n === 'Berlin' || n === 'Münih') ? brand : null,
+        onClick: pickC(n),
+      }));
+      const storm = M.cities['Kopenhag'];
+      liveMap = this.baseMap(lvb, [...legs, ...hubs,
+        React.createElement('g', { key: 'hq', onClick: pickC('Hamburg'), style: { cursor: 'pointer' } },
+          React.createElement('rect', { x: hq[0] - 8, y: hq[1] - 8, width: 16, height: 16, rx: 5, fill: brand, stroke: '#0A1220', strokeWidth: 1.5 }),
+          React.createElement('text', { x: hq[0], y: hq[1] + 21, textAnchor: 'middle', fontFamily: 'Nunito', fontSize: 11, fontWeight: 900, fill: '#F2EDE3' }, 'Hamburg • Merkez')),
+        React.createElement('g', { key: 'storm' },
+          React.createElement('circle', { cx: storm[0] + 26, cy: storm[1] - 18, r: 11, fill: 'rgba(255,107,94,.16)', stroke: coral, strokeWidth: 1.5 }),
+          React.createElement('text', { x: storm[0] + 26, y: storm[1] - 14, textAnchor: 'middle', fontFamily: 'Nunito', fontSize: 12, fontWeight: 1000, fill: coral }, '!')),
+      ], 'lm');
+      const routeCities = ['Paris', 'Saraybosna'];
+      const rvb = this.fit(routeCities.map(n => M.cities[n]), 402 / 360, 60);
+      const rLegs = [
+        this.leg('Paris', 'Saraybosna', { color: brand, w: 2.6, truck: traffic, dur: '9s', k: 'r1' }),
+        this.leg('Saraybosna', 'Paris', { color: mint, w: 2.2, dash: '2 7', op: 0.7, truck: traffic, dur: '9s', k: 'r2' }),
+      ];
+      const routeStops = [{ city: 'Paris', nums: [1, 4] }, { city: 'Saraybosna', nums: [2, 3] }];
+      const rPins = routeStops.map(st => {
+        const [x, y] = M.cities[st.city];
+        const on = st.nums.includes(this.state.step + 1);
+        return React.createElement('g', { key: 'rp' + st.city, onClick: () => this.setState({ step: st.nums[0] - 1 }), style: { cursor: 'pointer' } },
+          on ? React.createElement('circle', { cx: x, cy: y, r: 17, fill: 'none', stroke: brand, strokeWidth: 1.4, opacity: 0.6 }) : null,
+          React.createElement('circle', { cx: x, cy: y, r: 12, fill: on ? brand : '#1F3654', stroke: brand, strokeWidth: 1.8 }),
+          React.createElement('text', { x, y: y + 3.6, textAnchor: 'middle', fontFamily: 'Nunito', fontSize: 9, fontWeight: 1000, fill: on ? '#10203A' : brand }, st.nums.join('·')),
+          React.createElement('text', { x, y: y + 29, textAnchor: 'middle', fontFamily: 'Nunito', fontSize: 10.5, fontWeight: 800, fill: 'rgba(240,235,225,.65)' }, st.city));
+      });
+      routeMap = this.baseMap(rvb, [...rLegs, ...rPins], 'rm');
+      const cvb = this.fit([M.cities['Berlin']], 402 / 330, 115);
+      cityMap = this.baseMap(cvb, [
+        this.leg('Hamburg', 'Berlin', { color: brand, op: 0.4, k: 'cd1' }),
+        this.leg('Berlin', 'Varşova', { color: brand, op: 0.4, dash: '3 6', k: 'cd2' }),
+        this.leg('Berlin', 'Münih', { color: brand, op: 0.25, dash: '3 6', k: 'cd3' }),
+        ...['Hamburg', 'Varşova', 'Münih'].map(n => this.cityDot(n, { r: 4, label: true, k: 'cdc', fs: 9.5, labelColor: 'rgba(240,235,225,.4)' })),
+        this.cityDot('Berlin', { r: 8, fill: brand, color: brand, sw: 0, pulse: true, cargo: brand, k: 'cdb' }),
+      ], 'cm');
+    }
+    const vehiclePop = {
+      'TIR-07': { tag: 'ROTADA', sub: 'Hamburg → Berlin • Kuzey Hattı #1 • 4s 10d kaldı', chips: ['18t mobilya', '%92 dolu', 'Sürücü: L. Weber'] },
+      'TIR-12': { tag: 'ROTADA', sub: 'Hamburg → Amsterdam • sözleşme yükü • 2s 35d kaldı', chips: ['14t gıda', '%70 dolu', 'Sürücü: M. Kraus'] },
+      'VAN-03': { tag: 'ROTADA', sub: 'Frankfurt → Münih • spot iş • 5s 20d kaldı', chips: ['3.2t elektronik', '%88 dolu', 'Sürücü: A. Yıldız'] },
+      'TIR-09': { tag: 'ROTADA', sub: 'Berlin → Varşova • Kuzey Hattı #1 • 8s 05d kaldı', chips: ['20t beyaz eşya', 'Sigortalı yük', 'Sürücü: P. Nowak'] },
+    };
+    const cityPop = {
+      'Hamburg': { m: 80, c: 75, tag: 'MERKEZ', sub: 'Şirket merkezin • liman şehri • güçlü sanayi', chips: ['Merkez ofis', 'Büyük depo', '2 araç burada'] },
+      'Berlin': { m: 85, c: 70, tag: 'ŞEHİR', sub: 'Büyük tüketici pazarı • yüksek talep', chips: [{ t: 'Nordwind Mobilya — 12t yük bekliyor' }, 'Küçük depo', '3 açık iş ilanı'] },
+      'Amsterdam': { m: 70, c: 65, tag: 'ŞEHİR', sub: 'Liman erişimi • deniz hattı bağlantısı', chips: ['Yapın yok', 'Depo arsası $28K'] },
+      'Frankfurt': { m: 75, c: 70, tag: 'ŞEHİR', sub: 'Finans merkezi • aktarma kavşağı', chips: ['Yapın yok', '2 açık iş ilanı'] },
+      'Münih': { m: 75, c: 60, tag: 'ŞEHİR', sub: 'Sanayi bölgesi • otomotiv yükleri', chips: [{ t: 'Bavyera Otomotiv — 8t yük bekliyor' }, 'Garaj', '1 araç burada'] },
+      'Varşova': { m: 60, c: 35, tag: 'ŞEHİR', sub: 'Yükselen pazar • doğu–batı koridoru', chips: ['Yapın yok', 'Düşük rekabet'] },
+      'Kopenhag': { m: 55, c: 50, tag: 'ŞEHİR', sub: 'Soğuk zincir talebi • feribot hattı', chips: ['Yapın yok', '1 açık sözleşme'] },
+    };
+    const seg = (names, key) => names.map((label, i) => ({
+      label, pick: () => this.setState({ [key]: i }),
+      bg: this.state[key] === i ? brand : 'transparent',
+      color: this.state[key] === i ? '#241500' : 'rgba(240,235,225,.6)',
+    }));
+    const fleetTabs = seg(['Rotalar', 'Araçlar', 'Mağaza'], 'fleetTab');
+    const routeRows = [
+      { name: 'Paris Rotası #3', sub: '4 adım • 2 araç • sefer başına +$4.860' },
+      { name: 'Kuzey Hattı #1', sub: '6 adım • 3 araç • sefer başına +$7.120' },
+      { name: 'Baltık Ekspres', sub: '3 adım • 1 araç • sefer başına +$2.240' },
+    ];
+    const chipStyle = (on) => on
+      ? { bg: 'rgba(255,176,55,.14)', bd: 'rgba(255,176,55,.4)', fg: brand }
+      : { bg: 'rgba(140,170,215,.08)', bd: 'rgba(140,170,215,.14)', fg: 'rgba(240,235,225,.6)' };
+    const vehFilters = ['Tümü 24', 'Rotada 18', 'Boşta 4', 'Yüklemede 2'].map((t, i) => ({ t, ...chipStyle(i === 0) }));
+    const badge = { rota: ['ROTADA', mint, 'rgba(79,214,164,.12)'], bos: ['BOŞTA', 'rgba(240,235,225,.55)', 'rgba(140,170,215,.12)'], yuk: ['YÜKLEMEDE', sky, 'rgba(87,178,255,.12)'] };
+    const vehRows = [
+      ['TIR-07', 'Atlas 440 • Kuzey Hattı #1 • Berlin yolunda', 'rota'],
+      ['TIR-09', 'Atlas 440 • Kuzey Hattı #1 • Varşova yolunda', 'rota'],
+      ['TIR-12', 'Atlas 440 • Kuzey Hattı #1 • Amsterdam yolunda', 'rota'],
+      ['VAN-03', 'Sprinter L2 • Paris Rotası #3 • Münih yolunda', 'rota'],
+      ['VAN-05', "Sprinter L2 • Berlin'de bekliyor", 'bos'],
+      ['TIR-02', "Atlas 380 • Berlin'de yükleniyor", 'yuk'],
+    ].map(([id, sub, b]) => ({ id, sub, badge: badge[b][0], badgeColor: badge[b][1], badgeBg: badge[b][2] }));
+    const jobsModeTabs = seg(['Aktif 24', 'Pazar'], 'jobsMode');
+    const activeFilters = ['Tümü 24', 'Sözleşme 9', 'Spot 15', 'Riskli 3'].map((t, i) => ({ t, ...chipStyle(i === 0) }));
+    const activeRows = [
+      { title: 'Nordwind Mobilya', tag: 'SÖZLEŞME', tagColor: brand, tagBg: 'rgba(255,176,55,.14)', status: "Berlin'de 12t bekliyor", statusColor: brand, w: '25%', barColor: brand },
+      { title: 'Münih → Prag', tag: 'SPOT', tagColor: 'rgba(240,235,225,.6)', tagBg: 'rgba(140,170,215,.12)', status: '9s 20d • +$3.150', statusColor: mint, w: '62%', barColor: mint },
+      { title: 'Varşova → Viyana', tag: 'SPOT', tagColor: 'rgba(240,235,225,.6)', tagBg: 'rgba(140,170,215,.12)', status: 'Gecikme riski • 2s', statusColor: coral, w: '80%', barColor: coral },
+      { title: 'Baltik Gıda', tag: 'SÖZLEŞME', tagColor: brand, tagBg: 'rgba(255,176,55,.14)', status: 'Hafta 5/8 • yolunda', statusColor: 'rgba(240,235,225,.55)', w: '58%', barColor: sky },
+      { title: 'Lyon → Barselona', tag: 'SPOT', tagColor: 'rgba(240,235,225,.6)', tagBg: 'rgba(140,170,215,.12)', status: 'Yarın teslim', statusColor: 'rgba(240,235,225,.55)', w: '44%', barColor: mint },
+      { title: 'Adria Market', tag: 'SÖZLEŞME', tagColor: brand, tagBg: 'rgba(255,176,55,.14)', status: 'Hafta 3/12 • yolunda', statusColor: 'rgba(240,235,225,.55)', w: '25%', barColor: sky },
+    ];
+    const msel = this.state.mapSel;
+    let pop = null;
+    if (msel) {
+      if (msel.type === 'vehicle' && vehiclePop[msel.id]) {
+        const v = vehiclePop[msel.id];
+        pop = { title: msel.id, tag: v.tag, sub: v.sub, chips: v.chips, cta: 'Araç detayına git →', border: 'rgba(255,176,55,.35)', tagBg: 'rgba(79,214,164,.12)', tagColor: mint };
+      } else if (msel.type === 'city' && cityPop[msel.id]) {
+        const c = cityPop[msel.id];
+        pop = { title: msel.id, tag: c.tag, sub: c.sub, chips: c.chips, cta: 'Şehir detayına git →', border: 'rgba(87,178,255,.35)', tagBg: 'rgba(87,178,255,.12)', tagColor: sky, isCity: true, m: c.m, cM: c.c };
+      }
+    }
+    return {
+      brand, companyName, brandInitial: companyName.charAt(0) || 'M',
+      popOn: !!pop, popOff: !pop, popIsCity: !!pop && !!pop.isCity,
+      popMarketW: pop && pop.isCity ? pop.m + '%' : '0%', popCompW: pop && pop.isCity ? pop.cM + '%' : '0%',
+      popTitle: pop ? pop.title : '', popTag: pop ? pop.tag : '', popSub: pop ? pop.sub : '',
+      popChips: pop ? pop.chips.map(c => typeof c === 'string' ? { t: c, bg: 'rgba(140,170,215,.1)', bd: 'rgba(140,170,215,.14)', fg: 'rgba(240,235,225,.75)' } : { t: c.t, bg: 'rgba(255,176,55,.12)', bd: 'rgba(255,176,55,.3)', fg: brand }) : [], popCta: pop ? pop.cta : '',
+      popBorder: pop ? pop.border : 'transparent', popTagBg: pop ? pop.tagBg : '', popTagColor: pop ? pop.tagColor : '',
+      popClose: () => this.setState({ mapSel: null }),
+      foundingMap, liveMap, routeMap, cityMap,
+      fleetTabs, routeRows, vehFilters, vehRows,
+      fleetShowRoutes: this.state.fleetTab === 0, fleetShowVehicles: this.state.fleetTab === 1, fleetShowShop: this.state.fleetTab === 2,
+      jobsModeTabs, activeFilters, activeRows,
+      jobsShowActive: this.state.jobsMode === 0, jobsShowMarket: this.state.jobsMode === 1,
+      selName: sel, selTag: sm.tag, selCost: sm.cost,
+      selMarketW: sm.m + '%', selCompW: sm.c + '%',
+      selPerks: sm.perks.map(t => ({ t })),
+      steps, speedBtns, jobTabs, jobs: jobLists[this.state.jobTab], jobTabHint: jobTabHints[this.state.jobTab],
+      expenses,
+    };
+  }
+}
+</script>
+</body>
+</html>

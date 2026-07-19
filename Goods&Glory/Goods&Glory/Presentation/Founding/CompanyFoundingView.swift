@@ -224,7 +224,16 @@ private struct HeadquartersStageView: View {
                 hqCityID: nil,
                 highlightsStarterCities: true,
                 accentColorHex: draft.colorHex,
-                selectedCityID: $inspectedCityID
+                selection: Binding(
+                    get: { inspectedCityID.map { MapSelection.city($0) } ?? .none },
+                    set: { selection in
+                        switch selection {
+                        case .city(let id): inspectedCityID = id
+                        case .none: inspectedCityID = nil
+                        case .vehicle: break
+                        }
+                    }
+                )
             )
             .ignoresSafeArea()
 
@@ -260,19 +269,27 @@ private struct HeadquartersStageView: View {
 
                 Spacer()
 
-                if let cityID = inspectedCityID, let city = session.catalog.city(cityID) {
-                    CityFoundingCard(
-                        city: city,
-                        roadCount: session.catalog.roads.filter { $0.from == city.roadNodeID || $0.to == city.roadNodeID }.count,
-                        accent: draft.accentColor,
-                        onFound: { establishHQ(in: city) }
-                    )
+                if inspectedCityID != nil {
+                    Group {
+                        if let cityID = inspectedCityID, let city = session.catalog.city(cityID) {
+                            CityFoundingCard(
+                                city: city,
+                                insight: CityInsight.make(city: city, catalog: session.catalog),
+                                startingCash: session.catalog.economy.startingCash,
+                                accent: draft.accentColor,
+                                onFound: { establishHQ(in: city) }
+                            )
+                            // Şehir değişiminde metrik/perk’ler ayrı ayrı animate olmasın.
+                            .transaction { $0.animation = nil }
+                        }
+                    }
                     .padding(.horizontal, 14)
                     .padding(.bottom, 14)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .animation(.spring(duration: 0.35), value: inspectedCityID)
+            // Yalnız kartın görünür/gizli olması animate edilir; şehir→şehir içerik anında.
+            .animation(.spring(duration: 0.35), value: inspectedCityID != nil)
         }
     }
 
@@ -291,33 +308,42 @@ private struct HeadquartersStageView: View {
 
 private struct CityFoundingCard: View {
     let city: CityDefinition
-    let roadCount: Int
+    let insight: CityInsight
+    let startingCash: Money
     let accent: Color
     let onFound: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(city.name)
-                        .font(.gg(22, .heavy))
+                        .font(.gg(24, .heavy))
                         .foregroundStyle(Theme.textPrimary)
-                    Text(city.country)
-                        .font(.gg(12, .bold))
-                        .foregroundStyle(Theme.textSecondary)
+                    PopulationPill(population: city.population, color: accent)
                 }
-                Spacer()
-                if city.isStarterCity {
-                    TagPill(text: "Starter City", color: accent)
-                }
+                Spacer(minLength: 8)
+                Text(Format.money(insight.foundingCost))
+                    .font(.gg(17, .heavy))
+                    .foregroundStyle(Theme.textPrimary)
+                    .monospacedDigit()
             }
 
-            HStack(spacing: 8) {
-                StatChip(symbol: "person.2", text: city.population.formatted(.number.notation(.compactName)))
-                StatChip(symbol: "road.lanes", text: "\(roadCount)")
-                if city.hasRailFreightAccess { StatChip(symbol: "tram.fill", text: String(localized: "Rail")) }
-                if city.hasAirCargoAccess { StatChip(symbol: "airplane", text: String(localized: "Air")) }
-                if city.hasSeaPortAccess { StatChip(symbol: "ferry.fill", text: String(localized: "Sea")) }
+            HStack(spacing: 14) {
+                MetricBar(
+                    label: String(localized: "Market Size"),
+                    progress: insight.marketSizePercent,
+                    tint: Theme.mint
+                )
+                MetricBar(
+                    label: String(localized: "Competition"),
+                    progress: insight.competitionPercent,
+                    tint: Theme.coral
+                )
+            }
+
+            if !insight.perkLabels.isEmpty {
+                FlowPerkChips(labels: insight.perkLabels)
             }
 
             if city.isStarterCity {
@@ -331,10 +357,47 @@ private struct CityFoundingCard: View {
                     .foregroundStyle(Theme.textSecondary)
                     .padding(.top, 2)
             }
+
+            Text(
+                String(
+                    localized: "Starting cash \(Format.money(startingCash)) • founding cost deducted"
+                )
+            )
+            .font(.gg(11, .heavy))
+            .foregroundStyle(Theme.textTertiary)
+            .frame(maxWidth: .infinity)
+            .multilineTextAlignment(.center)
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Theme.surfaceGlass))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(city.isStarterCity ? accent.opacity(0.7) : Theme.stroke, lineWidth: 1.2))
         .shadow(color: .black.opacity(0.4), radius: 16, y: 6)
+        .drawingGroup() // Kart tek bitmap olarak gelir; çocuklar ayrı ayrı belirmez.
+    }
+}
+
+/// Compact wrapping chip row for city capability perks (non-lazy — paints as one unit).
+private struct FlowPerkChips: View {
+    let labels: [String]
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(labels, id: \.self) { label in
+                Text(label)
+                    .font(.gg(11, .heavy))
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(Color(red: 140 / 255, green: 170 / 255, blue: 215 / 255).opacity(0.10))
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(Color(red: 140 / 255, green: 170 / 255, blue: 215 / 255).opacity(0.14), lineWidth: 1)
+                    )
+            }
+            Spacer(minLength: 0)
+        }
     }
 }

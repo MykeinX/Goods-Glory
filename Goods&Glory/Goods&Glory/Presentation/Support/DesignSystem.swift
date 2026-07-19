@@ -252,6 +252,46 @@ struct ThemeProgressBar: View {
     }
 }
 
+/// Labeled metric row used on city founding / detail cards.
+struct MetricBar: View {
+    let label: String
+    let progress: Double
+    var tint: Color = Theme.brand
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(label.uppercased())
+                .font(.gg(10.5, .heavy))
+                .tracking(0.6)
+                .foregroundStyle(Theme.textSecondary)
+            ThemeProgressBar(value: progress, tint: tint, height: 7)
+        }
+    }
+}
+
+/// Population shown in the design’s tag slot (icon + compact count).
+struct PopulationPill: View {
+    let population: Int
+    var color: Color = Theme.brand
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "person.2.fill")
+                .font(.system(size: 9, weight: .heavy))
+            Text(population.formatted(.number.notation(.compactName)))
+                .font(.gg(10.5, .heavy))
+                .monospacedDigit()
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(color.opacity(0.14)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Population"))
+        .accessibilityValue(Text(population.formatted()))
+    }
+}
+
 /// The company mark: emblem in a rounded, glowing tile of the brand color.
 struct CompanyMark: View {
     let emblemSymbol: String

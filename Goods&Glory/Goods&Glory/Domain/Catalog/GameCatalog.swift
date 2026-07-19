@@ -17,8 +17,11 @@ struct GameCatalog: Sendable {
     let products: [ProductDefinition]
     let cityMarkets: [CityMarketProfile]
     let economy: EconomyConfig
+    /// Derived trading firms: one per city-market supply/demand entry.
+    let firms: [Firm]
 
     private let citiesByID: [CityID: CityDefinition]
+    private let firmsByID: [FirmID: Firm]
     private let networkNodesByID: [RoadNodeID: NetworkNodeDefinition]
     private let roadsByID: [RoadID: RoadDefinition]
     private let vehicleTypesByID: [VehicleTypeID: VehicleTypeDefinition]
@@ -92,14 +95,24 @@ struct GameCatalog: Sendable {
     func vehicleType(_ id: VehicleTypeID) -> VehicleTypeDefinition? { vehicleTypesByID[id] }
     func product(_ id: ProductID) -> ProductDefinition? { productsByID[id] }
     func cityMarket(_ id: CityID) -> CityMarketProfile? { cityMarketsByID[id] }
+    func firm(_ id: FirmID) -> Firm? { firmsByID[id] }
 
-    /// Road geometry oriented in the exact direction of travel.
-    func orientedGeometry(for traversal: RoadTraversal) -> [GeoCoordinate]? {
-        guard let road = roadsByID[traversal.roadID] else { return nil }
-        switch traversal.direction {
-        case .forward: return road.geometry
-        case .reverse: return Array(road.geometry.reversed())
-        }
+    func firms(in city: CityID) -> [Firm] {
+        firms.filter { $0.cityID == city }
+    }
+
+    /// The firm shipping `product` out of `city`, if the market supplies it.
+    func supplierFirm(city: CityID, product: ProductID) -> Firm? {
+        firmsByID[Self.firmID(city: city, product: product, role: .supplier)]
+    }
+
+    /// The firm receiving `product` in `city`, if the market demands it.
+    func receiverFirm(city: CityID, product: ProductID) -> Firm? {
+        firmsByID[Self.firmID(city: city, product: product, role: .receiver)]
+    }
+
+    static func firmID(city: CityID, product: ProductID, role: FirmRole) -> FirmID {
+        FirmID("\(city.rawValue).\(product.rawValue).\(role.rawValue)")
     }
 
     // MARK: - Routing
@@ -211,7 +224,8 @@ struct GameCatalog: Sendable {
             vehicleTypes: decode([VehicleTypeDefinition].self, resource: "vehicle_types"),
             products: decode([ProductDefinition].self, resource: "products"),
             cityMarkets: decode([CityMarketProfile].self, resource: "city_markets"),
-            economy: decode(EconomyConfig.self, resource: "economy")
+            economy: decode(EconomyConfig.self, resource: "economy"),
+            firmNames: decode(FirmNamePools.self, resource: "firm_names")
         )
     }
 
@@ -222,7 +236,8 @@ struct GameCatalog: Sendable {
         vehicleTypes: [VehicleTypeDefinition],
         products: [ProductDefinition],
         cityMarkets: [CityMarketProfile],
-        economy: EconomyConfig
+        economy: EconomyConfig,
+        firmNames: FirmNamePools = .fallback
     ) throws {
         self.cities = cities
         self.networkNodes = networkNodes
@@ -231,6 +246,8 @@ struct GameCatalog: Sendable {
         self.products = products
         self.cityMarkets = cityMarkets
         self.economy = economy
+        self.firms = Self.deriveFirms(cities: cities, cityMarkets: cityMarkets, pools: firmNames)
+        self.firmsByID = try Self.uniqueIndex(firms, id: \.id, label: "firm")
 
         self.citiesByID = try Self.uniqueIndex(cities, id: \.id, label: "city")
         self.networkNodesByID = try Self.uniqueIndex(networkNodes, id: \.id, label: "road node")
@@ -256,7 +273,6 @@ struct GameCatalog: Sendable {
             guard road.distanceKm.isFinite, road.distanceKm > 0 else {
                 throw CatalogError.validationFailure("road \(road.id) has non-positive distance")
             }
-            try Self.validateGeometry(of: road, networkNodesByID: networkNodesByID)
             adjacency[road.from, default: []].append(RoadEdge(
                 neighbor: road.to,
                 distanceKm: road.distanceKm,
@@ -281,6 +297,73 @@ struct GameCatalog: Sendable {
         try validate()
     }
 
+    // MARK: - Firm derivation
+
+    /// Deterministically turns every city-market supply/demand entry into a
+    /// named trading firm. No authored firm data and no save state: the same
+    /// catalog always yields the same firms.
+    private static func deriveFirms(
+        cities: [CityDefinition],
+        cityMarkets: [CityMarketProfile],
+        pools: FirmNamePools
+    ) -> [Firm] {
+        guard !pools.stems.isEmpty else { return [] }
+        var firms: [Firm] = []
+        for city in cities.sorted(by: { $0.id.rawValue < $1.id.rawValue }) {
+            guard let market = cityMarkets.first(where: { $0.cityID == city.id }) else { continue }
+            var usedStems: Set<String> = []
+
+            func stem(for product: ProductID, role: FirmRole) -> String {
+                let hash = SeedDerivation.seed(
+                    0, "firm_stem",
+                    .string(city.id.rawValue), .string(product.rawValue), .string(role.rawValue)
+                )
+                var index = Int(hash % UInt64(pools.stems.count))
+                // Linear probe so firm names stay unique within one city.
+                for _ in 0..<pools.stems.count {
+                    let candidate = pools.stems[index]
+                    if !usedStems.contains(candidate) {
+                        usedStems.insert(candidate)
+                        return candidate
+                    }
+                    index = (index + 1) % pools.stems.count
+                }
+                return pools.stems[index]
+            }
+
+            func suffix(for product: ProductID, role: FirmRole, from list: [String]) -> String {
+                guard !list.isEmpty else { return "" }
+                let hash = SeedDerivation.seed(
+                    0, "firm_suffix",
+                    .string(city.id.rawValue), .string(product.rawValue), .string(role.rawValue)
+                )
+                return list[Int(hash % UInt64(list.count))]
+            }
+
+            for entry in market.supply {
+                let name = "\(stem(for: entry.productID, role: .supplier)) \(suffix(for: entry.productID, role: .supplier, from: pools.supplierSuffixes))"
+                firms.append(Firm(
+                    id: firmID(city: city.id, product: entry.productID, role: .supplier),
+                    cityID: city.id,
+                    productID: entry.productID,
+                    role: .supplier,
+                    name: name.trimmingCharacters(in: .whitespaces)
+                ))
+            }
+            for entry in market.demand {
+                let name = "\(stem(for: entry.productID, role: .receiver)) \(suffix(for: entry.productID, role: .receiver, from: pools.receiverSuffixes))"
+                firms.append(Firm(
+                    id: firmID(city: city.id, product: entry.productID, role: .receiver),
+                    cityID: city.id,
+                    productID: entry.productID,
+                    role: .receiver,
+                    name: name.trimmingCharacters(in: .whitespaces)
+                ))
+            }
+        }
+        return firms
+    }
+
     private static func uniqueIndex<T, ID: Hashable>(
         _ items: [T], id: KeyPath<T, ID>, label: String
     ) throws -> [ID: T] {
@@ -296,7 +379,6 @@ struct GameCatalog: Sendable {
     }
 
     private static let maximumCityRoadNodeDistanceKm = 25.0
-    private static let maximumRoadGeometryEndpointDistanceKm = 0.1
     /// Gameplay guardrails wide enough for future global normalization while
     /// still catching a missing x1000 fixed-point scale in catalog data.
     private static let plausibleCostIndexRange: ClosedRange<UInt16> = 250...4_000
@@ -336,27 +418,6 @@ struct GameCatalog: Sendable {
         }
     }
 
-    private static func validateGeometry(
-        of road: RoadDefinition,
-        networkNodesByID: [RoadNodeID: NetworkNodeDefinition]
-    ) throws {
-        guard road.geometry.count >= 2 else {
-            throw CatalogError.validationFailure("road \(road.id) geometry has fewer than 2 points")
-        }
-        for point in road.geometry {
-            try validateCoordinate(point, label: "road \(road.id) geometry")
-        }
-
-        guard let fromNode = networkNodesByID[road.from], let toNode = networkNodesByID[road.to],
-              let first = road.geometry.first, let last = road.geometry.last else { return }
-        guard geographicDistanceKm(fromNode.coordinate, first) <= maximumRoadGeometryEndpointDistanceKm else {
-            throw CatalogError.validationFailure("road \(road.id) geometry does not start near \(road.from)")
-        }
-        guard geographicDistanceKm(toNode.coordinate, last) <= maximumRoadGeometryEndpointDistanceKm else {
-            throw CatalogError.validationFailure("road \(road.id) geometry does not end near \(road.to)")
-        }
-    }
-
     private static func validateCoordinate(_ coordinate: GeoCoordinate, label: String) throws {
         guard coordinate.latitude.isFinite, coordinate.longitude.isFinite,
               (-90...90).contains(coordinate.latitude),
@@ -393,7 +454,9 @@ struct GameCatalog: Sendable {
 
         for vehicleType in vehicleTypes {
             guard vehicleType.capacity.massKg > 0, vehicleType.capacity.volumeM3 > 0,
-                  vehicleType.speedKmh > 0, vehicleType.purchasePrice > 0 else {
+                  vehicleType.speedKmh > 0, vehicleType.purchasePrice > 0,
+                  vehicleType.freightRatePerKm > 0, vehicleType.fixedCostPerDay >= 0,
+                  vehicleType.costPerKm >= 0, vehicleType.driverCostPerHour >= 0 else {
                 throw CatalogError.validationFailure("vehicle type \(vehicleType.id) has non-positive physical values")
             }
         }
@@ -416,12 +479,34 @@ struct GameCatalog: Sendable {
         guard economy.startingCash > 0, economy.offerGenerationIntervalMinutes > 0,
               economy.offerLifetimeMinutes > 0, economy.loadingMinutes >= 0, economy.unloadingMinutes >= 0,
               (0...100).contains(economy.offerChancePercent), economy.maxOpenOffersPerCity > 0,
-              economy.offerMinimumProfit >= 0,
-              (0...100).contains(economy.offerProfitMarginPercent) else {
+              economy.offerSlotPopulation > 0,
+              (0...1).contains(economy.fillFloor),
+              !economy.urgencyTiers.isEmpty,
+              economy.urgencyTiers.allSatisfy({
+                  $0.multiplier > 0 && $0.lifetimeMinutes > 0 && $0.weight > 0 && !$0.id.isEmpty
+              }),
+              economy.contractOfferIntervalMinutes > 0,
+              economy.maxOpenContractOffers > 0,
+              economy.contractDurationDays > 0,
+              (0...100).contains(economy.contractMarginPercent),
+              (0...100).contains(economy.contractPenaltyPercent) else {
             throw CatalogError.validationFailure("economy config has invalid values")
         }
-        guard vehicleTypes.contains(where: { $0.purchasePrice <= economy.startingCash }) else {
+        guard let cheapestVehicle = vehicleTypes.map(\.purchasePrice).min() else {
             throw CatalogError.validationFailure("no vehicle type is affordable with starting cash")
+        }
+        for city in starterCities {
+            let foundingCost = CityInsight.foundingCost(for: city)
+            guard economy.startingCash > foundingCost else {
+                throw CatalogError.validationFailure(
+                    "starter city \(city.id) founding cost exceeds starting cash"
+                )
+            }
+            guard economy.startingCash - foundingCost >= cheapestVehicle else {
+                throw CatalogError.validationFailure(
+                    "starter city \(city.id) leaves too little cash for an entry vehicle"
+                )
+            }
         }
 
         // The canonical road graph must be a single component; otherwise a road can

@@ -96,7 +96,7 @@ struct MainMenuView: View {
             titleVisibility: .visible
         ) {
             Button("Delete and Start New", role: .destructive) {
-                session.abandonCampaign()
+                // Eski kayıt founding iptal edilirse kalsın; yeni kampanya startNewGame ile üzerine yazılır.
                 session.beginFounding()
             }
             Button("Cancel", role: .cancel) {}

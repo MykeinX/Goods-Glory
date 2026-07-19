@@ -2,61 +2,81 @@
 //  FleetView.swift
 //  Goods&Glory
 //
-//  Fleet tab (design 1d): the company's vehicles as cards, a vehicle detail
-//  screen and a route-builder preview. Real data (type, capacity, location,
-//  odometer, assigned job) drives the screen; driver / fuel / maintenance /
-//  add-ons and the multi-stop route builder are visual shells for features that
-//  do not have a simulation backend yet.
+//  Fleet tab (design 3b): Routes / Vehicles / Shop segments. Routes are a
+//  visual shell; vehicles and shop use live catalog/state data.
 //
 
 import SwiftUI
 
+private enum FleetMode: CaseIterable {
+    case routes, vehicles, shop
+    var title: String {
+        switch self {
+        case .routes: return "Routes"
+        case .vehicles: return "Vehicles"
+        case .shop: return "Shop"
+        }
+    }
+}
+
+private enum VehicleFilter: String, CaseIterable {
+    case all = "All"
+    case idle = "Idle"
+    case onRoute = "On route"
+}
+
+private struct RouteActionSelection: Identifiable {
+    let routeID: RouteID
+    var id: Int { routeID.rawValue }
+}
+
 struct FleetView: View {
     @Environment(GameSession.self) private var session
-    @State private var showsShop = false
+    @State private var path = NavigationPath()
+    @State private var mode: FleetMode = .vehicles
+    @State private var vehicleFilter: VehicleFilter = .all
     @State private var purchaseError: CommandError?
+    @State private var routeActionSelection: RouteActionSelection?
 
     private var accent: Color {
         Color(hex: session.state?.config.identity.colorHex ?? "#FFB037")
     }
 
+    private var vehicles: [Vehicle] { session.state?.vehicles ?? [] }
+    private var routes: [Route] { session.state?.routes ?? [] }
+
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    ScreenHeader(title: "Fleet", trailing: "\(session.state?.vehicles.count ?? 0) vehicles")
+        NavigationStack(path: $path) {
+            VStack(alignment: .leading, spacing: 0) {
+                ScreenHeader(
+                    title: "Fleet",
+                    trailing: "\(vehicles.count) vehicles · \(routes.count) routes"
+                )
+                .padding(.horizontal, 14)
 
-                    let vehicles = session.state?.vehicles ?? []
-                    if vehicles.isEmpty {
-                        EmptyFleetCard()
-                    } else {
-                        ForEach(vehicles) { vehicle in
-                            NavigationLink(value: vehicle.id) {
-                                FleetVehicleCard(vehicle: vehicle, accent: accent)
-                            }
-                            .buttonStyle(.plain)
+                fleetModePicker
+                    .padding(.horizontal, 14)
+                    .padding(.top, 4)
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 10) {
+                        switch mode {
+                        case .routes: routesContent
+                        case .vehicles: vehiclesContent
+                        case .shop: shopContent
                         }
+                        Color.clear.frame(height: Layout.tabBarClearance)
                     }
-
-                    Button {
-                        showsShop = true
-                    } label: {
-                        Label("Buy Vehicle", systemImage: "plus")
-                    }
-                    .buttonStyle(PrimaryButtonStyle(tint: accent))
-                    .padding(.top, 2)
-
-                    Color.clear.frame(height: Layout.tabBarClearance)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 12)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
             }
             .background(Theme.backgroundBottom.ignoresSafeArea())
             .navigationDestination(for: VehicleID.self) { id in
                 VehicleDetailView(vehicleID: id)
             }
-            .sheet(isPresented: $showsShop) {
-                VehicleShopView(accent: accent, purchaseError: $purchaseError, onClose: { showsShop = false })
+            .navigationDestination(for: RouteID.self) { id in
+                RouteBuilderView(routeID: id)
             }
             .alert(
                 "Purchase Failed",
@@ -66,8 +86,121 @@ struct FleetView: View {
             } message: {
                 Text("Not enough cash for this vehicle.")
             }
+            .sheet(item: $routeActionSelection) { selection in
+                RouteCancellationSheet(routeID: selection.routeID, accent: accent)
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.hidden)
+                    .presentationCornerRadius(28)
+                    .presentationBackground(Theme.backgroundBottom)
+            }
         }
         .tint(accent)
+    }
+
+    private var fleetModePicker: some View {
+        HStack(spacing: 5) {
+            ForEach(FleetMode.allCases, id: \.self) { item in
+                let isActive = mode == item
+                Button { mode = item } label: {
+                    Text(item.title)
+                        .font(.gg(13, .heavy))
+                        .foregroundStyle(isActive ? Theme.onBrand : Theme.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 38)
+                        .background(Capsule().fill(isActive ? accent : Color.clear))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(5)
+        .background(Capsule().fill(Theme.surface))
+        .overlay(Capsule().stroke(Theme.stroke, lineWidth: 1))
+    }
+
+    @ViewBuilder private var routesContent: some View {
+        if routes.isEmpty {
+            Text("No routes yet. Build a custom route or assign a vehicle to a signed contract.")
+                .font(.gg(12, .bold))
+                .foregroundStyle(Theme.textSecondary)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .surfacePanel(cornerRadius: 18)
+        } else {
+            ForEach(routes) { route in
+                RouteRow(
+                    route: route,
+                    accent: accent,
+                    onOpen: { path.append(route.id) },
+                    onRequestCancellation: {
+                        routeActionSelection = RouteActionSelection(routeID: route.id)
+                    }
+                )
+            }
+        }
+
+        Button {
+            guard let routeID = session.createRoute() else { return }
+            path.append(routeID)
+        } label: {
+            HStack(spacing: 7) {
+                Text("+").font(.gg(15, .heavy)).foregroundStyle(accent)
+                Text("Build a custom route")
+                    .font(.gg(12.5, .heavy))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
+                    .foregroundStyle(Theme.stroke.opacity(2))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder private var vehiclesContent: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(VehicleFilter.allCases, id: \.self) { filter in
+                    let selected = vehicleFilter == filter
+                    Button { vehicleFilter = filter } label: {
+                        Text(filter.rawValue)
+                            .font(.gg(11.5, .heavy))
+                            .foregroundStyle(selected ? Theme.onBrand : Theme.textSecondary)
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 7)
+                            .background(Capsule().fill(selected ? accent : Theme.surface))
+                            .overlay(Capsule().stroke(selected ? accent : Theme.stroke, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+
+        let filtered = filteredVehicles
+        if filtered.isEmpty {
+            EmptyFleetCard()
+        } else {
+            ForEach(filtered) { vehicle in
+                NavigationLink(value: vehicle.id) {
+                    CompactFleetVehicleRow(vehicle: vehicle, accent: accent)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var filteredVehicles: [Vehicle] {
+        switch vehicleFilter {
+        case .all: return vehicles
+        case .idle: return vehicles.filter { session.state?.isVehicleIdle($0.id) ?? true }
+        case .onRoute: return vehicles.filter { session.state?.isVehicleIdle($0.id) == false }
+        }
+    }
+
+    private var shopContent: some View {
+        VehicleShopInline(accent: accent, purchaseError: $purchaseError)
     }
 }
 
@@ -80,16 +213,279 @@ struct ScreenHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.gg(28, .heavy))
+                .font(.gg(26, .heavy))
                 .foregroundStyle(Theme.textPrimary)
             Spacer()
             if let trailing {
                 Text(trailing)
-                    .font(.gg(12, .bold))
+                    .font(.gg(11.5, .heavy))
                     .foregroundStyle(Theme.textSecondary)
             }
         }
         .padding(.top, 44)
+        .padding(.bottom, 10)
+    }
+}
+
+/// A live route card: contract lane, its stops, serving vehicles and status.
+private struct RouteRow: View {
+    @Environment(GameSession.self) private var session
+    let route: Route
+    var accent: Color
+    let onOpen: () -> Void
+    let onRequestCancellation: () -> Void
+
+    private var contract: ActiveContract? {
+        route.contractID.flatMap { session.state?.activeContract($0) }
+    }
+
+    private var isCancelling: Bool { route.cancellationRequestedAt != nil }
+
+    private var status: (text: String, color: Color) {
+        if isCancelling {
+            return (String(localized: "Cancelling"), Theme.warning)
+        }
+        if route.isRunning {
+            return (String(localized: "Running"), Theme.mint)
+        }
+        return (String(localized: "Stopped"), Theme.textSecondary)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Button(action: onOpen) {
+                    HStack(spacing: 8) {
+                        Text(route.name)
+                            .font(.gg(14.5, .heavy))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        if route.contractID != nil {
+                            TagPill(text: String(localized: "Contract"), color: Theme.brand)
+                        }
+                        TagPill(text: status.text, color: status.color)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Button(action: onRequestCancellation) {
+                    Image(systemName: "ellipsis.circle.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(isCancelling ? Theme.textTertiary : Theme.coral)
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(Theme.coral.opacity(isCancelling ? 0.04 : 0.10)))
+                }
+                .buttonStyle(.plain)
+                .disabled(isCancelling)
+                .accessibilityLabel(isCancelling ? "Route cancellation in progress" : "Cancel or delete route")
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                // Stop list in lap order.
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(Array(route.stops.enumerated()), id: \.element.id) { index, stop in
+                            if index > 0 {
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(Theme.textTertiary)
+                            }
+                            HStack(spacing: 4) {
+                                Image(systemName: stopSymbol(stop.task))
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(stopColor(stop.task))
+                                Text(session.catalog.city(stop.cityID)?.name ?? stop.cityID.rawValue)
+                                    .font(.gg(11.5, .bold))
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                        }
+                    }
+                }
+
+                if route.vehicleIDs.isEmpty {
+                    Text("No vehicle serving this route — shipments risk compensation.")
+                        .font(.gg(11.5, .bold))
+                        .foregroundStyle(Theme.coral)
+                } else {
+                    Text(vehicleSummary)
+                        .font(.gg(11.5, .bold))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                if let contract, let clock = session.state?.clock {
+                    Text("\(contract.shipmentsCompleted) delivered · \(contract.shipmentsMissed) missed · next shipment in \(Format.duration(minutes: max(0, clock.minutes(until: contract.nextShipmentAt))))")
+                        .font(.gg(11, .bold))
+                        .foregroundStyle(contract.shipmentsMissed > 0 ? Theme.coral : Theme.textTertiary)
+                }
+
+                if route.contractID != nil && contract == nil {
+                    Text("Contract ended — route is running empty.")
+                        .font(.gg(11.5, .bold))
+                        .foregroundStyle(Theme.warning)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onOpen)
+        }
+        .padding(14)
+        .surfacePanel(cornerRadius: 16)
+    }
+
+    private var vehicleSummary: String {
+        let codes = route.vehicleIDs.compactMap { id -> String? in
+            guard let vehicle = session.state?.vehicle(id),
+                  let type = session.catalog.vehicleType(vehicle.typeID) else { return nil }
+            return Format.vehicleCode(typeName: type.name, id: vehicle.id)
+        }
+        return codes.joined(separator: " · ")
+    }
+
+    private func stopSymbol(_ task: RouteTask) -> String {
+        switch task {
+        case .travel: return "arrow.triangle.turn.up.right.circle"
+        case .pickupShipment, .pickupContract: return "tray.and.arrow.up.fill"
+        case .deliverShipment, .deliverContract: return "tray.and.arrow.down.fill"
+        }
+    }
+
+    private func stopColor(_ task: RouteTask) -> Color {
+        switch task {
+        case .travel: return Theme.textTertiary
+        case .pickupShipment, .pickupContract: return accent
+        case .deliverShipment, .deliverContract: return Theme.mint
+        }
+    }
+}
+
+private struct RouteCancellationSheet: View {
+    @Environment(GameSession.self) private var session
+    @Environment(\.dismiss) private var dismiss
+
+    let routeID: RouteID
+    var accent: Color
+    @State private var commandError: CommandError?
+
+    private var route: Route? { session.state?.route(routeID) }
+
+    private var requiresWindDown: Bool {
+        guard let state = session.state, let route else { return false }
+        return route.isRunning || !state.routeRuns(of: route.id).isEmpty
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Theme.stroke.opacity(1.5))
+                .frame(width: 44, height: 5)
+                .padding(.top, 10)
+
+            if let route {
+                cancellationContent(route)
+            } else {
+                ContentUnavailableView(
+                    "Route Unavailable",
+                    systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
+                    description: Text("This route was already removed.")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Theme.backgroundBottom)
+        .tint(accent)
+    }
+
+    private func cancellationContent(_ route: Route) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: requiresWindDown ? "stop.circle.fill" : "trash.circle.fill")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(Theme.coral)
+                    .frame(width: 48, height: 48)
+                    .background(Circle().fill(Theme.coral.opacity(0.10)))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(requiresWindDown ? "Cancel route?" : "Delete route?")
+                        .font(.gg(21, .heavy))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(route.name)
+                        .font(.gg(12.5, .bold))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer()
+
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Theme.surface))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close")
+            }
+
+            if requiresWindDown {
+                VStack(alignment: .leading, spacing: 10) {
+                    consequenceRow(symbol: "shippingbox.fill", text: "New pickups stop immediately.")
+                    consequenceRow(symbol: "truck.box.fill", text: "Loaded cargo finishes its delivery.")
+                    consequenceRow(symbol: "parkingsign.circle.fill", text: "Vehicles release at the next safe city.")
+                }
+                .padding(14)
+                .surfacePanel(cornerRadius: 16)
+            } else {
+                Text("The route is removed immediately. Assigned vehicles are released and remain in their current cities.")
+                    .font(.gg(12.5, .bold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .surfacePanel(cornerRadius: 16)
+            }
+
+            if commandError != nil {
+                Label("The route changed before it could be cancelled. Please try again.", systemImage: "exclamationmark.triangle.fill")
+                    .font(.gg(11.5, .bold))
+                    .foregroundStyle(Theme.coral)
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(spacing: 9) {
+                Button {
+                    if let error = session.perform(.deleteRoute(route.id)) {
+                        commandError = error
+                    } else {
+                        dismiss()
+                    }
+                } label: {
+                    Text(requiresWindDown ? "Cancel Route" : "Delete Route")
+                }
+                .buttonStyle(PrimaryButtonStyle(tint: Theme.coral))
+                .disabled(route.cancellationRequestedAt != nil)
+                .opacity(route.cancellationRequestedAt == nil ? 1 : 0.45)
+
+                Button("Keep Route") { dismiss() }
+                    .buttonStyle(SecondaryButtonStyle())
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 18)
+        .padding(.bottom, 16)
+    }
+
+    private func consequenceRow(symbol: String, text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(accent)
+                .frame(width: 20)
+            Text(text)
+                .font(.gg(12, .bold))
+                .foregroundStyle(Theme.textSecondary)
+            Spacer(minLength: 0)
+        }
     }
 }
 
@@ -99,7 +495,7 @@ private struct EmptyFleetCard: View {
             Label("No vehicles yet", systemImage: "truck.box")
                 .font(.gg(15, .heavy))
                 .foregroundStyle(Theme.brand)
-            Text("Buy your first vehicle to start hauling freight.")
+            Text("Buy your first vehicle in the Shop tab to start hauling freight.")
                 .font(.gg(12.5, .bold))
                 .foregroundStyle(Theme.textSecondary)
         }
@@ -109,9 +505,7 @@ private struct EmptyFleetCard: View {
     }
 }
 
-// MARK: - Vehicle list card
-
-private struct FleetVehicleCard: View {
+private struct CompactFleetVehicleRow: View {
     @Environment(GameSession.self) private var session
     let vehicle: Vehicle
     var accent: Color
@@ -119,56 +513,100 @@ private struct FleetVehicleCard: View {
     private var type: VehicleTypeDefinition? { session.catalog.vehicleType(vehicle.typeID) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
-                Image(systemName: type?.symbol ?? "truck.box.fill")
-                    .font(.title3)
-                    .foregroundStyle(accent)
-                    .frame(width: 44, height: 44)
-                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.white.opacity(0.06)))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(localizedName)
-                        .font(.gg(16, .heavy))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text(subtitle)
-                        .font(.gg(11.5, .bold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                }
-                Spacer()
-                statusTag
+        HStack(spacing: 11) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(code)
+                    .font(.gg(13, .heavy))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(subtitle)
+                    .font(.gg(11, .bold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
             }
-            if let type {
-                HStack(spacing: 8) {
-                    StatChip(symbol: "scalemass", text: Format.mass(kg: type.capacity.massKg))
-                    StatChip(symbol: "cube", text: Format.volume(m3: type.capacity.volumeM3))
-                    StatChip(symbol: "gauge.with.dots.needle.bottom.50percent", text: Format.distance(km: vehicle.odometerKm))
-                }
-            }
+            Spacer(minLength: 4)
+            TagPill(text: statusText, color: statusColor)
         }
-        .padding(15)
-        .surfacePanel()
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .surfacePanel(cornerRadius: 16)
     }
 
-    private var localizedName: String {
-        guard let type else { return "Vehicle" }
-        return String(localized: String.LocalizationValue(type.name))
+    private var statusText: String {
+        if session.state?.routeRun(for: vehicle.id) != nil { return String(localized: "On route") }
+        if !vehicle.isAvailable { return String(localized: "On job") }
+        if session.state?.route(of: vehicle.id) != nil { return String(localized: "Standby") }
+        return String(localized: "Idle")
+    }
+
+    private var statusColor: Color {
+        if session.state?.routeRun(for: vehicle.id) != nil { return Theme.mint }
+        if !vehicle.isAvailable { return Theme.mint }
+        if session.state?.route(of: vehicle.id) != nil { return Theme.sky }
+        return Theme.textSecondary
+    }
+
+    private var code: String {
+        Format.vehicleCode(typeName: type?.name ?? "VEH", id: vehicle.id)
     }
 
     private var subtitle: String {
+        let typeName = type.map { String(localized: String.LocalizationValue($0.name)) } ?? "Vehicle"
         if vehicle.isAvailable {
-            return "Idle · \(session.catalog.city(vehicle.cityID)?.name ?? "")"
-        } else if let job = session.state?.activeJobs.first(where: { $0.vehicleID == vehicle.id }) {
-            return "\(session.catalog.city(job.offer.origin)?.name ?? "") → \(session.catalog.city(job.offer.destination)?.name ?? "")"
+            return "\(typeName) · \(session.catalog.city(vehicle.cityID)?.name ?? "")"
         }
-        return "On the job"
+        if let job = session.state?.activeJobs.first(where: { $0.vehicleID == vehicle.id }) {
+            let from = session.catalog.city(job.offer.origin)?.name ?? ""
+            let to = session.catalog.city(job.offer.destination)?.name ?? ""
+            return "\(typeName) · \(from) → \(to)"
+        }
+        return typeName
     }
+}
 
-    @ViewBuilder private var statusTag: some View {
-        if vehicle.isAvailable {
-            TagPill(text: "Idle", color: Theme.textSecondary)
-        } else {
-            TagPill(text: "On route", color: Theme.mint)
+private struct VehicleShopInline: View {
+    @Environment(GameSession.self) private var session
+    var accent: Color
+    @Binding var purchaseError: CommandError?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel("Vehicles")
+            ForEach(session.catalog.vehicleTypes) { type in
+                HStack(spacing: 11) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(String(localized: String.LocalizationValue(type.name)))
+                            .font(.gg(13.5, .heavy))
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("\(Format.mass(kg: type.capacity.massKg)) · \(Int(type.speedKmh)) km/h")
+                            .font(.gg(11, .bold))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    Spacer()
+                    Button {
+                        if let error = session.perform(.buyVehicle(type.id)) {
+                            purchaseError = error
+                        }
+                    } label: {
+                        Text(Format.money(type.purchasePrice))
+                            .font(.gg(12.5, .heavy))
+                            .foregroundStyle(Theme.onBrand)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Capsule().fill(accent))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(13)
+                .surfacePanel(cornerRadius: 18)
+            }
+
+            SectionLabel("Add-ons")
+            Text("Trailers and reefers unlock in a later update.")
+                .font(.gg(12, .bold))
+                .foregroundStyle(Theme.textSecondary)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .surfacePanel(cornerRadius: 18)
         }
     }
 }
@@ -178,7 +616,6 @@ private struct FleetVehicleCard: View {
 struct VehicleDetailView: View {
     @Environment(GameSession.self) private var session
     let vehicleID: VehicleID
-    @State private var showsRouteBuilder = false
 
     private var accent: Color {
         Color(hex: session.state?.config.identity.colorHex ?? "#FFB037")
@@ -206,9 +643,6 @@ struct VehicleDetailView: View {
         }
         .background(Theme.backgroundBottom.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showsRouteBuilder) {
-            RouteBuilderView(accent: accent)
-        }
     }
 
     private func header(vehicle: Vehicle, type: VehicleTypeDefinition) -> some View {
@@ -222,8 +656,7 @@ struct VehicleDetailView: View {
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
-            TagPill(text: vehicle.isAvailable ? "Idle" : "On route",
-                    color: vehicle.isAvailable ? Theme.textSecondary : Theme.mint)
+            TagPill(text: status(for: vehicle).text, color: status(for: vehicle).color)
         }
         .padding(.top, 8)
     }
@@ -286,24 +719,59 @@ struct VehicleDetailView: View {
     private var assignedRouteSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionLabel("Assigned Route")
-            Button { showsRouteBuilder = true } label: {
+            if let route = session.state?.route(of: vehicleID) {
+                NavigationLink {
+                    RouteBuilderView(routeID: route.id)
+                } label: {
+                    HStack(spacing: 11) {
+                        Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
+                            .font(.title3).foregroundStyle(accent)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(route.name)
+                                .font(.gg(13.5, .heavy)).foregroundStyle(Theme.textPrimary)
+                            Text(route.contractID != nil
+                                 ? "Contract route — shipments dispatch automatically"
+                                 : "Custom route")
+                                .font(.gg(11, .bold)).foregroundStyle(Theme.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Theme.textTertiary)
+                    }
+                    .padding(14)
+                    .surfacePanel(cornerRadius: 18)
+                }
+                .buttonStyle(.plain)
+            } else {
                 HStack(spacing: 11) {
                     Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                        .font(.title3).foregroundStyle(accent)
+                        .font(.title3).foregroundStyle(Theme.textTertiary)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(job != nil ? "Active delivery" : "No route assigned")
                             .font(.gg(13.5, .heavy)).foregroundStyle(Theme.textPrimary)
-                        Text("Open the route builder")
+                        Text("Assign this vehicle from a route builder.")
                             .font(.gg(11, .bold)).foregroundStyle(Theme.textSecondary)
                     }
                     Spacer()
-                    Text("Edit →").font(.gg(12, .heavy)).foregroundStyle(accent)
                 }
                 .padding(14)
                 .surfacePanel(cornerRadius: 18)
             }
-            .buttonStyle(.plain)
         }
+    }
+
+    private func status(for vehicle: Vehicle) -> (text: String, color: Color) {
+        if session.state?.routeRun(for: vehicle.id) != nil {
+            return (String(localized: "On route"), Theme.mint)
+        }
+        if !vehicle.isAvailable {
+            return (String(localized: "On job"), Theme.mint)
+        }
+        if session.state?.route(of: vehicle.id) != nil {
+            return (String(localized: "Standby"), Theme.sky)
+        }
+        return (String(localized: "Idle"), Theme.textSecondary)
     }
 }
 
@@ -352,78 +820,6 @@ private struct TruckGlyph: View {
         }
         .frame(height: 84)
         .frame(maxWidth: .infinity)
-    }
-}
-
-// MARK: - Route builder (preview shell, design 1c)
-
-struct RouteBuilderView: View {
-    @Environment(\.dismiss) private var dismiss
-    var accent: Color
-
-    private struct Step { let n: Int; let title: String; let sub: String; let type: String; let color: Color }
-    private let steps: [Step] = [
-        .init(n: 1, title: "Pickup", sub: "Load freight at origin", type: "PICKUP", color: Theme.brand),
-        .init(n: 2, title: "Transfer", sub: "Consolidate at a hub", type: "TRANSFER", color: Theme.sky),
-        .init(n: 3, title: "Deliver", sub: "Drop at destination", type: "DELIVER", color: Theme.mint),
-        .init(n: 4, title: "Return load", sub: "Fill the empty leg", type: "SPOT", color: Theme.coral),
-        .init(n: 5, title: "Loop", sub: "Repeat the route", type: "LOOP", color: Theme.violet)
-    ]
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "info.circle.fill").font(.caption).foregroundStyle(accent)
-                        Text("Preview — multi-stop routes & loops arrive in a later update.")
-                            .font(.gg(11.5, .bold)).foregroundStyle(Theme.textSecondary)
-                        Spacer()
-                    }
-                    .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(accent.opacity(0.08)))
-
-                    ForEach(steps, id: \.n) { step in
-                        HStack(spacing: 11) {
-                            Text("\(step.n)")
-                                .font(.gg(13, .heavy)).foregroundStyle(Theme.onBrand)
-                                .frame(width: 28, height: 28)
-                                .background(Circle().fill(step.color))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(step.title).font(.gg(13.5, .heavy)).foregroundStyle(Theme.textPrimary)
-                                Text(step.sub).font(.gg(11, .bold)).foregroundStyle(Theme.textSecondary)
-                            }
-                            Spacer()
-                            TagPill(text: step.type, color: step.color)
-                        }
-                        .padding(12)
-                        .surfacePanel(cornerRadius: 16)
-                    }
-
-                    HStack(spacing: 7) {
-                        Image(systemName: "plus").font(.headline).foregroundStyle(accent)
-                        Text("Add step — tap a point on the map")
-                            .font(.gg(12.5, .heavy)).foregroundStyle(Theme.textSecondary)
-                        Spacer()
-                    }
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
-                    )
-                }
-                .padding(16)
-            }
-            .background(Theme.backgroundBottom.ignoresSafeArea())
-            .navigationTitle("Route Builder")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
-                }
-            }
-        }
-        .tint(accent)
     }
 }
 

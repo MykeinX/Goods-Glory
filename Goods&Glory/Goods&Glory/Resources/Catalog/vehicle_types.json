@@ -6,8 +6,10 @@
     "capacity": { "massKg": 1200, "volumeM3": 10 },
     "speedKmh": 100,
     "purchasePrice": 14000,
-    "costPerKm": 0.45,
-    "driverCostPerHour": 20
+    "costPerKm": 0.8,
+    "driverCostPerHour": 22,
+    "freightRatePerKm": 2.1,
+    "fixedCostPerDay": 90
   },
   {
     "id": "box_truck",
@@ -16,8 +18,10 @@
     "capacity": { "massKg": 5000, "volumeM3": 35 },
     "speedKmh": 90,
     "purchasePrice": 32000,
-    "costPerKm": 0.85,
-    "driverCostPerHour": 24
+    "costPerKm": 2.3,
+    "driverCostPerHour": 26,
+    "freightRatePerKm": 5.2,
+    "fixedCostPerDay": 320
   },
   {
     "id": "semi_truck",
@@ -26,7 +30,9 @@
     "capacity": { "massKg": 22000, "volumeM3": 85 },
     "speedKmh": 85,
     "purchasePrice": 95000,
-    "costPerKm": 1.35,
-    "driverCostPerHour": 28
+    "costPerKm": 5.2,
+    "driverCostPerHour": 30,
+    "freightRatePerKm": 12.5,
+    "fixedCostPerDay": 850
   }
 ]

@@ -1,202 +1,2268 @@
 [
   {
-    "cityID": "us_new_york",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_los_angeles",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_chicago",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_dallas",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_houston",
-    "supply": [],
-    "demand": []
-  },
-  {
     "cityID": "us_atlanta",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_washington",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_miami",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_philadelphia",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_phoenix",
-    "supply": [],
-    "demand": []
+    "supply": [
+      {
+        "productID": "pharmaceuticals",
+        "weight": 100
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 97
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 75
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 74
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 71
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 71
+      },
+      {
+        "productID": "apparel",
+        "weight": 68
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 62
+      },
+      {
+        "productID": "processed_food",
+        "weight": 59
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 54
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 49
+      },
+      {
+        "productID": "beverages",
+        "weight": 47
+      }
+    ],
+    "demand": [
+      {
+        "productID": "consumer_electronics",
+        "weight": 100
+      },
+      {
+        "productID": "processed_food",
+        "weight": 100
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 96
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 87
+      },
+      {
+        "productID": "apparel",
+        "weight": 86
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 86
+      },
+      {
+        "productID": "beverages",
+        "weight": 85
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 85
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 84
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 79
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 76
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 74
+      }
+    ]
   },
   {
     "cityID": "us_boston",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_san_francisco",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_detroit",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_seattle",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_minneapolis",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_tampa",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_san_diego",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_denver",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_orlando",
-    "supply": [],
-    "demand": []
+    "supply": [
+      {
+        "productID": "industrial_chemicals",
+        "weight": 100
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 97
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 96
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 69
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 64
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 61
+      },
+      {
+        "productID": "apparel",
+        "weight": 57
+      },
+      {
+        "productID": "furniture",
+        "weight": 56
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 52
+      },
+      {
+        "productID": "processed_food",
+        "weight": 52
+      },
+      {
+        "productID": "beverages",
+        "weight": 51
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 49
+      }
+    ],
+    "demand": [
+      {
+        "productID": "consumer_electronics",
+        "weight": 100
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 98
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 98
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 92
+      },
+      {
+        "productID": "apparel",
+        "weight": 85
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 85
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 84
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 77
+      },
+      {
+        "productID": "beverages",
+        "weight": 76
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 73
+      },
+      {
+        "productID": "processed_food",
+        "weight": 73
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 70
+      }
+    ]
   },
   {
     "cityID": "us_charlotte",
-    "supply": [],
-    "demand": []
+    "supply": [
+      {
+        "productID": "construction_materials",
+        "weight": 100
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 89
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 83
+      },
+      {
+        "productID": "beverages",
+        "weight": 82
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 79
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 75
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 74
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 66
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 62
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 57
+      },
+      {
+        "productID": "furniture",
+        "weight": 53
+      },
+      {
+        "productID": "apparel",
+        "weight": 47
+      }
+    ],
+    "demand": [
+      {
+        "productID": "industrial_machinery",
+        "weight": 100
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 95
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 87
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 76
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 76
+      },
+      {
+        "productID": "apparel",
+        "weight": 75
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 73
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 73
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 71
+      },
+      {
+        "productID": "beverages",
+        "weight": 68
+      },
+      {
+        "productID": "processed_food",
+        "weight": 67
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 64
+      }
+    ]
   },
   {
-    "cityID": "us_st_louis",
-    "supply": [],
-    "demand": []
+    "cityID": "us_chicago",
+    "supply": [
+      {
+        "productID": "automotive_parts",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 83
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 78
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 77
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 67
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 66
+      },
+      {
+        "productID": "beverages",
+        "weight": 65
+      },
+      {
+        "productID": "furniture",
+        "weight": 63
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 61
+      },
+      {
+        "productID": "apparel",
+        "weight": 57
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 57
+      },
+      {
+        "productID": "processed_food",
+        "weight": 57
+      }
+    ],
+    "demand": [
+      {
+        "productID": "refrigerated_goods",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 92
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 90
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 86
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 84
+      },
+      {
+        "productID": "apparel",
+        "weight": 78
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 76
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 72
+      },
+      {
+        "productID": "beverages",
+        "weight": 70
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 70
+      },
+      {
+        "productID": "processed_food",
+        "weight": 70
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 66
+      }
+    ]
   },
   {
-    "cityID": "us_san_antonio",
-    "supply": [],
-    "demand": []
+    "cityID": "us_dallas",
+    "supply": [
+      {
+        "productID": "pharmaceuticals",
+        "weight": 100
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 91
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 90
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 88
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 83
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 77
+      },
+      {
+        "productID": "beverages",
+        "weight": 65
+      },
+      {
+        "productID": "furniture",
+        "weight": 61
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 60
+      },
+      {
+        "productID": "processed_food",
+        "weight": 55
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 54
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 53
+      }
+    ],
+    "demand": [
+      {
+        "productID": "construction_materials",
+        "weight": 100
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 99
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 93
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 84
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 83
+      },
+      {
+        "productID": "processed_food",
+        "weight": 78
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 74
+      },
+      {
+        "productID": "furniture",
+        "weight": 74
+      },
+      {
+        "productID": "apparel",
+        "weight": 71
+      },
+      {
+        "productID": "beverages",
+        "weight": 69
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 69
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 67
+      }
+    ]
   },
   {
-    "cityID": "us_portland",
-    "supply": [],
-    "demand": []
+    "cityID": "us_denver",
+    "supply": [
+      {
+        "productID": "construction_materials",
+        "weight": 100
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 83
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 79
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 79
+      },
+      {
+        "productID": "beverages",
+        "weight": 77
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 76
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 76
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 73
+      },
+      {
+        "productID": "apparel",
+        "weight": 71
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 69
+      },
+      {
+        "productID": "processed_food",
+        "weight": 64
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 59
+      }
+    ],
+    "demand": [
+      {
+        "productID": "pharmaceuticals",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 93
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 92
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 92
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 71
+      },
+      {
+        "productID": "processed_food",
+        "weight": 71
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 70
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 68
+      },
+      {
+        "productID": "beverages",
+        "weight": 63
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 63
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 61
+      },
+      {
+        "productID": "apparel",
+        "weight": 57
+      }
+    ]
   },
   {
-    "cityID": "us_sacramento",
-    "supply": [],
-    "demand": []
+    "cityID": "us_detroit",
+    "supply": [
+      {
+        "productID": "automotive_parts",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 100
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 89
+      },
+      {
+        "productID": "apparel",
+        "weight": 80
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 78
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 78
+      },
+      {
+        "productID": "furniture",
+        "weight": 77
+      },
+      {
+        "productID": "processed_food",
+        "weight": 75
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 73
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 66
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 63
+      },
+      {
+        "productID": "beverages",
+        "weight": 62
+      }
+    ],
+    "demand": [
+      {
+        "productID": "refrigerated_goods",
+        "weight": 100
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 96
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 93
+      },
+      {
+        "productID": "processed_food",
+        "weight": 88
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 87
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 81
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 79
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 78
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 78
+      },
+      {
+        "productID": "apparel",
+        "weight": 76
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 69
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 67
+      }
+    ]
   },
   {
-    "cityID": "us_pittsburgh",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_las_vegas",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_cincinnati",
-    "supply": [],
-    "demand": []
+    "cityID": "us_houston",
+    "supply": [
+      {
+        "productID": "refrigerated_goods",
+        "weight": 100
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 93
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 91
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 88
+      },
+      {
+        "productID": "apparel",
+        "weight": 85
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 85
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 81
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 79
+      },
+      {
+        "productID": "processed_food",
+        "weight": 79
+      },
+      {
+        "productID": "beverages",
+        "weight": 78
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 69
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 63
+      }
+    ],
+    "demand": [
+      {
+        "productID": "refrigerated_goods",
+        "weight": 100
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 92
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 77
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 76
+      },
+      {
+        "productID": "beverages",
+        "weight": 70
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 69
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 69
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 68
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 68
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 66
+      },
+      {
+        "productID": "apparel",
+        "weight": 58
+      },
+      {
+        "productID": "processed_food",
+        "weight": 54
+      }
+    ]
   },
   {
     "cityID": "us_kansas_city",
-    "supply": [],
-    "demand": []
+    "supply": [
+      {
+        "productID": "processed_food",
+        "weight": 100
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 99
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 93
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 89
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 89
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 88
+      },
+      {
+        "productID": "furniture",
+        "weight": 86
+      },
+      {
+        "productID": "beverages",
+        "weight": 82
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 75
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 75
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 71
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 69
+      }
+    ],
+    "demand": [
+      {
+        "productID": "automotive_parts",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 95
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 90
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 89
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 76
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 74
+      },
+      {
+        "productID": "apparel",
+        "weight": 71
+      },
+      {
+        "productID": "beverages",
+        "weight": 70
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 66
+      },
+      {
+        "productID": "processed_food",
+        "weight": 66
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 64
+      },
+      {
+        "productID": "furniture",
+        "weight": 57
+      }
+    ]
   },
   {
-    "cityID": "us_indianapolis",
-    "supply": [],
-    "demand": []
+    "cityID": "us_las_vegas",
+    "supply": [
+      {
+        "productID": "fresh_produce",
+        "weight": 100
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 82
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 61
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 58
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 57
+      },
+      {
+        "productID": "processed_food",
+        "weight": 57
+      },
+      {
+        "productID": "beverages",
+        "weight": 55
+      },
+      {
+        "productID": "furniture",
+        "weight": 53
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 50
+      },
+      {
+        "productID": "apparel",
+        "weight": 48
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 47
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 44
+      }
+    ],
+    "demand": [
+      {
+        "productID": "consumer_goods",
+        "weight": 100
+      },
+      {
+        "productID": "processed_food",
+        "weight": 99
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 87
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 84
+      },
+      {
+        "productID": "apparel",
+        "weight": 83
+      },
+      {
+        "productID": "furniture",
+        "weight": 76
+      },
+      {
+        "productID": "beverages",
+        "weight": 72
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 70
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 65
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 63
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 59
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 58
+      }
+    ]
+  },
+  {
+    "cityID": "us_los_angeles",
+    "supply": [
+      {
+        "productID": "consumer_electronics",
+        "weight": 100
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 92
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 88
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 77
+      },
+      {
+        "productID": "beverages",
+        "weight": 76
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 69
+      },
+      {
+        "productID": "processed_food",
+        "weight": 68
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 67
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 64
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 55
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 49
+      },
+      {
+        "productID": "furniture",
+        "weight": 47
+      }
+    ],
+    "demand": [
+      {
+        "productID": "apparel",
+        "weight": 100
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 98
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 95
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 94
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 93
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 90
+      },
+      {
+        "productID": "furniture",
+        "weight": 78
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 73
+      },
+      {
+        "productID": "beverages",
+        "weight": 72
+      },
+      {
+        "productID": "processed_food",
+        "weight": 68
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 67
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 63
+      }
+    ]
+  },
+  {
+    "cityID": "us_miami",
+    "supply": [
+      {
+        "productID": "industrial_chemicals",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 93
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 88
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 82
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 70
+      },
+      {
+        "productID": "apparel",
+        "weight": 69
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 69
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 61
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 57
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 57
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 56
+      },
+      {
+        "productID": "beverages",
+        "weight": 50
+      }
+    ],
+    "demand": [
+      {
+        "productID": "refrigerated_goods",
+        "weight": 100
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 93
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 77
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 74
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 73
+      },
+      {
+        "productID": "processed_food",
+        "weight": 72
+      },
+      {
+        "productID": "beverages",
+        "weight": 69
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 65
+      },
+      {
+        "productID": "apparel",
+        "weight": 63
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 63
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 63
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 61
+      }
+    ]
+  },
+  {
+    "cityID": "us_minneapolis",
+    "supply": [
+      {
+        "productID": "construction_materials",
+        "weight": 100
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 95
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 80
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 80
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 75
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 75
+      },
+      {
+        "productID": "apparel",
+        "weight": 73
+      },
+      {
+        "productID": "beverages",
+        "weight": 73
+      },
+      {
+        "productID": "furniture",
+        "weight": 66
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 61
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 57
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 55
+      }
+    ],
+    "demand": [
+      {
+        "productID": "construction_materials",
+        "weight": 100
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 95
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 94
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 81
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 79
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 77
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 74
+      },
+      {
+        "productID": "beverages",
+        "weight": 71
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 70
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 68
+      },
+      {
+        "productID": "processed_food",
+        "weight": 67
+      },
+      {
+        "productID": "apparel",
+        "weight": 61
+      }
+    ]
   },
   {
     "cityID": "us_nashville",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_cleveland",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_virginia_beach",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_jacksonville",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_oklahoma_city",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_memphis",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_salt_lake_city",
-    "supply": [],
-    "demand": []
-  },
-  {
-    "cityID": "us_omaha",
-    "supply": [],
-    "demand": []
+    "supply": [
+      {
+        "productID": "industrial_machinery",
+        "weight": 100
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 99
+      },
+      {
+        "productID": "processed_food",
+        "weight": 74
+      },
+      {
+        "productID": "apparel",
+        "weight": 69
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 65
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 58
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 57
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 52
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 51
+      },
+      {
+        "productID": "furniture",
+        "weight": 51
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 51
+      },
+      {
+        "productID": "beverages",
+        "weight": 45
+      }
+    ],
+    "demand": [
+      {
+        "productID": "industrial_machinery",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 98
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 95
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 94
+      },
+      {
+        "productID": "beverages",
+        "weight": 85
+      },
+      {
+        "productID": "processed_food",
+        "weight": 85
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 80
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 72
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 67
+      },
+      {
+        "productID": "apparel",
+        "weight": 57
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 55
+      },
+      {
+        "productID": "furniture",
+        "weight": 55
+      }
+    ]
   },
   {
     "cityID": "us_new_orleans",
-    "supply": [],
-    "demand": []
+    "supply": [
+      {
+        "productID": "industrial_machinery",
+        "weight": 100
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 97
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 90
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 77
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 76
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 72
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 72
+      },
+      {
+        "productID": "furniture",
+        "weight": 70
+      },
+      {
+        "productID": "apparel",
+        "weight": 64
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 53
+      },
+      {
+        "productID": "processed_food",
+        "weight": 47
+      },
+      {
+        "productID": "beverages",
+        "weight": 43
+      }
+    ],
+    "demand": [
+      {
+        "productID": "industrial_chemicals",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 88
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 83
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 79
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 78
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 61
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 58
+      },
+      {
+        "productID": "processed_food",
+        "weight": 57
+      },
+      {
+        "productID": "apparel",
+        "weight": 54
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 54
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 48
+      },
+      {
+        "productID": "furniture",
+        "weight": 47
+      }
+    ]
   },
   {
-    "cityID": "us_albuquerque",
-    "supply": [],
-    "demand": []
+    "cityID": "us_new_york",
+    "supply": [
+      {
+        "productID": "apparel",
+        "weight": 100
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 93
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 90
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 89
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 83
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 77
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 73
+      },
+      {
+        "productID": "processed_food",
+        "weight": 71
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 68
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 57
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 50
+      },
+      {
+        "productID": "beverages",
+        "weight": 48
+      }
+    ],
+    "demand": [
+      {
+        "productID": "apparel",
+        "weight": 100
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 97
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 94
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 93
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 91
+      },
+      {
+        "productID": "beverages",
+        "weight": 90
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 83
+      },
+      {
+        "productID": "furniture",
+        "weight": 79
+      },
+      {
+        "productID": "processed_food",
+        "weight": 77
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 71
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 65
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 57
+      }
+    ]
   },
   {
-    "cityID": "us_el_paso",
-    "supply": [],
-    "demand": []
+    "cityID": "us_phoenix",
+    "supply": [
+      {
+        "productID": "consumer_goods",
+        "weight": 100
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 91
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 84
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 80
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 79
+      },
+      {
+        "productID": "beverages",
+        "weight": 69
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 68
+      },
+      {
+        "productID": "processed_food",
+        "weight": 68
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 66
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 65
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 63
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 60
+      }
+    ],
+    "demand": [
+      {
+        "productID": "consumer_electronics",
+        "weight": 100
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 99
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 93
+      },
+      {
+        "productID": "beverages",
+        "weight": 83
+      },
+      {
+        "productID": "processed_food",
+        "weight": 80
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 80
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 79
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 74
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 73
+      },
+      {
+        "productID": "apparel",
+        "weight": 67
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 65
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 64
+      }
+    ]
+  },
+  {
+    "cityID": "us_salt_lake_city",
+    "supply": [
+      {
+        "productID": "construction_materials",
+        "weight": 100
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 98
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 85
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 81
+      },
+      {
+        "productID": "beverages",
+        "weight": 74
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 74
+      },
+      {
+        "productID": "apparel",
+        "weight": 67
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 64
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 61
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 60
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 60
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 57
+      }
+    ],
+    "demand": [
+      {
+        "productID": "construction_materials",
+        "weight": 100
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 93
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 92
+      },
+      {
+        "productID": "beverages",
+        "weight": 87
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 87
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 81
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 77
+      },
+      {
+        "productID": "apparel",
+        "weight": 72
+      },
+      {
+        "productID": "processed_food",
+        "weight": 68
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 63
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 62
+      },
+      {
+        "productID": "furniture",
+        "weight": 60
+      }
+    ]
+  },
+  {
+    "cityID": "us_san_francisco",
+    "supply": [
+      {
+        "productID": "automotive_parts",
+        "weight": 100
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 100
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 95
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 90
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 82
+      },
+      {
+        "productID": "processed_food",
+        "weight": 79
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 78
+      },
+      {
+        "productID": "beverages",
+        "weight": 71
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 69
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 53
+      },
+      {
+        "productID": "apparel",
+        "weight": 51
+      },
+      {
+        "productID": "furniture",
+        "weight": 48
+      }
+    ],
+    "demand": [
+      {
+        "productID": "refrigerated_goods",
+        "weight": 100
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 85
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 78
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 75
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 74
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 71
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 69
+      },
+      {
+        "productID": "processed_food",
+        "weight": 69
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 66
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 64
+      },
+      {
+        "productID": "beverages",
+        "weight": 59
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 59
+      }
+    ]
+  },
+  {
+    "cityID": "us_seattle",
+    "supply": [
+      {
+        "productID": "apparel",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 96
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 93
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 91
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 88
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 87
+      },
+      {
+        "productID": "automotive_parts",
+        "weight": 78
+      },
+      {
+        "productID": "beverages",
+        "weight": 78
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 59
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 54
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 53
+      },
+      {
+        "productID": "processed_food",
+        "weight": 53
+      }
+    ],
+    "demand": [
+      {
+        "productID": "industrial_chemicals",
+        "weight": 100
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 93
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 90
+      },
+      {
+        "productID": "processed_food",
+        "weight": 84
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 80
+      },
+      {
+        "productID": "apparel",
+        "weight": 78
+      },
+      {
+        "productID": "beverages",
+        "weight": 77
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 77
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 76
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 73
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 73
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 70
+      }
+    ]
+  },
+  {
+    "cityID": "us_st_louis",
+    "supply": [
+      {
+        "productID": "automotive_parts",
+        "weight": 100
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 88
+      },
+      {
+        "productID": "apparel",
+        "weight": 71
+      },
+      {
+        "productID": "furniture",
+        "weight": 67
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 65
+      },
+      {
+        "productID": "beverages",
+        "weight": 64
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 64
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 64
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 59
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 58
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 54
+      },
+      {
+        "productID": "processed_food",
+        "weight": 47
+      }
+    ],
+    "demand": [
+      {
+        "productID": "automotive_parts",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 99
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 96
+      },
+      {
+        "productID": "industrial_chemicals",
+        "weight": 83
+      },
+      {
+        "productID": "apparel",
+        "weight": 75
+      },
+      {
+        "productID": "processed_food",
+        "weight": 71
+      },
+      {
+        "productID": "beverages",
+        "weight": 67
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 67
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 65
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 65
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 62
+      },
+      {
+        "productID": "furniture",
+        "weight": 62
+      }
+    ]
+  },
+  {
+    "cityID": "us_washington",
+    "supply": [
+      {
+        "productID": "automotive_parts",
+        "weight": 100
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 85
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 83
+      },
+      {
+        "productID": "processed_food",
+        "weight": 82
+      },
+      {
+        "productID": "beverages",
+        "weight": 70
+      },
+      {
+        "productID": "apparel",
+        "weight": 66
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 65
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 65
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 60
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 59
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 58
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 56
+      }
+    ],
+    "demand": [
+      {
+        "productID": "automotive_parts",
+        "weight": 100
+      },
+      {
+        "productID": "pharmaceuticals",
+        "weight": 96
+      },
+      {
+        "productID": "construction_materials",
+        "weight": 89
+      },
+      {
+        "productID": "refrigerated_goods",
+        "weight": 86
+      },
+      {
+        "productID": "consumer_goods",
+        "weight": 83
+      },
+      {
+        "productID": "industrial_machinery",
+        "weight": 78
+      },
+      {
+        "productID": "fresh_produce",
+        "weight": 77
+      },
+      {
+        "productID": "apparel",
+        "weight": 71
+      },
+      {
+        "productID": "paper_packaging",
+        "weight": 70
+      },
+      {
+        "productID": "consumer_electronics",
+        "weight": 69
+      },
+      {
+        "productID": "furniture",
+        "weight": 66
+      },
+      {
+        "productID": "beverages",
+        "weight": 62
+      }
+    ]
   }
 ]

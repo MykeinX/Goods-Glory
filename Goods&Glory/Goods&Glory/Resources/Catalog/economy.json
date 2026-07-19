@@ -1,11 +1,21 @@
 {
-  "startingCash": 50000,
+  "startingCash": 75000,
   "loadingMinutes": 45,
   "unloadingMinutes": 45,
   "offerGenerationIntervalMinutes": 240,
   "offerLifetimeMinutes": 720,
   "offerChancePercent": 60,
-  "maxOpenOffersPerCity": 3,
-  "offerMinimumProfit": 120,
-  "offerProfitMarginPercent": 20
+  "maxOpenOffersPerCity": 4,
+  "offerSlotPopulation": 4500000,
+  "fillFloor": 0.6,
+  "urgencyTiers": [
+    { "id": "economy", "multiplier": 0.85, "lifetimeMinutes": 1440, "weight": 30 },
+    { "id": "normal", "multiplier": 1.0, "lifetimeMinutes": 720, "weight": 50 },
+    { "id": "urgent", "multiplier": 1.45, "lifetimeMinutes": 300, "weight": 20 }
+  ],
+  "contractOfferIntervalMinutes": 2880,
+  "maxOpenContractOffers": 3,
+  "contractDurationDays": 14,
+  "contractMarginPercent": 25,
+  "contractPenaltyPercent": 40
 }

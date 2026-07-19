@@ -16,7 +16,8 @@ struct InteractiveMapView: View {
     var highlightsStarterCities: Bool = false
     var accentColorHex: String
     var renderSnapshot: MapRenderSnapshot = .empty
-    @Binding var selectedCityID: CityID?
+    var cameraFocus: MapCameraFocus = .world
+    @Binding var selection: MapSelection
 
     var body: some View {
         SpriteKitMapSurface(
@@ -25,12 +26,13 @@ struct InteractiveMapView: View {
             highlightsStarterCities: highlightsStarterCities,
             accentColorHex: accentColorHex,
             renderSnapshot: renderSnapshot,
-            selectedCityID: $selectedCityID
+            cameraFocus: cameraFocus,
+            selection: $selection
         )
         .background(Theme.backgroundTop)
         .clipped()
         .accessibilityLabel("Interactive logistics map")
-        .accessibilityHint("Pan and zoom the map, then tap a city for details.")
+        .accessibilityHint("Pan and zoom the map, then tap a vehicle or city for details.")
     }
 }
 
@@ -40,7 +42,8 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
     let highlightsStarterCities: Bool
     let accentColorHex: String
     let renderSnapshot: MapRenderSnapshot
-    @Binding var selectedCityID: CityID?
+    let cameraFocus: MapCameraFocus
+    @Binding var selection: MapSelection
 
     func makeCoordinator() -> Coordinator {
         let geography: MapGeographyDefinition
@@ -56,7 +59,7 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
                 projection: MapProjection(),
                 geography: geography
             ),
-            selection: $selectedCityID
+            selection: $selection
         )
     }
 
@@ -69,9 +72,10 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
         context.coordinator.installGestures(on: view)
         context.coordinator.applyConfiguration(
             hqCityID: hqCityID,
-            selectedCityID: selectedCityID,
+            selection: selection,
             highlightsStarterCities: highlightsStarterCities,
             accentColorHex: accentColorHex,
+            cameraFocus: cameraFocus,
             force: true
         )
         context.coordinator.applySnapshot(renderSnapshot, force: true)
@@ -79,14 +83,15 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
     }
 
     func updateUIView(_ view: SKView, context: Context) {
-        context.coordinator.selection = $selectedCityID
+        context.coordinator.selection = $selection
         // Clock ticks rewrite GameState every second; skip no-op map updates so
         // idle maps do not restyle cities / rebuild routes on every tick.
         context.coordinator.applyConfiguration(
             hqCityID: hqCityID,
-            selectedCityID: selectedCityID,
+            selection: selection,
             highlightsStarterCities: highlightsStarterCities,
             accentColorHex: accentColorHex,
+            cameraFocus: cameraFocus,
             force: false
         )
         context.coordinator.applySnapshot(renderSnapshot, force: false)
@@ -99,45 +104,51 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         let scene: GameMapScene
-        var selection: Binding<CityID?>
+        var selection: Binding<MapSelection>
 
         private var lastHQCityID: CityID?
-        private var lastSelectedCityID: CityID?
+        private var lastSelection: MapSelection?
         private var lastHighlightsStarterCities: Bool?
         private var lastAccentColorHex: String?
+        private var lastCameraFocus: MapCameraFocus?
         private var lastSnapshot: MapRenderSnapshot?
 
-        init(scene: GameMapScene, selection: Binding<CityID?>) {
+        init(scene: GameMapScene, selection: Binding<MapSelection>) {
             self.scene = scene
             self.selection = selection
             super.init()
-            scene.onCitySelected = { [weak self] cityID in
-                self?.selection.wrappedValue = cityID
+            scene.onSelectionChanged = { [weak self] value in
+                self?.selection.wrappedValue = value
             }
         }
 
         func applyConfiguration(
             hqCityID: CityID?,
-            selectedCityID: CityID?,
+            selection: MapSelection,
             highlightsStarterCities: Bool,
             accentColorHex: String,
+            cameraFocus: MapCameraFocus,
             force: Bool
         ) {
             let changed = force
                 || lastHQCityID != hqCityID
-                || lastSelectedCityID != selectedCityID
+                || lastSelection != selection
                 || lastHighlightsStarterCities != highlightsStarterCities
                 || lastAccentColorHex != accentColorHex
+                || lastCameraFocus != cameraFocus
             guard changed else { return }
             lastHQCityID = hqCityID
-            lastSelectedCityID = selectedCityID
+            lastSelection = selection
             lastHighlightsStarterCities = highlightsStarterCities
             lastAccentColorHex = accentColorHex
+            lastCameraFocus = cameraFocus
             scene.configure(
                 hqCityID: hqCityID,
-                selectedCityID: selectedCityID,
+                selectedCityID: selection.cityID,
+                selectedVehicleID: selection.vehicleID,
                 highlightsStarterCities: highlightsStarterCities,
-                accentColorHex: accentColorHex
+                accentColorHex: accentColorHex,
+                cameraFocus: cameraFocus
             )
         }
 
@@ -177,7 +188,7 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
 
         @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let view = gesture.view, gesture.state == .ended else { return }
-            scene.selectCity(at: gesture.location(in: view))
+            scene.selectAt(viewPoint: gesture.location(in: view))
         }
 
         func gestureRecognizer(

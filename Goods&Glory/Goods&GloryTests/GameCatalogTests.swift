@@ -29,7 +29,7 @@ struct GameCatalogTests {
         #expect(!catalog.vehicleTypes.isEmpty)
         #expect(!catalog.products.isEmpty)
         #expect(catalog.cityMarkets.count == catalog.cities.count)
-        #expect(catalog.cities.count == 40)
+        #expect(catalog.cities.count == 22)
         #expect(catalog.networkNodes.count >= 500)
         #expect(catalog.roads.count >= 700)
         #expect(catalog.cities.allSatisfy { $0.id.rawValue.hasPrefix("us_") })
@@ -45,15 +45,14 @@ struct GameCatalogTests {
         #expect(catalog.cities.contains { !$0.hasRailFreightAccess })
         #expect(catalog.city(CityID("us_las_vegas"))?.hasRailFreightAccess == false)
         #expect(catalog.city(CityID("us_new_orleans"))?.hasSeaPortAccess == true)
-        #expect(catalog.city(CityID("us_memphis"))?.hasAirCargoAccess == true)
-        #expect(catalog.city(CityID("us_memphis"))?.hasSeaPortAccess == false)
+        #expect(catalog.city(CityID("us_st_louis"))?.hasAirCargoAccess == false)
         #expect(catalog.city(CityID("us_dallas"))?.hasSeaPortAccess == false)
         #expect(catalog.starterCities.count >= 6)
         #expect(catalog.cities.contains { $0.isStarterCity && $0.id == CityID("us_seattle") })
         #expect(catalog.cities.contains { $0.isStarterCity && $0.id == CityID("us_miami") })
         #expect(catalog.cities.contains { $0.isStarterCity && $0.id == CityID("us_los_angeles") })
         #expect(catalog.city(CityID("us_st_louis"))?.isStarterCity == false)
-        #expect(catalog.city(CityID("us_indianapolis"))?.isStarterCity == false)
+        #expect(catalog.city(CityID("us_dallas"))?.isStarterCity == false)
     }
 
     @Test func cityMarketsRejectMissingUnknownDuplicateOversizedAndUnorderedProducts() throws {
@@ -130,7 +129,7 @@ struct GameCatalogTests {
         let pairs = [
             (CityID("us_los_angeles"), CityID("us_new_york"), 3_500.0...5_200.0),
             (CityID("us_seattle"), CityID("us_miami"), 4_500.0...6_200.0),
-            (CityID("us_san_francisco"), CityID("us_sacramento"), 100.0...220.0)
+            (CityID("us_denver"), CityID("us_salt_lake_city"), 450.0...900.0)
         ]
 
         for (origin, destination, plausibleDistance) in pairs {
@@ -158,7 +157,7 @@ struct GameCatalogTests {
         #expect(catalog.nearestCities(from: cityC, limit: 0) == [])
     }
 
-    @Test func routeRetainsRoadIdentityDirectionAndOrientedGeometry() throws {
+    @Test func routeRetainsRoadIdentityAndDirection() throws {
         let catalog = try graphCatalog()
 
         let forward = try #require(catalog.shortestRoute(from: cityA, to: cityC))
@@ -178,20 +177,14 @@ struct GameCatalogTests {
             RoadTraversal(roadID: roadJB, direction: .reverse),
             RoadTraversal(roadID: roadAJ, direction: .reverse)
         ])
-        let reverseGeometry = try #require(catalog.orientedGeometry(for: reverse.traversals[2]))
-        #expect(reverseGeometry == [
-            GeoCoordinate(latitude: 0, longitude: 0.5),
-            GeoCoordinate(latitude: 0, longitude: 0.25),
-            GeoCoordinate(latitude: 0, longitude: 0)
-        ])
     }
 
     @Test func shortestRouteBreaksEqualCostTiesByNodeID() throws {
         let roadJC = RoadID("junction_gamma")
         let catalog = try graphCatalog(roads: [
             validRoadAJ,
-            makeRoad(id: roadJC, from: junction, to: nodeC, geometry: [junctionPoint, cityCPoint]),
-            makeRoad(id: RoadID("alpha_beta"), from: nodeA, to: nodeB, geometry: [cityAPoint, cityBPoint]),
+            makeRoad(id: roadJC, from: junction, to: nodeC),
+            makeRoad(id: RoadID("alpha_beta"), from: nodeA, to: nodeB),
             validRoadBC
         ])
 
@@ -209,8 +202,7 @@ struct GameCatalogTests {
         let duplicate = makeRoad(
             id: roadAJ,
             from: junction,
-            to: nodeB,
-            geometry: [junctionPoint, cityBPoint]
+            to: nodeB
         )
         #expect(throws: GameCatalog.CatalogError.self) {
             try graphCatalog(roads: [validRoadAJ, duplicate])
@@ -229,8 +221,7 @@ struct GameCatalogTests {
         let roads = [validRoadAJ, validRoadJB, validRoadBC, makeRoad(
             id: RoadID("isolated_road"),
             from: isolatedA,
-            to: isolatedB,
-            geometry: [isolatedAPoint, isolatedBPoint]
+            to: isolatedB
         )]
 
         #expect(throws: GameCatalog.CatalogError.self) {
@@ -238,32 +229,13 @@ struct GameCatalogTests {
         }
     }
 
-    @Test func malformedRoadGeometryIsRejected() throws {
-        let malformedGeometries: [[GeoCoordinate]] = [
-            [cityAPoint],
-            [cityAPoint, GeoCoordinate(latitude: .nan, longitude: 1)],
-            [cityAPoint, GeoCoordinate(latitude: 0, longitude: 181)],
-            [cityAPoint, cityBPoint],
-            [cityBPoint, cityAPoint]
-        ]
-
-        for geometry in malformedGeometries {
-            let road = makeRoad(id: roadAJ, from: nodeA, to: junction, geometry: geometry)
-            #expect(throws: GameCatalog.CatalogError.self) {
-                try graphCatalog(roads: [road, validRoadJB, validRoadBC])
-            }
-        }
-    }
-
-    @Test func roadGeometryEndpointOneKilometerFromItsNodeIsRejected() throws {
-        let offsetPoint = GeoCoordinate(latitude: 0, longitude: 0.009)
-        let road = makeRoad(
+    @Test func nonPositiveRoadDistanceIsRejected() throws {
+        let road = RoadDefinition(
             id: roadAJ,
             from: nodeA,
             to: junction,
-            geometry: [offsetPoint, junctionPoint]
+            distanceKm: 0
         )
-
         #expect(throws: GameCatalog.CatalogError.self) {
             try graphCatalog(roads: [road, validRoadJB, validRoadBC])
         }
@@ -281,8 +253,7 @@ struct GameCatalogTests {
         let accessRoad = makeRoad(
             id: roadAJ,
             from: nodeA,
-            to: junction,
-            geometry: [accessPoint, junctionPoint]
+            to: junction
         )
 
         let catalog = try graphCatalog(
@@ -323,34 +294,28 @@ struct GameCatalogTests {
     private var junctionPoint: GeoCoordinate { GeoCoordinate(latitude: 0, longitude: 0.5) }
 
     private var validRoadAJ: RoadDefinition {
-        makeRoad(
-            id: roadAJ,
-            from: nodeA,
-            to: junction,
-            geometry: [cityAPoint, GeoCoordinate(latitude: 0, longitude: 0.25), junctionPoint]
-        )
+        makeRoad(id: roadAJ, from: nodeA, to: junction)
     }
 
     private var validRoadJB: RoadDefinition {
-        makeRoad(id: roadJB, from: junction, to: nodeB, geometry: [junctionPoint, cityBPoint])
+        makeRoad(id: roadJB, from: junction, to: nodeB)
     }
 
     private var validRoadBC: RoadDefinition {
-        makeRoad(id: roadBC, from: nodeB, to: nodeC, geometry: [cityBPoint, cityCPoint])
+        makeRoad(id: roadBC, from: nodeB, to: nodeC)
     }
 
     private func makeRoad(
         id: RoadID,
         from: RoadNodeID,
         to: RoadNodeID,
-        geometry: [GeoCoordinate]
+        distanceKm: Double = 100
     ) -> RoadDefinition {
         RoadDefinition(
             id: id,
             from: from,
             to: to,
-            distanceKm: 100,
-            geometry: geometry
+            distanceKm: distanceKm
         )
     }
 
@@ -390,17 +355,17 @@ struct GameCatalogTests {
                 CityDefinition(
                     id: cityA, roadNodeID: nodeA, name: "Alpha", country: "TST", latitude: 0, longitude: 0,
                     population: 100_000, hasRailFreightAccess: true, hasAirCargoAccess: true, hasSeaPortAccess: false,
-                    costIndex: 1_000, trafficDelayIndex: 1_000, isStarterCity: true
+                    costIndex: 250, trafficDelayIndex: 1_000, isStarterCity: true
                 ),
                 CityDefinition(
                     id: cityB, roadNodeID: nodeB, name: "Beta", country: "TST", latitude: 0, longitude: 1,
                     population: 100_000, hasRailFreightAccess: true, hasAirCargoAccess: true, hasSeaPortAccess: false,
-                    costIndex: 1_000, trafficDelayIndex: 1_000, isStarterCity: false
+                    costIndex: 250, trafficDelayIndex: 1_000, isStarterCity: false
                 ),
                 CityDefinition(
                     id: cityC, roadNodeID: nodeC, name: "Gamma", country: "TST", latitude: 0, longitude: 2,
                     population: 100_000, hasRailFreightAccess: true, hasAirCargoAccess: true, hasSeaPortAccess: false,
-                    costIndex: 1_000, trafficDelayIndex: 1_000, isStarterCity: false
+                    costIndex: 250, trafficDelayIndex: 1_000, isStarterCity: false
                 )
             ],
             networkNodes: networkNodes ?? validNetworkNodes,
@@ -409,17 +374,13 @@ struct GameCatalogTests {
                 VehicleTypeDefinition(
                     id: VehicleTypeID("test_van"), name: "Test Van", symbol: "box.truck",
                     capacity: LoadSize(massKg: 2_000, volumeM3: 20), speedKmh: 100,
-                    purchasePrice: 10_000, costPerKm: 0.5, driverCostPerHour: 10
+                    purchasePrice: 10_000, costPerKm: 0.5, driverCostPerHour: 10,
+                    freightRatePerKm: 2.4, fixedCostPerDay: 60
                 )
             ],
             products: products ?? [testProduct],
             cityMarkets: cityMarkets ?? validCityMarkets,
-            economy: EconomyConfig(
-                startingCash: 20_000, loadingMinutes: 30, unloadingMinutes: 30,
-                offerGenerationIntervalMinutes: 480, offerLifetimeMinutes: 720,
-                offerChancePercent: 100, maxOpenOffersPerCity: 3,
-                offerMinimumProfit: 100, offerProfitMarginPercent: 20
-            )
+            economy: TestEconomy.make()
         )
     }
 }

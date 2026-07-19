@@ -11,18 +11,61 @@
 import CoreGraphics
 import Foundation
 
+/// Shared map tap / highlight selection (design 1b).
+enum MapSelection: Equatable, Hashable {
+    case none
+    case city(CityID)
+    case vehicle(VehicleID)
+
+    var cityID: CityID? {
+        if case .city(let id) = self { return id }
+        return nil
+    }
+
+    var vehicleID: VehicleID? {
+        if case .vehicle(let id) = self { return id }
+        return nil
+    }
+}
+
+/// Initial / locked camera framing for a map surface.
+enum MapCameraFocus: Equatable {
+    /// Strategic overview — HQ-centered opening frame (first map open only).
+    case world
+    /// Keep the current camera; do not reframe.
+    case free
+    /// City centered at the closest allowed zoom (detail headers).
+    case city(CityID)
+    /// Fit the listed cities in view. `bottomInset` reserves space for bottom UI
+    /// (route editor panel, map city card, tab bar).
+    case route(cities: [CityID], bottomInset: CGFloat)
+
+    /// Default inset used by the route builder map strip.
+    static func route(_ cities: [CityID]) -> MapCameraFocus {
+        .route(cities: cities, bottomInset: 126)
+    }
+}
+
 struct MapVehicleMarker: Identifiable, Equatable {
     let id: VehicleID
+    let displayCode: String
     let position: CGPoint
     let headingRadians: CGFloat
     let isMoving: Bool
-    /// Stable screen-space separation for vehicles parked at the same city.
-    let stackIndex: Int
+    /// Visual capsule fill 0…1 while loading/unloading (`nil` when traveling).
+    /// Loading rises 0→1; unloading falls 1→0.
+    let serviceProgress: CGFloat?
+    /// Stationed at a city: 0 = just above the city name, 1+ = stacked higher.
+    let labelStackIndex: Int
 }
 
 enum MapRouteKind: Hashable {
     case loaded
     case deadhead
+    /// Player-authored route preview, independent from live vehicle movement.
+    case planned
+    /// Ephemeral spot-job preview on the live map (thin dashed arc).
+    case preview
 }
 
 struct MapRouteOverlay: Identifiable, Equatable {
@@ -32,11 +75,29 @@ struct MapRouteOverlay: Identifiable, Equatable {
     let kind: MapRouteKind
 }
 
+/// A compact route-plan marker grouped by physical city. A city visited more
+/// than once renders one marker such as `1·4`, matching the route builder.
+struct MapPlannedVisitMarker: Identifiable, Equatable {
+    let id: CityID
+    let position: CGPoint
+    let stepNumbers: [Int]
+    let hasPickup: Bool
+    let hasDelivery: Bool
+}
+
 struct MapRenderSnapshot: Equatable {
     let vehicles: [MapVehicleMarker]
     let routes: [MapRouteOverlay]
+    let plannedVisits: [MapPlannedVisitMarker]
+    /// Idle vehicles parked at a city — shown as a count badge on the city, not as sprites.
+    let idleFleetByCity: [CityID: Int]
 
-    static let empty = MapRenderSnapshot(vehicles: [], routes: [])
+    static let empty = MapRenderSnapshot(
+        vehicles: [],
+        routes: [],
+        plannedVisits: [],
+        idleFleetByCity: [:]
+    )
 }
 
 /// Shared quadratic-arc geometry so the scene draws exactly the curve the
@@ -72,29 +133,40 @@ enum MapSceneAdapter {
     static func snapshot(
         state: GameState,
         catalog: GameCatalog,
-        projection: MapProjection
+        projection: MapProjection,
+        previewRoute: Route? = nil
     ) -> MapRenderSnapshot {
         var markers: [MapVehicleMarker] = []
         var routes: [MapRouteOverlay] = []
         var idleCountPerCity: [CityID: Int] = [:]
+        var labelStackByCity: [CityID: Int] = [:]
 
         func point(_ id: CityID) -> CGPoint {
             catalog.city(id).map(projection.point(for:)) ?? .zero
         }
 
-        // Sorted by ID so same-city stacking offsets remain deterministic.
+        // Sorted by ID for stable iteration order.
         for vehicle in state.vehicles.sorted(by: { $0.id.rawValue < $1.id.rawValue }) {
+            let typeName = catalog.vehicleType(vehicle.typeID)?.name ?? "VEH"
+            let code = Format.vehicleCode(typeName: typeName, id: vehicle.id)
+            if let run = state.routeRun(for: vehicle.id) {
+                if let marker = routeRunMarker(
+                    run: run,
+                    vehicle: vehicle,
+                    code: code,
+                    state: state,
+                    point: point,
+                    overlays: &routes
+                ) {
+                    markers.append(marker)
+                } else {
+                    idleCountPerCity[vehicle.cityID, default: 0] += 1
+                }
+                continue
+            }
             guard let job = state.activeJob(for: vehicle.id) else {
-                guard let city = catalog.city(vehicle.cityID) else { continue }
-                let stackIndex = idleCountPerCity[vehicle.cityID, default: 0]
-                idleCountPerCity[vehicle.cityID] = stackIndex + 1
-                markers.append(MapVehicleMarker(
-                    id: vehicle.id,
-                    position: projection.point(for: city),
-                    headingRadians: 0,
-                    isMoving: false,
-                    stackIndex: stackIndex
-                ))
+                // Idle fleet is summarized on the city label — no per-vehicle sprite.
+                idleCountPerCity[vehicle.cityID, default: 0] += 1
                 continue
             }
 
@@ -117,22 +189,205 @@ enum MapSceneAdapter {
                 kind: .loaded
             ))
 
+            let progress = fraction(of: job, clock: state.clock)
             let placement = placement(
                 for: job,
                 originPt: originPt,
                 destPt: destPt,
                 vehiclePt: vehiclePt,
-                clock: state.clock
+                progress: progress
             )
+            let isServicing = job.phase == .loading || job.phase == .unloading
+            var labelStackIndex = 0
+            if isServicing {
+                let cityID = job.phase == .loading ? job.offer.origin : job.offer.destination
+                labelStackIndex = labelStackByCity[cityID, default: 0]
+                labelStackByCity[cityID] = labelStackIndex + 1
+            }
+            // Loading: 0→1 fill. Unloading: 1→0 drain.
+            let serviceProgress: CGFloat? = {
+                guard isServicing else { return nil }
+                return job.phase == .unloading ? 1 - progress : progress
+            }()
             markers.append(MapVehicleMarker(
                 id: vehicle.id,
+                displayCode: code,
                 position: placement.position,
                 headingRadians: placement.heading,
                 isMoving: job.phase == .deadheading || job.phase == .enRoute,
-                stackIndex: 0
+                serviceProgress: serviceProgress,
+                labelStackIndex: labelStackIndex
             ))
         }
-        return MapRenderSnapshot(vehicles: markers, routes: routes)
+
+        let plannedVisits: [MapPlannedVisitMarker]
+        if let previewRoute {
+            let preview = routePreview(
+                route: previewRoute,
+                catalog: catalog,
+                projection: projection
+            )
+            if let overlay = preview.overlay {
+                routes.append(overlay)
+            }
+            plannedVisits = preview.markers
+        } else {
+            plannedVisits = []
+        }
+
+        return MapRenderSnapshot(
+            vehicles: markers,
+            routes: routes,
+            plannedVisits: plannedVisits,
+            idleFleetByCity: idleCountPerCity
+        )
+    }
+
+    /// Consecutive task stops in the same city form one visit. The route path
+    /// closes back to its first visit, while markers group non-consecutive
+    /// visits to the same physical city (`A → B → A` becomes `1·3` at A).
+    private static func routePreview(
+        route: Route,
+        catalog: GameCatalog,
+        projection: MapProjection
+    ) -> (overlay: MapRouteOverlay?, markers: [MapPlannedVisitMarker]) {
+        struct Visit {
+            let cityID: CityID
+            var hasPickup: Bool
+            var hasDelivery: Bool
+        }
+
+        var visits: [Visit] = []
+        for stop in route.stops {
+            let flags: (pickup: Bool, delivery: Bool)
+            switch stop.task {
+            case .pickupShipment, .pickupContract:
+                flags = (true, false)
+            case .deliverShipment, .deliverContract:
+                flags = (false, true)
+            case .travel:
+                flags = (false, false)
+            }
+
+            if let lastIndex = visits.indices.last,
+               visits[lastIndex].cityID == stop.cityID {
+                visits[lastIndex].hasPickup = visits[lastIndex].hasPickup || flags.pickup
+                visits[lastIndex].hasDelivery = visits[lastIndex].hasDelivery || flags.delivery
+            } else {
+                visits.append(Visit(
+                    cityID: stop.cityID,
+                    hasPickup: flags.pickup,
+                    hasDelivery: flags.delivery
+                ))
+            }
+        }
+
+        var markerOrder: [CityID] = []
+        var markerValues: [CityID: (steps: [Int], pickup: Bool, delivery: Bool)] = [:]
+        for (index, visit) in visits.enumerated() {
+            var value = markerValues[visit.cityID]
+                ?? (steps: [], pickup: false, delivery: false)
+            if markerValues[visit.cityID] == nil {
+                markerOrder.append(visit.cityID)
+            }
+            value.steps.append(index + 1)
+            value.pickup = value.pickup || visit.hasPickup
+            value.delivery = value.delivery || visit.hasDelivery
+            markerValues[visit.cityID] = value
+        }
+
+        let plannedMarkers = markerOrder.compactMap { cityID -> MapPlannedVisitMarker? in
+            guard let city = catalog.city(cityID), let value = markerValues[cityID] else { return nil }
+            return MapPlannedVisitMarker(
+                id: cityID,
+                position: projection.point(for: city),
+                stepNumbers: value.steps,
+                hasPickup: value.pickup,
+                hasDelivery: value.delivery
+            )
+        }
+
+        var anchorCityIDs = visits.map(\.cityID)
+        if anchorCityIDs.count > 1,
+           let first = anchorCityIDs.first,
+           anchorCityIDs.last != first {
+            anchorCityIDs.append(first)
+        }
+        let anchors = anchorCityIDs.compactMap { cityID in
+            catalog.city(cityID).map(projection.point(for:))
+        }
+        let overlay: MapRouteOverlay? = anchors.count > 1
+            ? MapRouteOverlay(
+                id: "preview-\(route.id.rawValue)",
+                anchors: anchors,
+                kind: .planned
+            )
+            : nil
+        return (overlay, plannedMarkers)
+    }
+
+    /// Marker + overlay for a vehicle executing a route. Returns nil when the
+    /// vehicle is parked (waiting), so it folds into the idle city summary.
+    private static func routeRunMarker(
+        run: RouteRun,
+        vehicle: Vehicle,
+        code: String,
+        state: GameState,
+        point: (CityID) -> CGPoint,
+        overlays: inout [MapRouteOverlay]
+    ) -> MapVehicleMarker? {
+        guard let route = state.route(run.routeID),
+              route.stops.indices.contains(run.stopIndex) else { return nil }
+        let stopCity = route.stops[run.stopIndex].cityID
+        let stopPt = point(stopCity)
+
+        switch run.phase {
+        case .waiting:
+            return nil
+
+        case .traveling:
+            let originPt = point(run.legOriginCityID)
+            guard originPt != stopPt else { return nil }
+            let loaded = state.routeShipments.contains { $0.loadedVehicleID == vehicle.id }
+            overlays.append(MapRouteOverlay(
+                id: "run-\(run.id)-leg",
+                anchors: [originPt, stopPt],
+                kind: loaded ? .loaded : .deadhead
+            ))
+            let progress = fraction(started: run.phaseStartedAt, ends: run.phaseEndsAt, clock: state.clock)
+            return MapVehicleMarker(
+                id: vehicle.id,
+                displayCode: code,
+                position: MapArc.point(originPt, stopPt, progress),
+                headingRadians: MapArc.heading(originPt, stopPt, progress),
+                isMoving: true,
+                serviceProgress: nil,
+                labelStackIndex: 0
+            )
+
+        case .servicing:
+            let progress = fraction(started: run.phaseStartedAt, ends: run.phaseEndsAt, clock: state.clock)
+            let isPickup: Bool
+            switch route.stops[run.stopIndex].task {
+            case .pickupShipment, .pickupContract: isPickup = true
+            default: isPickup = false
+            }
+            return MapVehicleMarker(
+                id: vehicle.id,
+                displayCode: code,
+                position: stopPt,
+                headingRadians: 0,
+                isMoving: false,
+                serviceProgress: isPickup ? progress : 1 - progress,
+                labelStackIndex: 0
+            )
+        }
+    }
+
+    private static func fraction(started: GameTime, ends: GameTime, clock: GameTime) -> CGFloat {
+        let total = max(1, started.minutes(until: ends))
+        let elapsed = started.minutes(until: clock)
+        return CGFloat(min(1, max(0, Double(elapsed) / Double(total))))
     }
 
     private static func placement(
@@ -140,7 +395,7 @@ enum MapSceneAdapter {
         originPt: CGPoint,
         destPt: CGPoint,
         vehiclePt: CGPoint,
-        clock: GameTime
+        progress: CGFloat
     ) -> (position: CGPoint, heading: CGFloat) {
         switch job.phase {
         case .loading:
@@ -148,11 +403,9 @@ enum MapSceneAdapter {
         case .unloading:
             return (destPt, 0)
         case .deadheading:
-            let t = fraction(of: job, clock: clock)
-            return (MapArc.point(vehiclePt, originPt, t), MapArc.heading(vehiclePt, originPt, t))
+            return (MapArc.point(vehiclePt, originPt, progress), MapArc.heading(vehiclePt, originPt, progress))
         case .enRoute:
-            let t = fraction(of: job, clock: clock)
-            return (MapArc.point(originPt, destPt, t), MapArc.heading(originPt, destPt, t))
+            return (MapArc.point(originPt, destPt, progress), MapArc.heading(originPt, destPt, progress))
         }
     }
 

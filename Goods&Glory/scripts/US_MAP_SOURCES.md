@@ -2,8 +2,10 @@
 
 The bundled US slice is generated offline by `generate_us_map.py`. It is a
 strategic game map, not a navigation database: divided carriageways and
-sub-kilometre bends are collapsed, while real corridor shapes, junctions and
-distances remain the canonical source for routing and SpriteKit rendering.
+sub-kilometre bends are collapsed at build time into a routing graph
+(`road_nodes` + `roads` with `distanceKm`). Runtime does not store or draw road
+polylines; the map shows city–city arcs for vehicles and separate world
+geography silhouettes.
 
 Pinned inputs:
 
@@ -22,9 +24,9 @@ Pinned inputs:
 - FHWA FY2026 Q1 Urban Congestion Report:
   `https://ops.fhwa.dot.gov/perf_measurement/ucr/reports/fy2026_q1.pdf`
 
-The 40 hubs are deliberately geography-balanced rather than a strict top-40
-ranking: a smaller city is omitted when it would overlap a nearby larger hub,
-and a major hub in an otherwise empty region is preferred.
+The 22 hubs are a sparse national skeleton of well-known major metros rather
+than a dense top-N ranking: nearby secondary cities are omitted so each region
+has one clear hub, leaving room for future world cities on the same map.
 
 The first road slice contains one- and two-digit Interstate routes plus the
 few auxiliary Interstate corridors needed by selected metro areas. Route names

@@ -57,12 +57,11 @@ struct RoadDefinition: Codable, Identifiable, Sendable {
     let id: RoadID
     let from: RoadNodeID
     let to: RoadNodeID
+    /// Build-time path length; routing and travel time use this, not polylines.
     let distanceKm: Double
-    /// Ordered from `from` to `to`; reverse travel reads these points backwards.
-    let geometry: [GeoCoordinate]
 }
 
-/// The direction in which a vehicle traverses a road's canonical geometry.
+/// Travel direction along an undirected road edge in the routing graph.
 enum RoadDirection: String, Codable, Hashable, Sendable {
     case forward
     case reverse
@@ -86,6 +85,10 @@ struct VehicleTypeDefinition: Codable, Identifiable, Sendable {
     let costPerKm: Double
     /// Driver wages, dollars per game hour while on a task.
     let driverCostPerHour: Double
+    /// Spot/contract freight revenue rate, dollars per loaded road-km at full util.
+    let freightRatePerKm: Double
+    /// Insurance / ownership, dollars per game day while the vehicle is owned.
+    let fixedCostPerDay: Double
 }
 
 struct ProductDefinition: Codable, Identifiable, Sendable {
@@ -101,6 +104,39 @@ struct ProductDefinition: Codable, Identifiable, Sendable {
     let densityM3PerTon: Double
     let minimumShipmentMassKg: Int
     let maximumShipmentMassKg: Int
+}
+
+/// Name material for derived trading firms. Firms themselves are not authored:
+/// every city-market supply/demand entry deterministically becomes one firm.
+struct FirmNamePools: Codable, Sendable {
+    let stems: [String]
+    let supplierSuffixes: [String]
+    let receiverSuffixes: [String]
+
+    /// Compact built-in pool for fixture catalogs and as a decode fallback.
+    static let fallback = FirmNamePools(
+        stems: ["Atlas", "Nova", "Summit", "Harbor", "Cedar", "Union", "Pioneer", "Crown"],
+        supplierSuffixes: ["Industries", "Works", "Supply"],
+        receiverSuffixes: ["Distribution", "Market", "Trading"]
+    )
+}
+
+enum FirmRole: String, Codable, Sendable {
+    /// Produces the product: loads are picked up at this firm's address.
+    case supplier
+    /// Consumes the product: loads are delivered to this firm's address.
+    case receiver
+}
+
+/// A trading company at a fixed address in one city, derived from market data.
+/// Jobs start and end at firm addresses, never at an abstract "city".
+struct Firm: Identifiable, Hashable, Sendable {
+    let id: FirmID
+    let cityID: CityID
+    let productID: ProductID
+    let role: FirmRole
+    /// Proper noun; not localized.
+    let name: String
 }
 
 /// Static market tendency. Runtime demand is derived by the simulation and is
@@ -120,18 +156,42 @@ struct CityMarketProfile: Codable, Identifiable, Sendable {
     var id: CityID { cityID }
 }
 
+/// Spot urgency band: payout multiplier, offer lifetime and selection weight.
+struct UrgencyTier: Codable, Hashable, Sendable {
+    let id: String
+    let multiplier: Double
+    let lifetimeMinutes: Int
+    let weight: Int
+}
+
 struct EconomyConfig: Codable, Sendable {
     let startingCash: Money
     let loadingMinutes: Int
     let unloadingMinutes: Int
     /// A new batch of spot job offers is generated every interval.
     let offerGenerationIntervalMinutes: Int
+    /// Fallback lifetime when a tier is unavailable (normally unused).
     let offerLifetimeMinutes: Int
     /// Percent chance (0-100) for each additional slot after the guaranteed local offer.
     let offerChancePercent: Int
+    /// Hard cap on simultaneous open spot offers per origin city.
     let maxOpenOffersPerCity: Int
-    /// Minimum gross profit built into a direct, loaded one-way job.
-    let offerMinimumProfit: Money
-    /// Gross profit percentage when it exceeds `offerMinimumProfit`.
-    let offerProfitMarginPercent: Int
+    /// Residents per additional offer slot: a city gets
+    /// min(maxOpenOffersPerCity, 1 + population / offerSlotPopulation) slots.
+    let offerSlotPopulation: Int
+    /// Lower bound of the fill factor: fillFloor + (1 - fillFloor) * util.
+    let fillFloor: Double
+    /// Spot urgency bands (economy / normal / urgent). Weights need not sum to 100.
+    let urgencyTiers: [UrgencyTier]
+    /// How often new open contract offers are generated.
+    let contractOfferIntervalMinutes: Int
+    let maxOpenContractOffers: Int
+    /// Signed contract length in game days.
+    let contractDurationDays: Int
+    /// Profit margin over the reference round-trip cost priced into each
+    /// contract shipment (0-100). Contract lanes include the empty return leg.
+    let contractMarginPercent: Int
+    /// Compensation charged when a shipment misses its deadline, as a percent
+    /// of that shipment's payout (0-100).
+    let contractPenaltyPercent: Int
 }

@@ -62,9 +62,13 @@ Persistence (SaveRepository)   Resources (JSON kataloglar)
   derin su kıyı/estuarin veya Great Lakes ticari limanıdır (yalnız nehir mavna
   hub’ları deniz sayılmaz).
 - `products.json`, kararlı `lowercase_snake_case` `ProductID` ile ürünün tek
-  tanım kaynağıdır. `city_markets.json` ürün tanımını kopyalamadan şehir başına
-  arz/talep listelerinde `ProductID` + `UInt16 weight` tutar; her liste en çok
-  20 üründür.
+  tanım kaynağıdır. `city_markets.json` ürün tanımını kopyalamadan her katalog
+  şehri için statik arz/talep listelerinde `ProductID` + `UInt16 weight` tutar;
+  her liste en çok 20 üründür (mevcut ABD diliminde şehir başına 12 arz +
+  12 talep). Ağırlıklar seçim eğilimidir; runtime talep kataloğa yazılmaz.
+  Profiller `scripts/generate_city_markets.py` ile nüfus ve erişim
+  bayraklarından türetilir; `GameCatalog` yüklemede her şehir için pazar
+  kaydı, bilinen `ProductID` ve liste üst sınırını doğrular.
 - `ProductID`, tek bir SKU değil simülasyon çözünürlüğünde ticareti yapılan yük
   kategorisidir (`cotton`, `consumer_electronics` gibi). Tek bir yoğunluk ve
   sevkiyat aralığı anlamlı değilse kategori daha somut ürünlere
@@ -72,16 +76,16 @@ Persistence (SaveRepository)   Resources (JSON kataloglar)
 - `GameCatalog` şehir, ürün ve şehir pazarı için kimlik sözlüklerini yüklemede
   kurar; runtime sistemleri katalog içeriğine O(1) kimlik erişimiyle ulaşır.
 - `road_nodes.json` şehir geçitleri ve kavşakları, `roads.json` ise kararlı yol
-  kimliklerini ve koordinat geometrilerini tanımlar. Bu kanonik graf rota hesabı,
-  araç konumu ve harita çiziminin ortak kaynağıdır. Yol adı runtime verisi
-  değildir; kaynak adlar yalnız çevrimdışı üretimde hatları birleştirmek için
-  kullanılır.
+  kimliklerini ve `distanceKm` mesafesini tanımlar. Bu kanonik graf yalnız rota
+  hesabı içindir; haritada araç/rota çizimi şehir–şehir yaylarla yapılır, yol
+  polylines runtime’da yoktur. Yol adı runtime verisi değildir; kaynak adlar
+  yalnız çevrimdışı üretimde hatları birleştirmek için kullanılır.
 - Harita verisi çevrimdışı ve sürümlü paketlenir. İlk ABD dilimi ülke namespace'li
-  ve coğrafi kapsama göre dengelenmiş 40 şehir, stratejik Interstate koridorları
+  ve coğrafi kapsama göre dengelenmiş 22 şehir, stratejik Interstate koridorları
   ve bunların gerçek kavşaklarından
-  oluşur. Rota hesabı, araç konumu ve SpriteKit çizimi aynı kanonik geometriyi
-  kullanır. Bölgeye özel üretim adımları `scripts/` altında kalır; çalışma zamanı
-  veri sözleşmesi yeni ülke ve kıtalar eklenirken değişmez.
+  oluşur. Görsel silüetler `map_geography.json` (kara, göl, ülke sınırı)
+  üzerinden gelir. Bölgeye özel üretim adımları `scripts/` altında kalır;
+  çalışma zamanı veri sözleşmesi yeni ülke ve kıtalar eklenirken değişmez.
 - Oyuncuya görünen metinler `Localizable.xcstrings` (en kaynak, tr çeviri)
   üzerinden yerelleşir; katalogdaki `name` alanları İngilizce anahtar olarak
   String Catalog'dan geçer.
@@ -110,25 +114,27 @@ Persistence (SaveRepository)   Resources (JSON kataloglar)
 ## Mevcut kapsam (temel iskelet)
 
 Ana menü → şirket kuruluşu (kimlik, başlangıç şehri, ilk araç) → oynanış
-(harita / işler / şirket sekmeleri). Spot işler: seed'li üretim, boş sürüş
-(deadhead) → yükleme → yol → boşaltma fazları, teslimatta atomik settlement,
-araç varış şehrinde kalır. İlk tek yönlü teklif sistemi, araç yokken HQ'daki en
-ucuz alınabilir araca; sonrasında boş araçların bulunduğu şehirlere göre iş
-üretir. Yük seçilen referans aracın kütle ve hacmine sığar, varış coğrafi olarak
-en yakın beş şehirden seçilir. Ödeme yalnız dolu gidişin araç+şoför maliyetine
-minimum/yüzdesel kâr ekler; deadhead ve dönüş oyuncunun konumlandırma riskidir.
-İlk harita dilimi, kıtasal ABD'nin 40 büyük metro
-merkezini ve ana Interstate ağını kapsar; kara/eyalet sınırları ile yollar
-çevrimdışı üretilmiş gerçek koordinat geometrileridir.
+(harita / filo / işler / tesisler / şirket sekmeleri). Spot işler: seed'li
+üretim, boş sürüş (deadhead) → yükleme → yol → boşaltma fazları, teslimatta
+atomik settlement, araç varış şehrinde kalır. Teklif üretimi origin şehrinin
+`supply` ağırlıklarından ürün seçer; varış, aynı ürünü talep eden şehirlerin
+`demand` × mesafe ağırlığıyla seçilir (kısa rota tercih edilir; market eşleşmesi
+yoksa mesafe ağırlıklı fallback). Araç yokken HQ'daki en ucuz alınabilir araca;
+sonrasında boş araçların bulunduğu şehirlere göre iş üretir. Yük seçilen
+referans aracın kütle ve hacmine sığar. Ödeme yalnız dolu gidişin araç+şoför
+maliyetine minimum/yüzdesel kâr ekler; deadhead ve dönüş oyuncunun
+konumlandırma riskidir. Açık sözleşmeler periyodik olarak aynı lane üzerinde
+spot benzeri sevkiyat teklifi üretir. İlk harita dilimi 22 ABD metro merkezi ve
+ana Interstate ağını kapsar; kara/eyalet sınırları ile yollar çevrimdışı
+üretilmiş gerçek koordinat geometrileridir.
 
 ## Bilinçli ertelemeler (GDD'de tanımlı, henüz yok)
 
-- `city_markets.json` profilleri şimdilik boş şema yer tutucularıdır. Spot teklif
-  üretimi henüz arz/talep ağırlıklarını kullanmaz; gerçek ürün taksonomisi ve
-  şehir ağırlıkları birlikte doğrulandıktan sonra origin arzı → destination
-  talebi akışına bağlanacaktır.
+- Dinamik pazar: fiyat/talep oynaklığı, oyuncu hacminin arz-talep üzerindeki
+  geri beslemesi ve sezonluk şoklar (katalog ağırlıkları hâlâ statik eğilim).
 - Sözleşme → yük partisi → taşıma aşaması → servis hattı omurgası
-  (şimdilik spot iş = tek parti + tek aşama; genişleme noktası `ActiveJob`).
+  (şimdilik spot/sözleşme sevkiyatı = tek parti + tek aşama; genişleme noktası
+  `ActiveJob`). SLA, gecikme cezası ve itibar henüz bağlı değil.
 - Seed'li süre/talep oynaklığı (faz süreleri şimdilik sabit formül).
 - Logbook mesajlarının tam veri-odaklı yerelleştirmesi.
 - CloudKit senkronizasyonu, migration zinciri, hibrit/toplu simülasyon.

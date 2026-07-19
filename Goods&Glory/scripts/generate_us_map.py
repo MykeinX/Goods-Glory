@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build the bundled contiguous-US strategic map from pinned source files.
 
-The game intentionally keeps a strategic level of detail: 40 geographically
-balanced large metro hubs, principal Interstate corridors, and their real
+The game intentionally keeps a strategic level of detail: ~22 geographically
+spaced major metro hubs, principal Interstate corridors, and their real
 junction topology. Divided carriageways and sub-kilometre detail are collapsed
 before JSON is written.
 
@@ -85,44 +85,25 @@ CITY_ACCESS: dict[str, tuple[bool, bool, bool]] = {
     "atlanta": (True, True, False),
     "washington": (True, True, False),
     "miami": (True, True, True),
-    "philadelphia": (True, True, True),
     "phoenix": (True, True, False),
     "boston": (True, True, True),
     "san_francisco": (True, True, True),
     "detroit": (True, True, True),  # Great Lakes
     "seattle": (True, True, True),
     "minneapolis": (True, True, False),  # river barge, not deep-sea
-    "tampa": (True, True, True),
-    "san_diego": (True, False, True),  # port yes; cargo air secondary to LA
     "denver": (True, True, False),
-    "orlando": (True, True, False),
     "charlotte": (True, True, False),
     "st_louis": (True, False, False),  # major rail; limited air cargo; river only
-    "san_antonio": (True, False, False),
-    "portland": (True, True, True),  # Columbia River deep-draft
-    "sacramento": (True, False, False),
-    "pittsburgh": (True, False, False),
     "las_vegas": (False, False, False),  # UP through-line, no freight hub / no port
-    "cincinnati": (True, True, False),  # CVG express air hub; river only
     "kansas_city": (True, False, False),
-    "indianapolis": (True, True, False),  # IND FedEx hub
     "nashville": (True, False, False),
-    "cleveland": (True, False, True),  # Great Lakes
-    "virginia_beach": (True, False, True),  # Hampton Roads
-    "jacksonville": (True, False, True),
-    "oklahoma_city": (True, False, False),
-    "memphis": (True, True, False),  # MEM #1 air cargo; river barge not sea
     "salt_lake_city": (True, False, False),
-    "omaha": (True, False, False),
     "new_orleans": (True, False, True),
-    "albuquerque": (True, False, False),
-    "el_paso": (True, False, False),
 }
 
 CITY_SPECS = [
+    # Sparse national skeleton (~22): famous metros only, one hub per region cluster.
     CitySpec("new_york", "New York", "NY", "New York city", 20_112_448, 1125, 1340, coordinate_override=(-74.0060, 40.7128)),
-    # Starters are spread across the contiguous US so founding choice is regional,
-    # not a Midwest cluster. Nine hubs: coasts, Gulf, interior, and mountains.
     CitySpec("los_angeles", "Los Angeles", "CA", "Los Angeles city", 12_844_441, 1155, 1590, True, coordinate_override=(-118.2437, 34.0522)),
     CitySpec("chicago", "Chicago", "IL", "Chicago city", 9_434_123, 1026, 1300, True),
     CitySpec("dallas", "Dallas", "TX", "Dallas city", 8_477_157, 1033, 1320),
@@ -130,38 +111,20 @@ CITY_SPECS = [
     CitySpec("atlanta", "Atlanta", "GA", "Atlanta city", 6_482_182, 1009, 1310, True),
     CitySpec("washington", "Washington", "DC", "Washington city", 6_465_724, 1086, 1330),
     CitySpec("miami", "Miami", "FL", "Miami city", 6_391_072, 1118, 1380, True),
-    CitySpec("philadelphia", "Philadelphia", "PA", "Philadelphia city", 6_329_118, 1035, 1230, True),
     CitySpec("phoenix", "Phoenix", "AZ", "Phoenix city", 5_228_938, 1055, 1190, True),
-    CitySpec("boston", "Boston", "MA", "Boston city", 5_034_221, 1116, 1270),
+    CitySpec("boston", "Boston", "MA", "Boston city", 5_034_221, 1116, 1270, True),
     CitySpec("san_francisco", "San Francisco", "CA", "San Francisco city", 4_630_041, 1182, 1350, coordinate_override=(-122.4194, 37.7749)),
     CitySpec("detroit", "Detroit", "MI", "Detroit city", 4_390_913, 980, 1130),
     CitySpec("seattle", "Seattle", "WA", "Seattle city", 4_161_883, 1130, 1360, True),
     CitySpec("minneapolis", "Minneapolis", "MN", "Minneapolis city", 3_790_295, 1045, 1210),
-    CitySpec("tampa", "Tampa", "FL", "Tampa city", 3_418_895, 1034, 1280),
-    CitySpec("san_diego", "San Diego", "CA", "San Diego city", 3_282_248, 1115, 1240),
     CitySpec("denver", "Denver", "CO", "Denver city", 3_092_037, 1055, 1280, True),
-    CitySpec("orlando", "Orlando", "FL", "Orlando city", 2_957_672, 1011, 1190, coordinate_override=(-81.3792, 28.5383)),
     CitySpec("charlotte", "Charlotte", "NC", "Charlotte city", 2_938_830, 970, 1230),
     CitySpec("st_louis", "St. Louis", "MO", "St. Louis city", 2_814_421, 963, 1020),
-    CitySpec("san_antonio", "San Antonio", "TX", "San Antonio city", 2_813_140, 937, 1220),
-    CitySpec("portland", "Portland", "OR", "Portland city", 2_542_282, 1066, 1340),
-    CitySpec("sacramento", "Sacramento", "CA", "Sacramento city", 2_477_274, 1089, 1200),
-    CitySpec("pittsburgh", "Pittsburgh", "PA", "Pittsburgh city", 2_421_992, 944, 1090),
     CitySpec("las_vegas", "Las Vegas", "NV", "Las Vegas city", 2_407_226, 974, 1220, coordinate_override=(-115.1398, 36.1699)),
-    CitySpec("cincinnati", "Cincinnati", "OH", "Cincinnati city", 2_312_858, 941, 1170),
     CitySpec("kansas_city", "Kansas City", "MO", "Kansas City city", 2_270_682, 933, 1100),
-    CitySpec("indianapolis", "Indianapolis", "IN", "Indianapolis city (balance)", 2_205_695, 946, 1160),
     CitySpec("nashville", "Nashville", "TN", "Nashville-Davidson metropolitan government (balance)", 2_197_416, 974, 1220),
-    CitySpec("cleveland", "Cleveland", "OH", "Cleveland city", 2_165_775, 930, 1070),
-    CitySpec("virginia_beach", "Virginia Beach", "VA", "Virginia Beach city", 1_797_213, 974, 1160, coordinate_override=(-75.9780, 36.8529)),
-    CitySpec("jacksonville", "Jacksonville", "FL", "Jacksonville city", 1_785_500, 992, 1140),
-    CitySpec("oklahoma_city", "Oklahoma City", "OK", "Oklahoma City city", 1_512_813, 910, 1110),
-    CitySpec("memphis", "Memphis", "TN", "Memphis city", 1_341_412, 924, 1120),
     CitySpec("salt_lake_city", "Salt Lake City", "UT", "Salt Lake City city", 1_308_377, 964, 1160),
-    CitySpec("omaha", "Omaha", "NE", "Omaha city", 1_009_836, 925, 1280),
     CitySpec("new_orleans", "New Orleans", "LA", "New Orleans city", 970_849, 911, 1170),
-    CitySpec("albuquerque", "Albuquerque", "NM", "Albuquerque city", 925_279, 930, 1280),
-    CitySpec("el_paso", "El Paso", "TX", "El Paso city", 881_291, 902, 1280),
 ]
 
 
@@ -782,17 +745,11 @@ def serialize_catalog(
     canonical_edges.sort(key=lambda item: (highway_sort_key(item[0].split(" / ")[0]), item[1], item[2]))
     roads = []
     for index, (highway, start_id, end_id, geometry) in enumerate(canonical_edges, 1):
-        rounded_geometry = []
-        for point in geometry:
-            rounded = rounded_coordinate(point)
-            if not rounded_geometry or rounded != rounded_geometry[-1]:
-                rounded_geometry.append(rounded)
         roads.append({
             "id": f"us_road_{index:05d}",
             "from": start_id,
             "to": end_id,
             "distanceKm": round(max(0.001, geometry_distance(geometry)), 3),
-            "geometry": rounded_geometry,
         })
     markets = [{"cityID": f"us_{city.slug}", "supply": [], "demand": []} for city in CITY_SPECS]
     return cities, nodes, roads, markets
@@ -899,7 +856,6 @@ def make_geography(source_dir: Path):
             {"id": name, "points": [rounded_coordinate(point) for point in points]}
             for name, points in lakes.items()
         ],
-        "rivers": [],
         "boundaries": boundaries,
     }
 

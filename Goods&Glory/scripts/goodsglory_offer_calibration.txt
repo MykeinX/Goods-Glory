@@ -1,0 +1,25 @@
+=== SPOT OFFER CALIBRATION (freight model) ===
+cities=22 starters=9 fillFloor=0.6 vanRate=2.4/km fixed/day=60
+
+--- A. Van direct (no deadhead) profits ---
+util=0.50 normal profit $: n=112 min=452.0 p25=1465.0 med=1999.0 p75=2710.0 max=3125.0 mean=1983.4
+util=0.50 normal $/km: n=112 min=1.9 p25=1.9 med=1.9 p75=1.9 max=1.9 mean=1.9
+util=0.75 normal profit $: n=112 min=543.0 p25=1747.0 med=2382.5 p75=3228.0 max=3721.0 mean=2363.9
+util=0.75 normal $/km: n=112 min=2.2 p25=2.2 med=2.2 p75=2.2 max=2.2 mean=2.2
+util=1.00 normal profit $: n=112 min=634.0 p25=2030.0 med=2766.5 p75=3746.0 max=4317.0 mean=2744.4
+util=1.00 normal $/km: n=112 min=2.4 p25=2.4 med=2.4 p75=2.4 max=2.4 mean=2.4
+
+--- B. Starter HQ short lanes (road < 800 km, util=0.75 normal) ---
+atlanta: short lanes n=3 medProfit=$582 road[404–737]
+boston: short lanes n=1 medProfit=$543 road[380–380]
+chicago: short lanes n=4 medProfit=$821 road[455–750]
+denver: no short lanes
+houston: short lanes n=2 medProfit=$698 road[385–579]
+los_angeles: short lanes n=3 medProfit=$885 road[432–760]
+miami: no short lanes
+phoenix: short lanes n=1 medProfit=$885 road[606–606]
+seattle: no short lanes
+
+--- C. Second-vehicle sketch (Chicago, util=0.75 normal, no deadhead) ---
+median job profit $1872, fixed/day $60
+~2 jobs/day × 14d net ≈ $51590 (van price $14000)
