@@ -179,6 +179,41 @@ final class GameMapScene: SKScene {
         clampCamera()
     }
 
+    /// Soft-pan to a city while keeping the current zoom level.
+    func centerOnCity(_ cityID: CityID, animated: Bool) {
+        guard let city = catalog.city(cityID), size.width > 1, size.height > 1 else { return }
+        userMovedCamera = true
+        let point = projection.point(for: city)
+        let halfWidth = size.width * cameraNode.xScale / 2
+        let halfHeight = size.height * cameraNode.yScale / 2
+        let target = CGPoint(
+            x: clampedCenter(
+                point.x,
+                minimum: cameraBounds.minX,
+                maximum: cameraBounds.maxX,
+                halfViewport: halfWidth
+            ),
+            y: clampedCenter(
+                point.y,
+                minimum: cameraBounds.minY,
+                maximum: cameraBounds.maxY,
+                halfViewport: halfHeight
+            )
+        )
+        cameraNode.removeAction(forKey: "cameraPan")
+        guard animated else {
+            cameraNode.position = target
+            clampCamera()
+            return
+        }
+        let move = SKAction.move(to: target, duration: 0.45)
+        move.timingMode = .easeInEaseOut
+        let finish = SKAction.run { [weak self] in
+            self?.clampCamera()
+        }
+        cameraNode.run(.sequence([move, finish]), withKey: "cameraPan")
+    }
+
     func zoom(by magnification: CGFloat, anchoredAt viewPoint: CGPoint) {
         guard magnification.isFinite, magnification > 0, let view else { return }
         userMovedCamera = true

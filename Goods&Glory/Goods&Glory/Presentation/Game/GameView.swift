@@ -31,7 +31,8 @@ struct GameView: View {
             Theme.backgroundTop.ignoresSafeArea()
 
             // Keep the live map mounted so pan/zoom survive leaving the Map tab.
-            MapTabView()
+            // Off-tab / covered / background maps pause SpriteKit instead of unmounting.
+            MapTabView(isMapTabSelected: selectedTab == .map)
                 .opacity(selectedTab == .map ? 1 : 0)
                 .allowsHitTesting(selectedTab == .map)
                 .accessibilityHidden(selectedTab != .map)

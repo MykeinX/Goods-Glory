@@ -22,14 +22,25 @@ private enum MapDetailDestination: Identifiable {
 }
 
 struct MapTabView: View {
+    /// False while another game tab is selected — map stays mounted but Metal sleeps.
+    var isMapTabSelected: Bool = true
+
     @Environment(GameSession.self) private var session
     @State private var selection: MapSelection = .none
     @State private var detail: MapDetailDestination?
     /// Spot offer shown inside the city card — drives map arc + camera fit.
     @State private var spotPreviewOfferID: JobID?
+    /// Notification (and future) soft-pans — zoom stays as the player left it.
+    @State private var cameraPanRequest: MapCameraPanRequest?
 
     private var accent: Color {
         Color(hex: session.state?.config.identity.colorHex ?? "#FFB037")
+    }
+
+    /// Off-tab or under a full-screen cover: keep the scene, stop presenting.
+    /// Background sleep is handled inside InteractiveMapView via scenePhase.
+    private var isMapRenderingEnabled: Bool {
+        isMapTabSelected && detail == nil
     }
 
     private var spotPreviewOffer: JobOffer? {
@@ -82,8 +93,11 @@ struct MapTabView: View {
                     catalog: session.catalog,
                     hqCityID: state.config.hqCity,
                     accentColorHex: state.config.identity.colorHex,
-                    renderSnapshot: mapSnapshot(state: state),
+                    // Snapshot work is skipped while sleeping; wake forces a fresh apply.
+                    renderSnapshot: isMapRenderingEnabled ? mapSnapshot(state: state) : .empty,
                     cameraFocus: mapCameraFocus,
+                    cameraPanRequest: cameraPanRequest,
+                    isRenderingEnabled: isMapRenderingEnabled,
                     selection: $selection
                 )
                 .ignoresSafeArea()
@@ -107,7 +121,8 @@ struct MapTabView: View {
                         accent: accent,
                         selection: $selection,
                         spotPreviewOfferID: $spotPreviewOfferID,
-                        onOpenDetail: { detail = $0 }
+                        onOpenDetail: { detail = $0 },
+                        onFocusCity: { cameraPanRequest = MapCameraPanRequest(cityID: $0) }
                     )
                 }
             } else {
@@ -245,6 +260,7 @@ private struct MapBottomChrome: View {
     @Binding var selection: MapSelection
     @Binding var spotPreviewOfferID: JobID?
     var onOpenDetail: (MapDetailDestination) -> Void
+    var onFocusCity: (CityID) -> Void
 
     private var onRouteCount: Int {
         guard let state = session.state else { return 0 }
@@ -258,7 +274,14 @@ private struct MapBottomChrome: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            GameNotificationStack(notifications: session.notifications, accent: accent)
+            GameNotificationStack(
+                notifications: session.notifications,
+                accent: accent,
+                onTap: { note in
+                    guard let cityID = note.mapFocusCityID else { return }
+                    onFocusCity(cityID)
+                }
+            )
                 .padding(.horizontal, 14)
 
             switch selection {
@@ -312,11 +335,14 @@ private struct MapBottomChrome: View {
 private struct GameNotificationStack: View {
     let notifications: [GameNotification]
     var accent: Color
+    var onTap: (GameNotification) -> Void
 
     var body: some View {
         VStack(spacing: 6) {
             ForEach(notifications) { note in
-                GameNotificationBanner(notification: note, accent: accent)
+                GameNotificationBanner(notification: note, accent: accent) {
+                    onTap(note)
+                }
                     .transition(.asymmetric(
                         insertion: .move(edge: .bottom).combined(with: .opacity),
                         removal: .opacity
@@ -330,6 +356,7 @@ private struct GameNotificationStack: View {
 private struct GameNotificationBanner: View {
     let notification: GameNotification
     var accent: Color
+    var onTap: () -> Void
 
     private var tint: Color {
         switch notification.chrome {
@@ -339,8 +366,10 @@ private struct GameNotificationBanner: View {
         }
     }
 
+    private var isTappable: Bool { notification.mapFocusCityID != nil }
+
     var body: some View {
-        HStack(spacing: 10) {
+        let content = HStack(spacing: 10) {
             Image(systemName: notification.systemImage)
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(tint)
@@ -368,6 +397,17 @@ private struct GameNotificationBanner: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Theme.stroke, lineWidth: 1)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+        if isTappable {
+            Button(action: onTap) {
+                content
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(String(localized: "Shows this city on the map"))
+        } else {
+            content
+        }
     }
 }
 

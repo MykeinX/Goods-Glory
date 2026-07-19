@@ -34,10 +34,31 @@ struct GameNotification: Identifiable, Equatable, Sendable {
     let detail: String
     let systemImage: String
     let logAt: GameTime
+    /// When set, tapping the toast pans the live map to this city (zoom unchanged).
+    /// Extend `mapFocusCity(for:)` as new event types gain a geographic target.
+    let mapFocusCityID: CityID?
+
+    /// Geographic focus for a log event, if the player should be able to jump there.
+    /// Pickup → origin; delivery → destination. Add cases here as event types grow.
+    static func mapFocusCity(for event: LogEvent) -> CityID? {
+        switch event {
+        case .jobPickedUp(_, let origin, _):
+            return origin
+        case .jobDelivered(_, let destination, _, _):
+            return destination
+        case .routeShipmentDelivered(_, _, let destination, _):
+            return destination
+        case .companyFounded, .vehiclePurchased, .jobAccepted, .contractSigned,
+             .vehicleAssignedToRoute, .vehicleUnassignedFromRoute, .routeStarted,
+             .routeStopped, .routeShipmentSkipped, .contractShipmentMissed, .contractEnded:
+            return nil
+        }
+    }
 
     /// Returns nil for log events that should stay in the company log only.
     static func make(from entry: LogEntry, catalog: GameCatalog) -> GameNotification? {
         func cityName(_ id: CityID) -> String { catalog.city(id)?.name ?? id.rawValue }
+        let focus = mapFocusCity(for: entry.event)
 
         switch entry.event {
         case .companyFounded(let city):
@@ -48,7 +69,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 title: String(localized: "Headquarters established"),
                 detail: cityName(city),
                 systemImage: "building.2.fill",
-                logAt: entry.at
+                logAt: entry.at,
+                mapFocusCityID: focus
             )
         case .vehiclePurchased(let typeID, let city):
             let typeName = catalog.vehicleType(typeID).map {
@@ -61,7 +83,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 title: String(localized: "Vehicle acquired"),
                 detail: "\(typeName) · \(cityName(city))",
                 systemImage: "truck.box.fill",
-                logAt: entry.at
+                logAt: entry.at,
+                mapFocusCityID: focus
             )
         case .jobPickedUp(_, let origin, let destination):
             return GameNotification(
@@ -71,7 +94,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 title: String(localized: "Cargo picked up"),
                 detail: "\(cityName(origin)) → \(cityName(destination))",
                 systemImage: "shippingbox.fill",
-                logAt: entry.at
+                logAt: entry.at,
+                mapFocusCityID: focus
             )
         case .jobDelivered(_, let destination, let revenue, let cost):
             let profit = revenue - cost
@@ -82,7 +106,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 title: String(localized: "Delivered"),
                 detail: "\(cityName(destination)) · \(Format.money(profit))",
                 systemImage: "checkmark.circle.fill",
-                logAt: entry.at
+                logAt: entry.at,
+                mapFocusCityID: focus
             )
         case .jobAccepted:
             // Acceptance is visible in Jobs; toast reserved for physical milestones.
@@ -95,7 +120,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 title: String(localized: "Contract signed"),
                 detail: "\(cityName(origin)) → \(cityName(destination))",
                 systemImage: "doc.text.fill",
-                logAt: entry.at
+                logAt: entry.at,
+                mapFocusCityID: focus
             )
         case .vehicleAssignedToRoute, .vehicleUnassignedFromRoute, .routeStarted, .routeStopped:
             // Visible immediately in the route/contract cards; no toast needed.
@@ -108,7 +134,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 title: String(localized: "Delivered"),
                 detail: "\(cityName(destination)) · \(Format.money(revenue))",
                 systemImage: "checkmark.circle.fill",
-                logAt: entry.at
+                logAt: entry.at,
+                mapFocusCityID: focus
             )
         case .routeShipmentSkipped:
             return GameNotification(
@@ -118,7 +145,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 title: String(localized: "Route pickup skipped"),
                 detail: String(localized: "Cargo missing or vehicle full"),
                 systemImage: "exclamationmark.triangle.fill",
-                logAt: entry.at
+                logAt: entry.at,
+                mapFocusCityID: focus
             )
         case .contractShipmentMissed(_, let penalty):
             return GameNotification(
@@ -128,7 +156,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 title: String(localized: "Contract shipment missed"),
                 detail: String(localized: "Compensation paid: \(Format.money(penalty))"),
                 systemImage: "exclamationmark.triangle.fill",
-                logAt: entry.at
+                logAt: entry.at,
+                mapFocusCityID: focus
             )
         case .contractEnded(_, let completed, let missed):
             return GameNotification(
@@ -138,7 +167,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 title: String(localized: "Contract ended"),
                 detail: String(localized: "\(completed) delivered · \(missed) missed"),
                 systemImage: "doc.text.magnifyingglass",
-                logAt: entry.at
+                logAt: entry.at,
+                mapFocusCityID: focus
             )
         }
     }

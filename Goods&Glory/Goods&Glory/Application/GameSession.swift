@@ -56,8 +56,11 @@ final class GameSession {
     private var clockTask: Task<Void, Never>?
     /// Real seconds since the last autosave while the clock is running.
     private var secondsSinceAutosave = 0
-    /// Browser prototype used ~2s; GDD asks for measured interval autosave.
-    private static let autosaveIntervalSeconds = 2
+    /// Kept for future energy / reliability tests. Not used while tick autosave is off.
+    private static let autosaveIntervalSeconds = 30
+    /// Tick-based autosave is disabled: `perform`, speed pause, background and
+    /// quit already persist. Flip to `true` to re-enable interval saves in tests.
+    private static let isTickAutosaveEnabled = false
 
     /// Transient player alerts derived from new log entries (not persisted).
     private(set) var notifications: [GameNotification] = []
@@ -134,6 +137,17 @@ final class GameSession {
         clearNotifications()
         state = nil
         phase = .mainMenu
+    }
+
+    /// App left the foreground: freeze simulation time (no catch-up on return) and save.
+    func suspendForBackground() {
+        stopClock()
+        persist()
+    }
+
+    /// App became active again: resume at the player's current speed setting.
+    func resumeFromBackground() {
+        restartClockIfNeeded()
     }
 
     // MARK: - Commands
@@ -229,6 +243,7 @@ final class GameSession {
         engine.advance(&current, by: minutes)
         state = current
         publishNewLogNotifications(from: current)
+        guard Self.isTickAutosaveEnabled else { return }
         secondsSinceAutosave += 1
         if secondsSinceAutosave >= Self.autosaveIntervalSeconds {
             persist()
@@ -265,7 +280,8 @@ final class GameSession {
 
     // MARK: - Persistence
 
-    /// Saves the current campaign. Called on commands, autosave, pause, background and quit.
+    /// Saves the current campaign. Called on commands, pause, background and quit.
+    /// (Tick autosave is currently disabled — see `isTickAutosaveEnabled`.)
     func persist() {
         guard let state else { return }
         do {

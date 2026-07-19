@@ -46,6 +46,18 @@ enum MapCameraFocus: Equatable {
     }
 }
 
+/// One-shot request to pan the live map to a city without changing zoom.
+/// A fresh `id` lets the same city be requested again (e.g. two taps).
+struct MapCameraPanRequest: Equatable, Identifiable {
+    let id: UUID
+    let cityID: CityID
+
+    init(cityID: CityID) {
+        self.id = UUID()
+        self.cityID = cityID
+    }
+}
+
 struct MapVehicleMarker: Identifiable, Equatable {
     let id: VehicleID
     let displayCode: String

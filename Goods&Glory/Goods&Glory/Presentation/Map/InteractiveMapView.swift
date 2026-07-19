@@ -17,7 +17,18 @@ struct InteractiveMapView: View {
     var accentColorHex: String
     var renderSnapshot: MapRenderSnapshot = .empty
     var cameraFocus: MapCameraFocus = .world
+    /// Soft-pan to a city without changing zoom (notification taps, etc.).
+    var cameraPanRequest: MapCameraPanRequest? = nil
+    /// When false the SKView stays mounted (camera / geography preserved) but
+    /// Metal stops presenting frames. Used for off-tab map and covers.
+    var isRenderingEnabled: Bool = true
     @Binding var selection: MapSelection
+    @Environment(\.scenePhase) private var scenePhase
+
+    /// Caller intent plus app activity — background/inactive always sleeps Metal.
+    private var isEffectivelyRendering: Bool {
+        isRenderingEnabled && scenePhase == .active
+    }
 
     var body: some View {
         SpriteKitMapSurface(
@@ -25,8 +36,10 @@ struct InteractiveMapView: View {
             hqCityID: hqCityID,
             highlightsStarterCities: highlightsStarterCities,
             accentColorHex: accentColorHex,
-            renderSnapshot: renderSnapshot,
+            renderSnapshot: isEffectivelyRendering ? renderSnapshot : .empty,
             cameraFocus: cameraFocus,
+            cameraPanRequest: cameraPanRequest,
+            isRenderingEnabled: isEffectivelyRendering,
             selection: $selection
         )
         .background(Theme.backgroundTop)
@@ -43,6 +56,8 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
     let accentColorHex: String
     let renderSnapshot: MapRenderSnapshot
     let cameraFocus: MapCameraFocus
+    let cameraPanRequest: MapCameraPanRequest?
+    let isRenderingEnabled: Bool
     @Binding var selection: MapSelection
 
     func makeCoordinator() -> Coordinator {
@@ -79,22 +94,29 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
             force: true
         )
         context.coordinator.applySnapshot(renderSnapshot, force: true)
+        context.coordinator.applyCameraPanRequest(cameraPanRequest)
+        context.coordinator.setRenderingEnabled(isRenderingEnabled, on: view)
         return view
     }
 
     func updateUIView(_ view: SKView, context: Context) {
         context.coordinator.selection = $selection
+        let becameActive = context.coordinator.setRenderingEnabled(isRenderingEnabled, on: view)
+        // Sleeping maps keep their scene graph; skip apply work until they wake.
+        guard isRenderingEnabled else { return }
         // Clock ticks rewrite GameState every second; skip no-op map updates so
         // idle maps do not restyle cities / rebuild routes on every tick.
+        // Force once on wake so mid-flight SKActions re-sync to simulation state.
         context.coordinator.applyConfiguration(
             hqCityID: hqCityID,
             selection: selection,
             highlightsStarterCities: highlightsStarterCities,
             accentColorHex: accentColorHex,
             cameraFocus: cameraFocus,
-            force: false
+            force: becameActive
         )
-        context.coordinator.applySnapshot(renderSnapshot, force: false)
+        context.coordinator.applySnapshot(renderSnapshot, force: becameActive)
+        context.coordinator.applyCameraPanRequest(cameraPanRequest)
     }
 
     static func dismantleUIView(_ view: SKView, coordinator: Coordinator) {
@@ -112,6 +134,8 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
         private var lastAccentColorHex: String?
         private var lastCameraFocus: MapCameraFocus?
         private var lastSnapshot: MapRenderSnapshot?
+        private var lastCameraPanRequestID: UUID?
+        private var isRenderingEnabled = true
 
         init(scene: GameMapScene, selection: Binding<MapSelection>) {
             self.scene = scene
@@ -120,6 +144,17 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
             scene.onSelectionChanged = { [weak self] value in
                 self?.selection.wrappedValue = value
             }
+        }
+
+        /// Pauses Metal presentation without tearing down the scene.
+        /// - Returns: `true` when rendering just turned back on.
+        @discardableResult
+        func setRenderingEnabled(_ enabled: Bool, on view: SKView) -> Bool {
+            let becameActive = enabled && !isRenderingEnabled
+            isRenderingEnabled = enabled
+            view.isPaused = !enabled
+            scene.isPaused = !enabled
+            return becameActive
         }
 
         func applyConfiguration(
@@ -158,6 +193,12 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
             scene.apply(snapshot: snapshot)
         }
 
+        func applyCameraPanRequest(_ request: MapCameraPanRequest?) {
+            guard let request, request.id != lastCameraPanRequestID else { return }
+            lastCameraPanRequestID = request.id
+            scene.centerOnCity(request.cityID, animated: true)
+        }
+
         func installGestures(on view: SKView) {
             let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
             pan.maximumNumberOfTouches = 2
@@ -174,20 +215,20 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
         }
 
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-            guard gesture.state == .changed, let view = gesture.view else { return }
+            guard isRenderingEnabled, gesture.state == .changed, let view = gesture.view else { return }
             let translation = gesture.translation(in: view)
             scene.pan(by: translation)
             gesture.setTranslation(.zero, in: view)
         }
 
         @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
-            guard gesture.state == .changed, let view = gesture.view else { return }
+            guard isRenderingEnabled, gesture.state == .changed, let view = gesture.view else { return }
             scene.zoom(by: gesture.scale, anchoredAt: gesture.location(in: view))
             gesture.scale = 1
         }
 
         @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
-            guard let view = gesture.view, gesture.state == .ended else { return }
+            guard isRenderingEnabled, let view = gesture.view, gesture.state == .ended else { return }
             scene.selectAt(viewPoint: gesture.location(in: view))
         }
 

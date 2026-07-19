@@ -23,8 +23,13 @@ struct RootView: View {
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .background || newPhase == .inactive {
-                session.persist()
+            switch newPhase {
+            case .background, .inactive:
+                session.suspendForBackground()
+            case .active:
+                session.resumeFromBackground()
+            @unknown default:
+                break
             }
         }
     }
