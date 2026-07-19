@@ -114,19 +114,50 @@ Persistence (SaveRepository)   Resources (JSON kataloglar)
 ## Mevcut kapsam (temel iskelet)
 
 Ana menü → şirket kuruluşu (kimlik, başlangıç şehri, ilk araç) → oynanış
-(harita / filo / işler / tesisler / şirket sekmeleri). Spot işler: seed'li
-üretim, boş sürüş (deadhead) → yükleme → yol → boşaltma fazları, teslimatta
-atomik settlement, araç varış şehrinde kalır. Teklif üretimi origin şehrinin
-`supply` ağırlıklarından ürün seçer; varış, aynı ürünü talep eden şehirlerin
-`demand` × mesafe ağırlığıyla seçilir (kısa rota tercih edilir; market eşleşmesi
-yoksa mesafe ağırlıklı fallback). Araç yokken HQ'daki en ucuz alınabilir araca;
-sonrasında boş araçların bulunduğu şehirlere göre iş üretir. Yük seçilen
-referans aracın kütle ve hacmine sığar. Ödeme yalnız dolu gidişin araç+şoför
-maliyetine minimum/yüzdesel kâr ekler; deadhead ve dönüş oyuncunun
-konumlandırma riskidir. Açık sözleşmeler periyodik olarak aynı lane üzerinde
-spot benzeri sevkiyat teklifi üretir. İlk harita dilimi 22 ABD metro merkezi ve
-ana Interstate ağını kapsar; kara/eyalet sınırları ile yollar çevrimdışı
-üretilmiş gerçek koordinat geometrileridir.
+(harita / filo / işler / tesisler / şirket sekmeleri).
+
+**Spot işler:** seed'li üretim, boş sürüş (deadhead) → yükleme → yol → boşaltma
+fazları, teslimatta atomik settlement, araç varış şehrinde kalır. Teklif
+üretimi origin şehrinin `supply` ağırlıklarından ürün seçer; varış, aynı ürünü
+talep eden şehirlerin `demand` × mesafe ağırlığıyla seçilir (kısa rota tercih
+edilir; market eşleşmesi yoksa mesafe ağırlıklı fallback). Araç yokken HQ'daki
+en ucuz alınabilir araca; sonrasında boş araçların bulunduğu şehirlere göre iş
+üretir. Yük seçilen referans aracın kütle ve hacmine sığar. Ödeme yalnız dolu
+gidişin araç+şoför maliyetine minimum/yüzdesel kâr ekler; deadhead ve dönüş
+oyuncunun konumlandırma riskidir.
+
+**Tesisler:** `Facility` (şube / depo), her ikisi de seviyeli ve inşa süreli.
+Şube o şehirde sözleşme hakkı ve teklif yuvası sayısı verir; depo yük saklar ve
+konsolidasyon sağlar. Maliyet/süre/gider sabit değil: `FacilityEconomics`
+şehir `costIndex`, nüfus ve erişim bayraklarından `siteFactor` türetir. HQ şubesi
+kuruluşta ücretsiz gelir ve `hqLanePremiumPercent` kadar hat primi verir.
+
+**Yük konumu:** `Shipment.location` (`address` / `vehicle` / `warehouse`) yükü
+rotadan bağımsızlaştırır; bir parti bir rotayla toplanıp depoda bekleyip başka bir
+rotayla teslim edilebilir. `StorageLot` yalnızca sunum katmanı gruplamasıdır
+(ürün + nihai hedef + sözleşme); motorda her parti kimliğini korur, böylece
+son tarih ve ceza muhasebesi bozulmaz. Depo görevleri: `dropToWarehouse`,
+`loadFromWarehouse(lot)`, `deliverAll`.
+
+**Rotalar / sözleşmeler:** Tek motor. Fleet → Rota Kurucu
+(`RouteBuilderView`) ile şehir döngüsü, araç atama, kontrat görevleri,
+başlat/durdur. Açık sözleşmeler periyodik sevkiyat üretir; atanmış araçlar
+`RouteRun` ile tur atar (bekleme → yükleme → taşıma). Spot işi rotaya ekleme
+komutu (`addJobToRoute`) hazır; Jobs/CityDetail'den “rotaya ekle” UI girişi
+henüz yok. Detaylı durum: kökteki `ROTA_SISTEMI_PLAN.md`.
+
+Sözleşmeler dört arketiptir (`laneRecurring`, `bulkPeriodic`, `evergreen`,
+`multiDrop`) ve yalnız şubeli şehirlerden üretilir. Teklif sayısı ve marjı şehrin
+`CityInsight` pazar/rekabet değerlerinden türetilir — sözleşme kıt değildir,
+kıt olan şube yatırımıdır. Arketip ve dönem hacmi tavanı `companyTier` ile açılır.
+Her dönem `volumePerCycleKg` araç boyu partilere bölünür; parti son tarihi artık
+sevkiyat aralığı değil ayrı `deliveryWindowMinutes`'tır ve imza ile ilk parti
+arasında `leadTimeMinutes` hazırlık payı vardır. `ContractCoverage` sözleşmenin
+gerçekten taşınıp taşınmadığını yapıdan değil akıştan ölçer.
+
+İlk harita dilimi 22 ABD metro merkezi ve ana Interstate ağını kapsar;
+kara/eyalet sınırları ile yollar çevrimdışı üretilmiş gerçek koordinat
+geometrileridir.
 
 ## Bilinçli ertelemeler (GDD'de tanımlı, henüz yok)
 
@@ -143,7 +174,8 @@ ana Interstate ağını kapsar; kara/eyalet sınırları ile yollar çevrimdış
 
 ## Test stratejisi
 
-`Goods&GloryTests/`: bundled katalog doğrulaması, deterministik rota,
-motor kuralları (settlement, kapasite/nakit reddi, teklif ömrü) ve
-determinizm sözleşmesi (parçalı vs tek seferlik zaman ilerletme → bayt
-düzeyinde aynı durum). Yeni sistem eklerken önce değişmezleri test edin.
+`Goods&GloryTests/`: bundled katalog doğrulaması, deterministik yol grafı,
+spot settlement, kontrat/rota koşucusu (bekleme→uyanma, kapasite atlama,
+silme/iade), bildirim map-focus eşlemesi ve determinizm sözleşmesi (parçalı vs
+tek seferlik `advance` → aynı durum; rota koşuculu senaryolar dahil). Yeni
+sistem eklerken önce değişmezleri test edin.

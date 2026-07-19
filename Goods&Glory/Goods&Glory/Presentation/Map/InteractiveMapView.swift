@@ -22,6 +22,8 @@ struct InteractiveMapView: View {
     /// When false the SKView stays mounted (camera / geography preserved) but
     /// Metal stops presenting frames. Used for off-tab map and covers.
     var isRenderingEnabled: Bool = true
+    /// SpriteKit's built-in fps / node / draw counters (developer HUD).
+    var showsRenderStatistics: Bool = false
     @Binding var selection: MapSelection
     @Environment(\.scenePhase) private var scenePhase
 
@@ -40,6 +42,7 @@ struct InteractiveMapView: View {
             cameraFocus: cameraFocus,
             cameraPanRequest: cameraPanRequest,
             isRenderingEnabled: isEffectivelyRendering,
+            showsRenderStatistics: showsRenderStatistics,
             selection: $selection
         )
         .background(Theme.backgroundTop)
@@ -58,6 +61,7 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
     let cameraFocus: MapCameraFocus
     let cameraPanRequest: MapCameraPanRequest?
     let isRenderingEnabled: Bool
+    let showsRenderStatistics: Bool
     @Binding var selection: MapSelection
 
     func makeCoordinator() -> Coordinator {
@@ -96,17 +100,30 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
         context.coordinator.applySnapshot(renderSnapshot, force: true)
         context.coordinator.applyCameraPanRequest(cameraPanRequest)
         context.coordinator.setRenderingEnabled(isRenderingEnabled, on: view)
+        applyRenderStatistics(to: view)
         return view
     }
 
+    /// SpriteKit's own counters. The draw count is the number that matters most
+    /// here: SKShapeNode never batches, so it tracks the city chrome directly.
+    private func applyRenderStatistics(to view: SKView) {
+        #if DEBUG
+        view.showsFPS = showsRenderStatistics
+        view.showsNodeCount = showsRenderStatistics
+        view.showsDrawCount = showsRenderStatistics
+        #endif
+    }
+
     func updateUIView(_ view: SKView, context: Context) {
+        applyRenderStatistics(to: view)
         context.coordinator.selection = $selection
         let becameActive = context.coordinator.setRenderingEnabled(isRenderingEnabled, on: view)
         // Sleeping maps keep their scene graph; skip apply work until they wake.
         guard isRenderingEnabled else { return }
         // Clock ticks rewrite GameState every second; skip no-op map updates so
         // idle maps do not restyle cities / rebuild routes on every tick.
-        // Force once on wake so mid-flight SKActions re-sync to simulation state.
+        // On wake: snap vehicles to current sim positions (no catch-up rush),
+        // then the next live ticks resume normal 1s motion.
         context.coordinator.applyConfiguration(
             hqCityID: hqCityID,
             selection: selection,
@@ -115,7 +132,11 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
             cameraFocus: cameraFocus,
             force: becameActive
         )
-        context.coordinator.applySnapshot(renderSnapshot, force: becameActive)
+        context.coordinator.applySnapshot(
+            renderSnapshot,
+            force: becameActive,
+            animateVehicleMotion: !becameActive
+        )
         context.coordinator.applyCameraPanRequest(cameraPanRequest)
     }
 
@@ -187,10 +208,14 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
             )
         }
 
-        func applySnapshot(_ snapshot: MapRenderSnapshot, force: Bool) {
+        func applySnapshot(
+            _ snapshot: MapRenderSnapshot,
+            force: Bool,
+            animateVehicleMotion: Bool = true
+        ) {
             guard force || lastSnapshot != snapshot else { return }
             lastSnapshot = snapshot
-            scene.apply(snapshot: snapshot)
+            scene.apply(snapshot: snapshot, animateVehicleMotion: animateVehicleMotion)
         }
 
         func applyCameraPanRequest(_ request: MapCameraPanRequest?) {
@@ -215,6 +240,9 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
         }
 
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            // Wake on `.began` too: an idle map runs at a low frame rate and
+            // should be back at full rate before the first drag frame lands.
+            if isRenderingEnabled, gesture.state == .began { scene.noteActivity() }
             guard isRenderingEnabled, gesture.state == .changed, let view = gesture.view else { return }
             let translation = gesture.translation(in: view)
             scene.pan(by: translation)
@@ -222,6 +250,7 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
         }
 
         @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+            if isRenderingEnabled, gesture.state == .began { scene.noteActivity() }
             guard isRenderingEnabled, gesture.state == .changed, let view = gesture.view else { return }
             scene.zoom(by: gesture.scale, anchoredAt: gesture.location(in: view))
             gesture.scale = 1

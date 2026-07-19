@@ -651,15 +651,18 @@ struct RouteBuilderView: View {
         switch task {
         case .travel: return "arrow.right"
         case .pickupShipment, .pickupContract: return "tray.and.arrow.up.fill"
-        case .deliverShipment, .deliverContract: return "tray.and.arrow.down.fill"
+        case .loadFromWarehouse: return "shippingbox.and.arrow.backward.fill"
+        case .deliverShipment, .deliverContract, .deliverAll: return "tray.and.arrow.down.fill"
+        case .dropToWarehouse: return "shippingbox.fill"
         }
     }
 
     private func taskColor(_ task: RouteTask) -> Color {
         switch task {
         case .travel: return Theme.textTertiary
-        case .pickupShipment, .pickupContract: return accent
-        case .deliverShipment, .deliverContract: return Theme.mint
+        case .pickupShipment, .pickupContract, .loadFromWarehouse: return accent
+        case .deliverShipment, .deliverContract, .deliverAll: return Theme.mint
+        case .dropToWarehouse: return Theme.sky
         }
     }
 
@@ -675,6 +678,13 @@ struct RouteBuilderView: View {
             return "ONE-OFF PICKUP"
         case .deliverShipment:
             return "ONE-OFF DELIVERY"
+        case .dropToWarehouse:
+            return "STORE IN WAREHOUSE"
+        case .loadFromWarehouse(let lotKey):
+            let product = session.catalog.product(lotKey.productID)?.name ?? lotKey.productID.rawValue
+            return "LOAD · \(product) → \(cityName(lotKey.destinationCityID))"
+        case .deliverAll:
+            return "DELIVER EVERYTHING FOR THIS CITY"
         }
     }
 
@@ -703,10 +713,17 @@ struct RouteBuilderView: View {
             default: return nil
             }
         }
-        for id in Set(contractTasks.map(\.0)) {
-            let entries = contractTasks.filter { $0.0 == id }
-            if !entries.contains(where: { $0.1 }) || !entries.contains(where: { !$0.1 }) {
-                return "Every contract pickup needs a matching delivery on this route."
+        // A warehouse drop or a catch-all delivery is a valid hand-off too:
+        // collection routes legitimately end at a hub instead of a customer.
+        let hasHandoff = route.stops.contains {
+            $0.task == .dropToWarehouse || $0.task == .deliverAll
+        }
+        if !hasHandoff {
+            for id in Set(contractTasks.map(\.0)) {
+                let entries = contractTasks.filter { $0.0 == id }
+                if entries.contains(where: { $0.1 }), !entries.contains(where: { !$0.1 }) {
+                    return "Cargo picked up here has nowhere to go — add a delivery, a warehouse drop, or 'deliver everything'."
+                }
             }
         }
         return nil
@@ -775,6 +792,13 @@ struct RouteBuilderView: View {
             return "That vehicle already serves another route."
         case .routeIsRunning:
             return "Stop the route and wait for committed freight before editing."
+        case .warehouseRequired:
+            return "That city has no warehouse to store or collect cargo."
+        case .branchRequired:
+            return "That city needs a branch first."
+        case .facilityAlreadyExists, .facilityNotAvailable,
+             .warehouseNotEmpty, .cannotDemolishHeadquarters:
+            return "That building action is not available right now."
         case .unknownReference, nil:
             return "The route or selected item is no longer available."
         }
@@ -804,7 +828,10 @@ private struct RouteTaskPicker: View {
             .flatMap { contract -> [TaskOption] in
                 var result: [TaskOption] = []
                 if contract.origin == cityID { result.append(TaskOption(contract: contract, action: .pickup)) }
-                if contract.destination == cityID { result.append(TaskOption(contract: contract, action: .deliver)) }
+                // Multi-drop lanes deliver in several cities.
+                if contract.destinations.contains(where: { $0.cityID == cityID }) {
+                    result.append(TaskOption(contract: contract, action: .deliver))
+                }
                 return result
             }
             .sorted { lhs, rhs in
@@ -822,17 +849,19 @@ private struct RouteTaskPicker: View {
                         .foregroundStyle(Theme.textSecondary)
 
                     if options.isEmpty {
-                        ContentUnavailableView(
-                            "No Recurring Work",
-                            systemImage: "shippingbox",
-                            description: Text("Sign a contract connected to this city to add pickup or delivery work.")
-                        )
-                        .frame(minHeight: 220)
+                        Text("No contract work here yet. Sign a contract connected to this city, or use the network actions below.")
+                            .font(.gg(11.5, .bold))
+                            .foregroundStyle(Theme.textTertiary)
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .surfacePanel(cornerRadius: 16)
                     } else {
                         ForEach(options) { option in
                             taskOptionRow(option)
                         }
                     }
+
+                    networkSection
                 }
                 .padding(14)
             }
@@ -857,6 +886,114 @@ private struct RouteTaskPicker: View {
                 Text("Stop the route and wait for its vehicles before changing recurring work.")
             }
         }
+    }
+
+    // MARK: Network actions
+
+    /// The three tasks that turn a lane into a network: store here, collect a
+    /// lot from here, drop everything that belongs here.
+    @ViewBuilder private var networkSection: some View {
+        let warehouse = session.state?.warehouse(in: cityID)
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Network actions")
+                .font(.gg(12, .bold))
+                .foregroundStyle(Theme.textSecondary)
+                .padding(.top, 6)
+
+            networkRow(
+                task: .deliverAll,
+                symbol: "tray.and.arrow.down.fill",
+                tint: Theme.mint,
+                title: String(localized: "Deliver everything for this city"),
+                detail: String(localized: "Unload every carried parcel whose destination is \(cityName)")
+            )
+
+            if let warehouse, warehouse.isOperational(at: session.state?.clock ?? .start) {
+                networkRow(
+                    task: .dropToWarehouse,
+                    symbol: "shippingbox.fill",
+                    tint: Theme.sky,
+                    title: String(localized: "Store in the warehouse"),
+                    detail: String(localized: "Drop everything not yet home, so another route can finish it")
+                )
+                lotOptions(warehouse: warehouse)
+            } else {
+                Text("Build a warehouse in \(cityName) to store and collect freight here.")
+                    .font(.gg(11, .bold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+        }
+    }
+
+    @ViewBuilder private func lotOptions(warehouse: Facility) -> some View {
+        if let state = session.state {
+            let lots = state.storageLots(in: warehouse.id)
+            if lots.isEmpty {
+                Text("The warehouse is empty — nothing to collect yet.")
+                    .font(.gg(11, .bold))
+                    .foregroundStyle(Theme.textTertiary)
+            } else {
+                ForEach(lots) { lot in
+                    let destination = session.catalog.city(lot.key.destinationCityID)?.name
+                        ?? lot.key.destinationCityID.rawValue
+                    let product = session.catalog.product(lot.key.productID)?.name
+                        ?? lot.key.productID.rawValue
+                    networkRow(
+                        task: .loadFromWarehouse(lot.key),
+                        symbol: "shippingbox.and.arrow.backward.fill",
+                        tint: accent,
+                        title: String(localized: "Collect \(product) → \(destination)"),
+                        detail: String(localized: "\(lot.parcelCount) parcel(s) · \(Format.mass(kg: lot.load.massKg)) · \(Format.money(lot.pendingPayout)) on delivery")
+                    )
+                }
+            }
+        }
+    }
+
+    private func networkRow(
+        task: RouteTask,
+        symbol: String,
+        tint: Color,
+        title: String,
+        detail: String
+    ) -> some View {
+        let existing = session.state?.route(routeID)?.stops.first {
+            $0.cityID == cityID && $0.task == task
+        }
+        return Button {
+            let command: GameCommand = existing.map {
+                .removeRouteStop(routeID: routeID, stopID: $0.id)
+            } ?? .addNetworkTaskToRoute(routeID: routeID, visitStopID: visitID, task: task)
+            commandError = session.perform(command)
+        } label: {
+            HStack(spacing: 11) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(tint.opacity(0.12))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: symbol)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(tint)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.gg(13, .heavy))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                    Text(detail)
+                        .font(.gg(10.5, .bold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: existing == nil ? "plus.circle" : "checkmark.circle.fill")
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(existing == nil ? Theme.textTertiary : tint)
+            }
+            .padding(12)
+            .surfacePanel(cornerRadius: 16)
+        }
+        .buttonStyle(.plain)
     }
 
     private func taskOptionRow(_ option: TaskOption) -> some View {
@@ -897,7 +1034,7 @@ private struct RouteTaskPicker: View {
                     Text(pickup ? "Pick up contract freight" : "Deliver contract freight")
                         .font(.gg(13, .heavy))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("\(firm) · \(product) · \(Format.mass(kg: option.contract.shipmentMassKg))")
+                    Text("\(firm) · \(product) · \(Format.mass(kg: option.contract.parcelMassKg))")
                         .font(.gg(10.5, .bold))
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)

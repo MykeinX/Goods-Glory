@@ -97,18 +97,45 @@ struct MapPlannedVisitMarker: Identifiable, Equatable {
     let hasDelivery: Bool
 }
 
+/// What the player owns in a city, drawn as a small icon strip under the pin.
+struct MapCityFacilities: Equatable {
+    let hasBranch: Bool
+    let hasWarehouse: Bool
+    /// True while anything there is still under construction.
+    let isBuilding: Bool
+}
+
+/// Freight in a city that needs the player's attention, surfaced as a single
+/// badge so the map stays readable. Only the count and urgency are shown; the
+/// detail lives in the city screen.
+struct MapCityAttention: Equatable {
+    /// Contract parcels posted from this city and not yet claimed.
+    let waitingParcels: Int
+    /// Parcels stored in this city's warehouse awaiting an onward leg.
+    let storedParcels: Int
+    /// Fraction of the tightest delivery window already spent, 0...1.
+    /// Drives the badge colour: calm, then warning, then late.
+    let urgency: Double
+
+    var total: Int { waitingParcels + storedParcels }
+}
+
 struct MapRenderSnapshot: Equatable {
     let vehicles: [MapVehicleMarker]
     let routes: [MapRouteOverlay]
     let plannedVisits: [MapPlannedVisitMarker]
     /// Idle vehicles parked at a city — shown as a count badge on the city, not as sprites.
     let idleFleetByCity: [CityID: Int]
+    let facilitiesByCity: [CityID: MapCityFacilities]
+    let attentionByCity: [CityID: MapCityAttention]
 
     static let empty = MapRenderSnapshot(
         vehicles: [],
         routes: [],
         plannedVisits: [],
-        idleFleetByCity: [:]
+        idleFleetByCity: [:],
+        facilitiesByCity: [:],
+        attentionByCity: [:]
     )
 }
 
@@ -251,8 +278,65 @@ enum MapSceneAdapter {
             vehicles: markers,
             routes: routes,
             plannedVisits: plannedVisits,
-            idleFleetByCity: idleCountPerCity
+            idleFleetByCity: idleCountPerCity,
+            facilitiesByCity: facilities(in: state),
+            attentionByCity: attention(in: state)
         )
+    }
+
+    private static func facilities(in state: GameState) -> [CityID: MapCityFacilities] {
+        var result: [CityID: MapCityFacilities] = [:]
+        for facility in state.facilities {
+            let existing = result[facility.cityID]
+            let building = !facility.isOperational(at: state.clock) || facility.isUpgrading
+            result[facility.cityID] = MapCityFacilities(
+                hasBranch: (existing?.hasBranch ?? false) || facility.kind == .branch,
+                hasWarehouse: (existing?.hasWarehouse ?? false) || facility.kind == .warehouse,
+                isBuilding: (existing?.isBuilding ?? false) || building
+            )
+        }
+        return result
+    }
+
+    /// Cargo the player still has to act on, per city. Deliberately narrow:
+    /// only unclaimed contract parcels and warehouse stock. Anything already
+    /// on a truck is handled and would just be noise on the map.
+    private static func attention(in state: GameState) -> [CityID: MapCityAttention] {
+        var waiting: [CityID: Int] = [:]
+        var stored: [CityID: Int] = [:]
+        // Smallest remaining fraction of the delivery window, per city.
+        var tightest: [CityID: Double] = [:]
+
+        func noteUrgency(city: CityID, createdAt: GameTime, expiresAt: GameTime) {
+            let window = max(1, createdAt.minutes(until: expiresAt))
+            let spent = Double(createdAt.minutes(until: state.clock)) / Double(window)
+            tightest[city] = max(tightest[city] ?? 0, min(1, max(0, spent)))
+        }
+
+        for offer in state.offers where offer.source == .contract {
+            waiting[offer.origin, default: 0] += 1
+            noteUrgency(city: offer.origin, createdAt: offer.createdAt, expiresAt: offer.expiresAt)
+        }
+        for shipment in state.shipments {
+            guard let facilityID = shipment.location.facilityID,
+                  let facility = state.facility(facilityID) else { continue }
+            stored[facility.cityID, default: 0] += 1
+            noteUrgency(
+                city: facility.cityID,
+                createdAt: shipment.offer.createdAt,
+                expiresAt: shipment.offer.expiresAt
+            )
+        }
+
+        var result: [CityID: MapCityAttention] = [:]
+        for cityID in Set(waiting.keys).union(stored.keys) {
+            result[cityID] = MapCityAttention(
+                waitingParcels: waiting[cityID] ?? 0,
+                storedParcels: stored[cityID] ?? 0,
+                urgency: tightest[cityID] ?? 0
+            )
+        }
+        return result
     }
 
     /// Consecutive task stops in the same city form one visit. The route path
@@ -273,9 +357,9 @@ enum MapSceneAdapter {
         for stop in route.stops {
             let flags: (pickup: Bool, delivery: Bool)
             switch stop.task {
-            case .pickupShipment, .pickupContract:
+            case .pickupShipment, .pickupContract, .loadFromWarehouse:
                 flags = (true, false)
-            case .deliverShipment, .deliverContract:
+            case .deliverShipment, .deliverContract, .deliverAll, .dropToWarehouse:
                 flags = (false, true)
             case .travel:
                 flags = (false, false)
@@ -360,7 +444,7 @@ enum MapSceneAdapter {
         case .traveling:
             let originPt = point(run.legOriginCityID)
             guard originPt != stopPt else { return nil }
-            let loaded = state.routeShipments.contains { $0.loadedVehicleID == vehicle.id }
+            let loaded = state.shipments.contains { $0.loadedVehicleID == vehicle.id }
             overlays.append(MapRouteOverlay(
                 id: "run-\(run.id)-leg",
                 anchors: [originPt, stopPt],
@@ -381,7 +465,7 @@ enum MapSceneAdapter {
             let progress = fraction(started: run.phaseStartedAt, ends: run.phaseEndsAt, clock: state.clock)
             let isPickup: Bool
             switch route.stops[run.stopIndex].task {
-            case .pickupShipment, .pickupContract: isPickup = true
+            case .pickupShipment, .pickupContract, .loadFromWarehouse: isPickup = true
             default: isPickup = false
             }
             return MapVehicleMarker(

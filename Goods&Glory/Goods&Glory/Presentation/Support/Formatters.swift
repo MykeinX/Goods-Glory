@@ -22,12 +22,36 @@ enum Format {
         )
     }
 
+    /// Human-scale duration. Nobody reads "600 h" as five weeks, so anything
+    /// past a day is expressed in days, and past two weeks in weeks.
     static func duration(minutes: Int) -> String {
-        let hours = minutes / 60
-        let mins = minutes % 60
+        let clamped = max(0, minutes)
+        let hours = clamped / 60
+        let mins = clamped % 60
+
+        if clamped >= 14 * 24 * 60 {
+            let weeks = Double(clamped) / Double(7 * 24 * 60)
+            return String(localized: "\(weeks.formatted(.number.precision(.fractionLength(0...1)))) wk")
+        }
+        if clamped >= 24 * 60 {
+            let days = clamped / (24 * 60)
+            let leftoverHours = (clamped % (24 * 60)) / 60
+            if leftoverHours == 0 { return String(localized: "\(days) d") }
+            return String(localized: "\(days) d \(leftoverHours) h")
+        }
         if hours == 0 { return String(localized: "\(mins) min") }
         if mins == 0 { return String(localized: "\(hours) h") }
         return String(localized: "\(hours) h \(mins) min")
+    }
+
+    /// Coarse duration for cards where precision is noise: "3 d", "8 h".
+    static func shortDuration(minutes: Int) -> String {
+        let clamped = max(0, minutes)
+        if clamped >= 24 * 60 {
+            return String(localized: "\(clamped / (24 * 60)) d")
+        }
+        if clamped >= 60 { return String(localized: "\(clamped / 60) h") }
+        return String(localized: "\(clamped) min")
     }
 
     static func distance(km: Double) -> String {
@@ -102,6 +126,33 @@ extension LogEntry {
             return String(localized: "Contract shipment missed. Compensation paid: \(Format.money(penalty)).")
         case .contractEnded(_, let completed, let missed):
             return String(localized: "Contract ended: \(completed) delivered, \(missed) missed.")
+        case .facilityConstructionStarted(_, let kind, let city, let level):
+            let what = kind == .branch
+                ? String(localized: "Branch")
+                : String(localized: "Warehouse")
+            return String(localized: "\(what) level \(level) started in \(cityName(city)).")
+        case .facilityCompleted(_, let kind, let city, let level):
+            let what = kind == .branch
+                ? String(localized: "Branch")
+                : String(localized: "Warehouse")
+            return String(localized: "\(what) in \(cityName(city)) is now open at level \(level).")
+        case .facilityDemolished(let kind, let city):
+            let what = kind == .branch
+                ? String(localized: "Branch")
+                : String(localized: "Warehouse")
+            return String(localized: "\(what) in \(cityName(city)) was demolished.")
+        case .cargoStored(let city, let parcels, let massKg):
+            return String(localized: "Stored \(parcels) parcel(s) (\(Format.mass(kg: massKg))) in \(cityName(city)).")
+        case .cargoLoadedFromWarehouse(let city, let parcels, let massKg):
+            return String(localized: "Collected \(parcels) parcel(s) (\(Format.mass(kg: massKg))) from the \(cityName(city)) warehouse.")
+        case .warehouseFull(let city, let refusedParcels):
+            return String(localized: "The \(cityName(city)) warehouse is full — \(refusedParcels) parcel(s) stayed on the vehicle.")
+        case .contractCancellationRequested:
+            return String(localized: "Contract closing — no new loads, committed freight still runs.")
+        case .contractRouteClosed:
+            return String(localized: "The contract's dedicated route was closed with it.")
+        case .routeNeedsReview:
+            return String(localized: "A route still has stops for an ended contract — edit it or its vehicles run empty.")
         }
     }
 }

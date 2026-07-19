@@ -9,6 +9,7 @@
 
 import Foundation
 import Observation
+import QuartzCore
 
 enum SimulationSpeed: Int, CaseIterable, Codable {
     case paused = 0
@@ -69,13 +70,25 @@ final class GameSession {
     private static let maxVisibleNotifications = 3
     private static let notificationDisplaySeconds: Double = 4.0
 
+    /// Digest of the stored campaign, or nil when there is none. Cached and
+    /// observable: the main menu must never stat the filesystem from `body`.
+    private(set) var saveSummary: SaveSummary?
+
     init(catalog: GameCatalog, saveRepository: SaveRepository = SaveRepository()) {
         self.catalog = catalog
         self.engine = SimulationEngine(catalog: catalog)
         self.saveRepository = saveRepository
+        self.saveSummary = saveRepository.summary()
     }
 
-    var hasSave: Bool { saveRepository.hasSave }
+    var hasSave: Bool { saveSummary != nil }
+
+    /// Drops the stored campaign without touching the current phase. Used by
+    /// the main menu's Settings screen.
+    func deleteSave() {
+        try? saveRepository.deleteSave()
+        saveSummary = nil
+    }
 
     // MARK: - Lifecycle
 
@@ -117,7 +130,7 @@ final class GameSession {
         guard let loaded = try? saveRepository.load() else { return }
         state = loaded
         phase = .playing
-        speed = .paused
+        speed = AppSettings.shared.resumesPaused ? .paused : .normal
         clearNotifications()
         lastPublishedLogID = loaded.log.last?.id ?? 0
         restartClockIfNeeded()
@@ -133,7 +146,7 @@ final class GameSession {
 
     func abandonCampaign() {
         stopClock()
-        try? saveRepository.deleteSave()
+        deleteSave()
         clearNotifications()
         state = nil
         phase = .mainMenu
@@ -213,6 +226,47 @@ final class GameSession {
         return engine.estimate(route: route, vehicleType: vehicleType, state: state)
     }
 
+    // MARK: - Facilities & contracts (read-only views for the UI)
+
+    /// Price, build time and capacity of a facility in a specific city.
+    func quote(kind: FacilityKind, level: Int = 1, city cityID: CityID) -> FacilityQuote? {
+        engine.quote(kind: kind, level: level, city: cityID)
+    }
+
+    func upgradeQuote(for facility: Facility) -> FacilityQuote? {
+        engine.upgradeQuote(for: facility)
+    }
+
+    /// Remaining room in a warehouse, for the city and facility screens.
+    func freeStorage(of facility: Facility) -> LoadSize? {
+        guard let state, facility.kind == .warehouse else { return nil }
+        return engine.freeStorage(of: facility, state: state)
+    }
+
+    /// Whether a contract's freight is actually moving. Replaces the old
+    /// structural "is a vehicle assigned to the contract's own route" check.
+    func coverage(of contract: ActiveContract) -> SimulationEngine.ContractCoverage? {
+        guard let state else { return nil }
+        return engine.coverage(of: contract, state: state)
+    }
+
+    /// Vehicles tied up, profit per day, utilisation — the whole contract
+    /// decision in three numbers.
+    func brief(for terms: some ContractTerms) -> SimulationEngine.ContractBrief? {
+        engine.brief(for: terms)
+    }
+
+    func companyTier() -> Int {
+        guard let state else { return 1 }
+        return engine.companyTier(state)
+    }
+
+    /// Total daily upkeep of every standing facility.
+    func facilityUpkeepPerDay() -> Money {
+        guard let state else { return 0 }
+        return engine.facilityUpkeepPerDay(state: state)
+    }
+
     func dismissNotification(id: Int) {
         notifications.removeAll { $0.id == id }
     }
@@ -240,7 +294,9 @@ final class GameSession {
         guard phase == .playing, var current = state else { return }
         let minutes = speed.minutesPerRealSecond
         guard minutes > 0 else { return }
+        let startedAt = CACurrentMediaTime()
         engine.advance(&current, by: minutes)
+        PerformanceMonitor.shared.recordTick(CACurrentMediaTime() - startedAt)
         state = current
         publishNewLogNotifications(from: current)
         guard Self.isTickAutosaveEnabled else { return }
@@ -261,6 +317,7 @@ final class GameSession {
         if let newest = state.log.last?.id {
             lastPublishedLogID = newest
         }
+        guard AppSettings.shared.showsGameplayToasts else { return }
         for entry in fresh {
             guard let note = GameNotification.make(from: entry, catalog: catalog) else { continue }
             notifications.append(note)
@@ -285,7 +342,10 @@ final class GameSession {
     func persist() {
         guard let state else { return }
         do {
+            let startedAt = CACurrentMediaTime()
             try saveRepository.save(state)
+            PerformanceMonitor.shared.recordSave(CACurrentMediaTime() - startedAt)
+            saveSummary = SaveSummary(state: state, savedAt: Date())
             secondsSinceAutosave = 0
         } catch {
             // Persistence failure must never crash the game loop.

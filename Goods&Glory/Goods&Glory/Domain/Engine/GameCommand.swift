@@ -26,6 +26,20 @@ enum GameCommand: Sendable {
     case assignVehicleToContract(contractID: ContractID, vehicleID: VehicleID)
     /// Release a vehicle from a contract route (delegates to route unassign).
     case unassignVehicleFromContract(contractID: ContractID, vehicleID: VehicleID)
+    /// Safe close: stop posting new cycles, let committed parcels finish.
+    /// The contract clears itself once nothing of it is left in the network.
+    case cancelContract(ContractID)
+
+    // MARK: Facilities
+
+    /// Start construction in a city. Cost and duration come from that city's
+    /// own catalog data, so the same building is not the same price twice.
+    case buildFacility(kind: FacilityKind, cityID: CityID)
+    /// Start a level upgrade. The facility keeps serving at its current level.
+    case upgradeFacility(FacilityID)
+    /// Tear down a facility. HQ cannot be demolished and a warehouse must be
+    /// empty first — the game never silently destroys cargo.
+    case demolishFacility(FacilityID)
 
     // MARK: Routes
 
@@ -47,6 +61,9 @@ enum GameCommand: Sendable {
         contractID: ContractID,
         action: ContractRouteAction
     )
+    /// Add a warehouse or bulk-delivery action to an existing city visit:
+    /// `dropToWarehouse`, `loadFromWarehouse` or `deliverAll`.
+    case addNetworkTaskToRoute(routeID: RouteID, visitStopID: Int, task: RouteTask)
     /// Replace the city-visit order atomically. Every current visit id must
     /// appear exactly once.
     case reorderRouteVisits(routeID: RouteID, orderedVisitIDs: [Int])
@@ -84,4 +101,16 @@ enum CommandError: Error, Equatable, Sendable {
     case vehicleAlreadyAssigned
     /// Structural route edits require the route to be stopped first.
     case routeIsRunning
+    /// A facility of this kind already stands in the city.
+    case facilityAlreadyExists
+    /// The facility is still under construction, or already at max level.
+    case facilityNotAvailable
+    /// Contract business in this city needs a finished branch first.
+    case branchRequired
+    /// This city has no warehouse to store or collect cargo.
+    case warehouseRequired
+    /// A warehouse must be emptied before it can be demolished.
+    case warehouseNotEmpty
+    /// Headquarters cannot be torn down.
+    case cannotDemolishHeadquarters
 }

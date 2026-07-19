@@ -61,7 +61,7 @@ private enum Fixture {
                     capacity: LoadSize(massKg: 2000, volumeM3: 20),
                     speedKmh: 100, purchasePrice: 10_000,
                     costPerKm: 0.5, driverCostPerHour: 10,
-                    freightRatePerKm: 2.4, fixedCostPerDay: 60
+                    fixedCostPerDay: 60
                 )
             ],
             products: [
@@ -153,20 +153,29 @@ struct SimulationEngineTests {
                     ).rounded() / 10
                     #expect(offer.load.volumeM3 == expectedVolume)
 
-                    let util = engine.util(load: offer.load, capacity: entryVehicleType.capacity)
                     let multiplier = catalog.economy.urgencyTiers
                         .first(where: { $0.id == offer.urgency.rawValue })?.multiplier ?? 1
                     let expected = engine.freightPayout(
-                        vehicleType: entryVehicleType,
+                        origin: offer.origin,
+                        destination: offer.destination,
                         distanceKm: offer.distanceKm,
-                        util: util,
+                        load: offer.load,
+                        vehicleType: entryVehicleType,
                         urgencyMultiplier: multiplier,
-                        laneFactor: engine.lanePriceFactor(
-                            origin: offer.origin,
-                            destination: offer.destination
-                        )
+                        state: state
                     )
                     #expect(offer.payout == expected)
+
+                    // The promise a new player is owed: the very first jobs on
+                    // the board are worth taking with the vehicle they can
+                    // actually afford.
+                    let haul = engine.haulCost(
+                        origin: offer.origin,
+                        destination: offer.destination,
+                        distanceKm: offer.distanceKm,
+                        vehicleType: entryVehicleType
+                    )
+                    #expect(offer.payout > haul.cost)
                 }
             }
         }
@@ -205,13 +214,14 @@ struct SimulationEngineTests {
         engine.advance(&state, by: 0)
         let offer = try #require(state.offers.first { $0.origin == Fixture.cityA })
         #expect(offer.load.massKg == 1000)
-        let util = engine.util(load: offer.load, capacity: vanType.capacity)
         let expectedPayout = engine.freightPayout(
-            vehicleType: vanType,
+            origin: offer.origin,
+            destination: offer.destination,
             distanceKm: offer.distanceKm,
-            util: util,
+            load: offer.load,
+            vehicleType: vanType,
             urgencyMultiplier: Fixture.urgencyMultiplier(offer.urgency),
-            laneFactor: engine.lanePriceFactor(origin: offer.origin, destination: offer.destination)
+            state: state
         )
         #expect(offer.payout == expectedPayout)
 
@@ -302,12 +312,20 @@ struct SimulationEngineTests {
         #expect(state.activeContracts.contains { $0.id == contractOffer.id })
         #expect(state.contractOffers.count == openBefore - 1)
         #expect(state.contractOffers.allSatisfy { $0.id != contractOffer.id })
+
+        // Lead time: signing buys preparation, not an instant obligation.
+        #expect(!state.offers.contains { $0.source == .contract && $0.contractID == contractOffer.id })
+        let signed = try #require(state.activeContract(contractOffer.id))
+        #expect(signed.nextShipmentAt == state.clock + contractOffer.leadTimeMinutes)
+
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         #expect(state.offers.contains { $0.source == .contract && $0.contractID == contractOffer.id })
 
         let shipment = try #require(state.offers.first { $0.source == .contract })
         #expect(shipment.payout == contractOffer.payoutPerShipment)
-        // Deadline: one full interval to deliver before compensation is due.
-        #expect(shipment.expiresAt == shipment.createdAt + contractOffer.shipmentIntervalMinutes)
+        // The delivery window is its own term, not the shipment interval: a
+        // daily lane over a long leg must still be physically deliverable.
+        #expect(shipment.expiresAt == shipment.createdAt + contractOffer.deliveryWindowMinutes)
 
         // Round-trip cost-plus pricing: above the cycle cost, below spot-normal.
         let vanType = try #require(catalog.vehicleType(Fixture.van))
@@ -323,13 +341,17 @@ struct SimulationEngineTests {
             vehicleType: vanType
         )
         #expect(shipment.payout > cycleCost)
-        let util = engine.util(load: shipment.load, capacity: vanType.capacity)
         let spotNormal = engine.freightPayout(
-            vehicleType: vanType,
+            origin: shipment.origin,
+            destination: shipment.destination,
             distanceKm: shipment.distanceKm,
-            util: util,
-            urgencyMultiplier: 1.0
+            load: shipment.load,
+            vehicleType: vanType,
+            urgencyMultiplier: 1.0,
+            state: state
         )
+        // A dedicated lane trades margin for certainty: it pays less per haul
+        // than the open market would for the same freight.
         #expect(shipment.payout < spotNormal)
     }
 
@@ -342,6 +364,8 @@ struct SimulationEngineTests {
 
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         let vehicle = try #require(state.vehicles.first)
         try engine.apply(
             .assignVehicleToContract(contractID: contractOffer.id, vehicleID: vehicle.id),
@@ -387,6 +411,8 @@ struct SimulationEngineTests {
 
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         let vehicle = try #require(state.vehicles.first)
         let vehicleType = try #require(catalog.vehicleType(vehicle.typeID))
         try engine.apply(
@@ -416,14 +442,14 @@ struct SimulationEngineTests {
         #expect(servicing.phase == .servicing)
         #expect(servicing.stopIndex == 0)
         #expect(servicing.phaseStartedAt == wakeAt)
-        let claimedID = try #require(servicing.claimedShipmentID)
-        let claimed = try #require(state.routeShipment(claimedID))
+        let claimedID = try #require(servicing.claimedShipmentIDs.first)
+        let claimed = try #require(state.shipment(claimedID))
         #expect(claimed.loadedVehicleID == nil)
         #expect(state.offers.allSatisfy { $0.id != claimedID })
 
         engine.advance(&state, by: engine.loadingMinutes(at: contractOffer.origin))
 
-        let loaded = try #require(state.routeShipment(claimedID))
+        let loaded = try #require(state.shipment(claimedID))
         #expect(loaded.loadedVehicleID == vehicle.id)
         let traveling = try #require(state.routeRun(for: vehicle.id))
         #expect(traveling.phase == .traveling)
@@ -438,6 +464,8 @@ struct SimulationEngineTests {
 
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         try engine.apply(.createRoute(name: "Recurring lane"), to: &state)
         let routeID = try #require(state.routes.last?.id)
         try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.origin), to: &state)
@@ -510,6 +538,8 @@ struct SimulationEngineTests {
         let vehicle = try #require(state.vehicles.first)
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         let visitID = try #require(state.route(routeID)?.stops.first?.id)
         try engine.apply(
             .addContractTaskToRoute(
@@ -534,6 +564,8 @@ struct SimulationEngineTests {
 
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         try engine.apply(.createRoute(name: "Reorder"), to: &state)
         let routeID = try #require(state.routes.last?.id)
         try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.origin), to: &state)
@@ -589,6 +621,8 @@ struct SimulationEngineTests {
 
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         try engine.apply(.createRoute(name: "Trim"), to: &state)
         let routeID = try #require(state.routes.last?.id)
         try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.origin), to: &state)
@@ -634,6 +668,8 @@ struct SimulationEngineTests {
 
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         let shipment = try #require(state.offers.first {
             $0.source == .contract && $0.contractID == contractOffer.id
         })
@@ -648,7 +684,7 @@ struct SimulationEngineTests {
         )
 
         #expect(state.route(routeID)?.stops.isEmpty == true)
-        #expect(state.routeShipment(shipment.id) == nil)
+        #expect(state.shipment(shipment.id) == nil)
         #expect(state.offers.contains { $0.id == shipment.id })
     }
 
@@ -660,6 +696,8 @@ struct SimulationEngineTests {
 
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         try engine.apply(.createRoute(name: "Cancelable"), to: &state)
         let routeID = try #require(state.routes.last?.id)
         try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.origin), to: &state)
@@ -690,7 +728,7 @@ struct SimulationEngineTests {
 
         engine.advance(&state, by: 0)
         engine.advance(&state, by: engine.loadingMinutes(at: contractOffer.origin))
-        let loaded = try #require(state.routeShipments.first { $0.routeID == routeID })
+        let loaded = try #require(state.shipments.first { $0.assignedRouteID == routeID })
         #expect(loaded.loadedVehicleID == vehicle.id)
 
         try engine.apply(.deleteRoute(routeID), to: &state)
@@ -703,7 +741,7 @@ struct SimulationEngineTests {
 
         #expect(state.route(routeID) == nil)
         #expect(state.routeRuns(of: routeID).isEmpty)
-        #expect(state.routeShipments(of: routeID).isEmpty)
+        #expect(state.shipments(of: routeID).isEmpty)
         #expect(state.vehicle(vehicle.id)?.cityID == contractOffer.destination)
         #expect(state.isVehicleIdle(vehicle.id))
         #expect(state.activeContract(contractOffer.id)?.shipmentsCompleted == 1)
@@ -724,12 +762,12 @@ struct SimulationEngineTests {
         try engine.apply(.addTravelStop(routeID: route.id, cityID: Fixture.cityA), to: &state)
         try engine.apply(.assignVehicleToRoute(routeID: route.id, vehicleID: vehicle.id), to: &state)
         try engine.apply(.startRoute(route.id), to: &state)
-        #expect(state.routeShipments.count == 1)
+        #expect(state.shipments.count == 1)
         #expect(state.routeRun(for: vehicle.id) != nil)
 
         // Lap: load (30) + drive (60) + unload (30) + empty return (60).
         engine.advance(&state, by: 200)
-        #expect(state.routeShipments.isEmpty)
+        #expect(state.shipments.isEmpty)
         #expect(state.stats.deliveredJobs == 1)
         #expect(state.stats.totalRevenue > 0)
 
@@ -775,7 +813,7 @@ struct SimulationEngineTests {
 
         engine.advance(&state, by: 1)
 
-        let shipment = try #require(state.routeShipment(oversized.id))
+        let shipment = try #require(state.shipment(oversized.id))
         #expect(shipment.loadedVehicleID == nil)
         let run = try #require(state.routeRun(for: vehicle.id))
         #expect(run.phase == .traveling)
@@ -809,7 +847,7 @@ struct SimulationEngineTests {
 
         engine.advance(&state, by: 1)
 
-        let claimers = state.routeRuns.filter { $0.claimedShipmentID == offer.id }
+        let claimers = state.routeRuns.filter { $0.claimedShipmentIDs.contains(offer.id) }
         #expect(claimers.count == 1)
         let claimer = try #require(claimers.first)
         #expect(claimer.phase == .servicing)
@@ -819,7 +857,7 @@ struct SimulationEngineTests {
 
         engine.advance(&state, by: engine.loadingMinutes(at: offer.origin))
 
-        let shipment = try #require(state.routeShipment(offer.id))
+        let shipment = try #require(state.shipment(offer.id))
         #expect(shipment.loadedVehicleID == claimer.vehicleID)
         let pickupLogs = state.log.filter { entry in
             if case let .jobPickedUp(jobID, _, _) = entry.event {
@@ -837,6 +875,8 @@ struct SimulationEngineTests {
 
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         let accepted = try #require(state.offers.first {
             $0.source == .contract && $0.contractID == contractOffer.id
         })
@@ -846,7 +886,7 @@ struct SimulationEngineTests {
 
         try engine.apply(.removeJobFromRoute(jobID: accepted.id, routeID: route.id), to: &state)
 
-        #expect(state.routeShipment(accepted.id) == nil)
+        #expect(state.shipment(accepted.id) == nil)
         let editedRoute = try #require(state.route(route.id))
         #expect(editedRoute.stops.allSatisfy {
             $0.task != .pickupShipment(accepted.id) && $0.task != .deliverShipment(accepted.id)
@@ -866,6 +906,8 @@ struct SimulationEngineTests {
 
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         let accepted = try #require(state.offers.first {
             $0.source == .contract && $0.contractID == contractOffer.id
         })
@@ -905,6 +947,8 @@ struct SimulationEngineTests {
         let spot = try #require(state.offers.first { $0.source == .spot })
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         let contractShipment = try #require(state.offers.first {
             $0.source == .contract && $0.contractID == contractOffer.id
         })
@@ -919,9 +963,9 @@ struct SimulationEngineTests {
 
         #expect(state.route(route.id) == nil)
         #expect(state.routeRuns(of: route.id).isEmpty)
-        #expect(state.routeShipments(of: route.id).isEmpty)
-        #expect(state.routeShipment(spot.id) == nil)
-        #expect(state.routeShipment(contractShipment.id) == nil)
+        #expect(state.shipments(of: route.id).isEmpty)
+        #expect(state.shipment(spot.id) == nil)
+        #expect(state.shipment(contractShipment.id) == nil)
         #expect(state.route(of: vehicle.id) == nil)
         #expect(state.isVehicleIdle(vehicle.id))
         #expect(state.offers.allSatisfy { $0.id != spot.id })
@@ -937,6 +981,8 @@ struct SimulationEngineTests {
 
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
+        // Signing grants preparation time; skip past it so the first cycle posts.
+        engine.advance(&state, by: contractOffer.leadTimeMinutes)
         let cashAfterSigning = state.cash
 
         // No vehicle is ever assigned: the first shipment must miss its

@@ -92,51 +92,157 @@ struct ActiveJob: Codable, Identifiable, Sendable {
     var phaseEndsAt: GameTime
 }
 
+/// How a contract shapes its recurring freight. The archetype decides the
+/// shipment calendar and volume, not the physical work — every archetype
+/// ultimately posts ordinary parcels that vehicles and routes carry.
+enum ContractArchetype: String, Codable, Hashable, Sendable, CaseIterable {
+    /// Steady lane: a moderate volume moves on a fixed cadence, A to B.
+    case laneRecurring
+    /// Periodic bulk: one large volume per cycle, far beyond a single vehicle.
+    case bulkPeriodic
+    /// Open-ended lane with no end date; runs until safely cancelled.
+    case evergreen
+    /// One source feeding several destinations by share. Forces a hub network.
+    case multiDrop
+}
+
+/// One delivery endpoint of a contract. Single-destination contracts carry
+/// exactly one of these; `multiDrop` carries several with shares summing to 10 000.
+struct ContractDestination: Codable, Hashable, Sendable {
+    let cityID: CityID
+    /// Receiving firm address in that city.
+    let firmID: FirmID?
+    /// Share of the cycle volume in basis points. All shares sum to 10 000.
+    let shareBps: Int
+    let distanceKm: Double
+    /// Revenue for one full `parcelMassKg` parcel delivered here. Partial
+    /// parcels settle pro rata by mass.
+    let payoutPerParcel: Money
+
+    static let fullShareBps = 10_000
+}
+
+/// Fields shared by open offers and signed contracts, so pricing, UI and the
+/// shipment scheduler can treat both through one interface.
+protocol ContractTerms {
+    var origin: CityID { get }
+    var productID: ProductID { get }
+    var archetype: ContractArchetype { get }
+    var destinations: [ContractDestination] { get }
+    var referenceVehicleTypeID: VehicleTypeID { get }
+    var parcelMassKg: Int { get }
+    var volumePerCycleKg: Int { get }
+    var shipmentIntervalMinutes: Int { get }
+    var deliveryWindowMinutes: Int { get }
+    var originFirmID: FirmID? { get }
+}
+
+extension ContractTerms {
+    /// Convenience view for single-destination contracts, which stay the
+    /// common case across UI and tests.
+    var destination: CityID { destinations.first?.cityID ?? origin }
+    var destinationFirmID: FirmID? { destinations.first?.firmID }
+    var distanceKm: Double { destinations.first?.distanceKm ?? 0 }
+    /// Revenue for one full parcel on the primary destination.
+    var payoutPerShipment: Money { destinations.first?.payoutPerParcel ?? 0 }
+    /// Mass of one posted shipment. Named for the old single-parcel model.
+    var shipmentMassKg: Int { parcelMassKg }
+    /// Whole parcels posted per cycle across every destination.
+    var parcelsPerCycle: Int {
+        destinations.reduce(0) { total, destination in
+            total + Self.parcelCount(
+                volumeKg: cycleVolume(for: destination),
+                parcelMassKg: parcelMassKg
+            )
+        }
+    }
+    /// Total revenue of one full cycle, all destinations included.
+    var revenuePerCycle: Money {
+        destinations.reduce(0) { total, destination in
+            let volume = cycleVolume(for: destination)
+            guard parcelMassKg > 0 else { return total }
+            return total + Money(
+                (Double(destination.payoutPerParcel) * Double(volume) / Double(parcelMassKg)).rounded()
+            )
+        }
+    }
+    var isMultiDrop: Bool { destinations.count > 1 }
+
+    /// Mass routed to one destination in a single cycle.
+    func cycleVolume(for destination: ContractDestination) -> Int {
+        Int(
+            (Double(volumePerCycleKg) * Double(destination.shareBps)
+                / Double(ContractDestination.fullShareBps)).rounded()
+        )
+    }
+
+    static func parcelCount(volumeKg: Int, parcelMassKg: Int) -> Int {
+        guard parcelMassKg > 0, volumeKg > 0 else { return 0 }
+        return (volumeKg + parcelMassKg - 1) / parcelMassKg
+    }
+}
+
 /// Open long-term lane available for signing.
-struct ContractOffer: Codable, Identifiable, Sendable {
+struct ContractOffer: Codable, Identifiable, Sendable, ContractTerms {
     let id: ContractID
     let origin: CityID
-    let destination: CityID
     let productID: ProductID
-    /// Vehicle class used to size and price each shipment.
+    let archetype: ContractArchetype
+    let destinations: [ContractDestination]
+    /// Vehicle class used to size and price each parcel.
     let referenceVehicleTypeID: VehicleTypeID
-    /// Typical shipment mass for this lane (volume derived from product density).
-    let shipmentMassKg: Int
-    let distanceKm: Double
-    /// Revenue paid per completed shipment.
-    let payoutPerShipment: Money
-    /// How often a shipment opportunity is posted after signing.
+    /// Mass of one posted parcel — sized to the reference vehicle.
+    let parcelMassKg: Int
+    /// Total mass moved per cycle. Bulk contracts exceed one vehicle by design.
+    let volumePerCycleKg: Int
+    /// How often a cycle of shipments is posted after signing.
     let shipmentIntervalMinutes: Int
-    /// Contracting firm addresses: pickup at origin firm, delivery at destination firm.
+    /// Time a posted parcel has before it counts as late.
+    let deliveryWindowMinutes: Int
+    /// Preparation time between signing and the first posted cycle.
+    let leadTimeMinutes: Int
+    /// Contract length in game days. Nil for evergreen contracts.
+    let durationDays: Int?
+    /// Pickup address in the origin city.
     let originFirmID: FirmID?
-    let destinationFirmID: FirmID?
     let createdAt: GameTime
     let expiresAt: GameTime
 }
 
 /// Signed contract that periodically posts shipment obligations.
 /// Each shipment must be delivered before its deadline or a penalty is charged.
-struct ActiveContract: Codable, Identifiable, Sendable {
+struct ActiveContract: Codable, Identifiable, Sendable, ContractTerms {
     let id: ContractID
     let origin: CityID
-    let destination: CityID
     let productID: ProductID
+    let archetype: ContractArchetype
+    let destinations: [ContractDestination]
     let referenceVehicleTypeID: VehicleTypeID
-    let shipmentMassKg: Int
-    let distanceKm: Double
-    let payoutPerShipment: Money
+    let parcelMassKg: Int
+    let volumePerCycleKg: Int
     let shipmentIntervalMinutes: Int
+    let deliveryWindowMinutes: Int
     let signedAt: GameTime
-    let endsAt: GameTime
+    /// Nil for evergreen contracts: they end only when cancelled.
+    let endsAt: GameTime?
     var nextShipmentAt: GameTime
     var shipmentsIssued: Int
     var shipmentsCompleted: Int
     var shipmentsMissed: Int
     /// Total compensation charged for missed shipments.
     var penaltiesPaid: Money
-    /// Contracting firm addresses carried over from the offer.
+    /// Safe close requested: no new cycles post, committed parcels still run.
+    var cancellationRequestedAt: GameTime?
     let originFirmID: FirmID?
-    let destinationFirmID: FirmID?
+
+    var isEvergreen: Bool { endsAt == nil }
+
+    /// True once the contract must stop posting new work.
+    func isClosing(at clock: GameTime) -> Bool {
+        if cancellationRequestedAt != nil { return true }
+        if let endsAt { return endsAt <= clock }
+        return false
+    }
 }
 
 // MARK: - Routes
@@ -155,6 +261,45 @@ enum RouteTask: Codable, Hashable, Sendable {
     case pickupContract(ContractID)
     /// Unload all carried shipments of this contract here.
     case deliverContract(ContractID)
+    /// Store every carried parcel that is not already at its final city into
+    /// this city's warehouse. The backbone of consolidation.
+    case dropToWarehouse
+    /// Load parcels from this city's warehouse, earliest deadline first, until
+    /// the vehicle is full. The lot narrows what may be loaded.
+    case loadFromWarehouse(StorageLotKey)
+    /// Unload every carried parcel whose final destination is this city and
+    /// collect its payout. Makes one distribution run serve many customers.
+    case deliverAll
+}
+
+/// Groups warehouse cargo the way a dispatcher thinks about it: same product,
+/// same final destination, same contract. Shipments keep their own identity in
+/// the engine; the lot is how the player selects and moves them in bulk.
+struct StorageLotKey: Codable, Hashable, Sendable {
+    let productID: ProductID
+    let destinationCityID: CityID
+    /// Nil for spot cargo with no contract behind it.
+    let contractID: ContractID?
+}
+
+/// Where a parcel physically is right now.
+enum CargoLocation: Codable, Hashable, Sendable {
+    /// Waiting at its pickup address in this city.
+    case address(CityID)
+    /// Loaded on a vehicle.
+    case vehicle(VehicleID)
+    /// Stored in a warehouse, available for any route to pick up.
+    case warehouse(FacilityID)
+
+    var vehicleID: VehicleID? {
+        if case .vehicle(let id) = self { return id }
+        return nil
+    }
+
+    var facilityID: FacilityID? {
+        if case .warehouse(let id) = self { return id }
+        return nil
+    }
 }
 
 struct RouteStop: Codable, Hashable, Identifiable, Sendable {
@@ -182,16 +327,50 @@ struct Route: Codable, Identifiable, Sendable {
     var cancellationRequestedAt: GameTime? = nil
 }
 
-/// An accepted market offer bound to a route, waiting at its pickup address
-/// or loaded on a vehicle. Removed on delivery.
-struct RouteShipment: Codable, Identifiable, Sendable {
+/// An accepted parcel moving through the network. It outlives any single route:
+/// a parcel may be picked up by one route, stored in a warehouse, then finished
+/// by another. Removed only on final delivery.
+struct Shipment: Codable, Identifiable, Sendable {
     /// Same id as the originating offer.
     let id: JobID
-    /// Snapshot of the accepted offer (addresses, load, payout).
+    /// Snapshot of the accepted offer (addresses, load, payout, deadline).
     let offer: JobOffer
-    let routeID: RouteID
-    /// Nil while the cargo waits at its origin address.
-    var loadedVehicleID: VehicleID?
+    var location: CargoLocation
+    /// The route that committed to carrying this parcel next. Nil means the
+    /// parcel is free: it sits in a warehouse or address for anyone to take.
+    var assignedRouteID: RouteID?
+
+    /// Nil while the cargo is not on a vehicle. Kept for call-site clarity.
+    var loadedVehicleID: VehicleID? { location.vehicleID }
+
+    var lotKey: StorageLotKey {
+        StorageLotKey(
+            productID: offer.productID,
+            destinationCityID: offer.destination,
+            contractID: offer.contractID
+        )
+    }
+
+    /// True when this parcel can be handed over at the given city.
+    func isDeliverable(at cityID: CityID) -> Bool {
+        offer.destination == cityID
+    }
+}
+
+/// A dispatcher-facing grouping of warehouse cargo. Derived on demand from
+/// `Shipment` records; never stored, never saved.
+struct StorageLot: Identifiable, Sendable {
+    let key: StorageLotKey
+    let facilityID: FacilityID
+    /// Parcel ids ordered by deadline, then id — the order the engine loads in.
+    let shipmentIDs: [JobID]
+    let load: LoadSize
+    let earliestDeadline: GameTime?
+    /// Revenue still to be collected once these parcels reach their destination.
+    let pendingPayout: Money
+
+    var id: StorageLotKey { key }
+    var parcelCount: Int { shipmentIDs.count }
 }
 
 enum RouteRunPhase: String, Codable, Sendable {
@@ -218,8 +397,9 @@ struct RouteRun: Codable, Identifiable, Sendable {
     var legDistanceKm: Double
     /// When the current lap began; guards against zero-time idle loops.
     var lapStartedAt: GameTime
-    /// Contract shipment claimed at service start, applied at service end.
-    var claimedShipmentID: JobID?
+    /// Parcels claimed at service start, loaded at service end. A list, not a
+    /// single id: one dock visit fills the vehicle rather than taking one box.
+    var claimedShipmentIDs: [JobID] = []
     /// Wind-down: skip pickups, finish deliveries, then release the vehicle.
     var isWindingDown: Bool
 }
@@ -243,6 +423,23 @@ enum LogEvent: Codable, Sendable {
     /// A contract shipment passed its deadline undelivered; compensation charged.
     case contractShipmentMissed(contractID: ContractID, penalty: Money)
     case contractEnded(contractID: ContractID, completed: Int, missed: Int)
+    /// Construction started. Nothing is granted until it completes.
+    case facilityConstructionStarted(facilityID: FacilityID, kind: FacilityKind, city: CityID, level: Int)
+    case facilityCompleted(facilityID: FacilityID, kind: FacilityKind, city: CityID, level: Int)
+    case facilityDemolished(kind: FacilityKind, city: CityID)
+    /// Parcels were stored in a warehouse mid-journey.
+    case cargoStored(city: CityID, parcels: Int, massKg: Int)
+    /// Parcels were collected from a warehouse for their onward leg.
+    case cargoLoadedFromWarehouse(city: CityID, parcels: Int, massKg: Int)
+    /// A drop was refused because the warehouse had no room left.
+    case warehouseFull(city: CityID, refusedParcels: Int)
+    /// Safe close requested on an open-ended contract.
+    case contractCancellationRequested(contractID: ContractID)
+    /// A contract's own dedicated route was wound down with the contract.
+    case contractRouteClosed(routeID: RouteID, contractID: ContractID)
+    /// A player-built route still carries tasks for a contract that has ended;
+    /// those stops now do nothing and the route needs editing.
+    case routeNeedsReview(routeID: RouteID, contractID: ContractID)
 }
 
 struct LogEntry: Codable, Identifiable, Sendable {
@@ -266,8 +463,10 @@ struct GameState: Codable, Sendable {
     var activeJobs: [ActiveJob]
     var contractOffers: [ContractOffer]
     var activeContracts: [ActiveContract]
+    var facilities: [Facility]
     var routes: [Route]
-    var routeShipments: [RouteShipment]
+    /// Every accepted parcel in the network, wherever it currently sits.
+    var shipments: [Shipment]
     var routeRuns: [RouteRun]
     var log: [LogEntry]
     var stats: CampaignStats
@@ -312,8 +511,9 @@ struct GameState: Codable, Sendable {
             activeJobs: [],
             contractOffers: [],
             activeContracts: [],
+            facilities: [],
             routes: [],
-            routeShipments: [],
+            shipments: [],
             routeRuns: [],
             log: [],
             stats: CampaignStats(),
@@ -322,6 +522,19 @@ struct GameState: Codable, Sendable {
             lastFixedCostDay: 0,
             nextRuntimeID: 1
         )
+        // The founding city gets its branch for free: the company has to have a
+        // commercial home somewhere, and it is what unlocks the first contracts.
+        state.facilities.append(Facility(
+            id: FacilityID(rawValue: state.issueID()),
+            cityID: config.hqCity,
+            kind: .branch,
+            level: 1,
+            isHeadquarters: true,
+            foundedAt: .start,
+            operationalAt: .start,
+            upgradingTo: nil,
+            upgradeEndsAt: nil
+        ))
         state.appendLog(.companyFounded(city: config.hqCity))
         return state
     }
@@ -360,24 +573,76 @@ struct GameState: Codable, Sendable {
         routeRuns.filter { $0.routeID == routeID }
     }
 
-    func routeShipment(_ id: JobID) -> RouteShipment? {
-        routeShipments.first { $0.id == id }
+    func shipment(_ id: JobID) -> Shipment? {
+        shipments.first { $0.id == id }
     }
 
-    func routeShipments(of routeID: RouteID) -> [RouteShipment] {
-        routeShipments.filter { $0.routeID == routeID }
+    /// Parcels a route has committed to carry, wherever they currently are.
+    func shipments(of routeID: RouteID) -> [Shipment] {
+        shipments.filter { $0.assignedRouteID == routeID }
     }
 
-    /// Cargo currently loaded on the vehicle across all its route shipments.
+    func shipments(onBoard vehicleID: VehicleID) -> [Shipment] {
+        shipments.filter { $0.location.vehicleID == vehicleID }
+    }
+
+    func shipments(storedIn facilityID: FacilityID) -> [Shipment] {
+        shipments.filter { $0.location.facilityID == facilityID }
+    }
+
+    /// Cargo currently loaded on the vehicle.
     func cargoLoad(of vehicleID: VehicleID) -> LoadSize {
-        routeShipments
-            .filter { $0.loadedVehicleID == vehicleID }
-            .reduce(LoadSize(massKg: 0, volumeM3: 0)) { total, shipment in
-                LoadSize(
-                    massKg: total.massKg + shipment.offer.load.massKg,
-                    volumeM3: total.volumeM3 + shipment.offer.load.volumeM3
-                )
+        shipments(onBoard: vehicleID).reduce(LoadSize(massKg: 0, volumeM3: 0)) { total, shipment in
+            LoadSize(
+                massKg: total.massKg + shipment.offer.load.massKg,
+                volumeM3: total.volumeM3 + shipment.offer.load.volumeM3
+            )
+        }
+    }
+
+    /// Cargo occupying a warehouse right now.
+    func storedLoad(in facilityID: FacilityID) -> LoadSize {
+        shipments(storedIn: facilityID).reduce(LoadSize(massKg: 0, volumeM3: 0)) { total, shipment in
+            LoadSize(
+                massKg: total.massKg + shipment.offer.load.massKg,
+                volumeM3: total.volumeM3 + shipment.offer.load.volumeM3
+            )
+        }
+    }
+
+    /// Warehouse contents grouped the way the player picks them: by product,
+    /// final destination and contract. Ordered by urgency, then stable key.
+    func storageLots(in facilityID: FacilityID) -> [StorageLot] {
+        let stored = shipments(storedIn: facilityID)
+        guard !stored.isEmpty else { return [] }
+        var grouped: [StorageLotKey: [Shipment]] = [:]
+        for shipment in stored {
+            grouped[shipment.lotKey, default: []].append(shipment)
+        }
+        return grouped.map { key, parcels in
+            let ordered = parcels.sorted {
+                ($0.offer.expiresAt, $0.id.rawValue) < ($1.offer.expiresAt, $1.id.rawValue)
             }
+            return StorageLot(
+                key: key,
+                facilityID: facilityID,
+                shipmentIDs: ordered.map(\.id),
+                load: ordered.reduce(LoadSize(massKg: 0, volumeM3: 0)) { total, parcel in
+                    LoadSize(
+                        massKg: total.massKg + parcel.offer.load.massKg,
+                        volumeM3: total.volumeM3 + parcel.offer.load.volumeM3
+                    )
+                },
+                earliestDeadline: ordered.first?.offer.expiresAt,
+                pendingPayout: ordered.reduce(0) { $0 + $1.offer.payout }
+            )
+        }
+        .sorted { lhs, rhs in
+            let left = lhs.earliestDeadline?.totalMinutes ?? .max
+            let right = rhs.earliestDeadline?.totalMinutes ?? .max
+            if left != right { return left < right }
+            return lhs.key.destinationCityID.rawValue < rhs.key.destinationCityID.rawValue
+        }
     }
 
     /// Idle = no direct job and no route run. Only idle vehicles can take new work.

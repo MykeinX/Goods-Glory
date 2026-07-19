@@ -7,6 +7,7 @@
 //  pure Swift domain and arrive here as MapRenderSnapshot values.
 //
 
+import QuartzCore
 import SpriteKit
 import UIKit
 
@@ -54,6 +55,23 @@ final class GameMapScene: SKScene {
     private var plannedVisitMarkers: [CityID: MapPlannedVisitMarker] = [:]
     private var lastPlannedVisits: [MapPlannedVisitMarker] = []
     private var idleFleetByCity: [CityID: Int] = [:]
+    private var facilitiesByCity: [CityID: MapCityFacilities] = [:]
+    private var attentionByCity: [CityID: MapCityAttention] = [:]
+
+    /// Frame rates. The strategic map is mostly still: at 1x a vehicle covers a
+    /// few points per second and most of the time nothing moves at all. Drawing
+    /// an unchanged scene 30 times a second is pure heat, so the view drops to
+    /// `idleFramesPerSecond` once nothing has happened for `idleDelay`.
+    private enum FrameRate {
+        static let active = 30
+        static let idle = 8
+        /// Grace period before sleeping, long enough to cover the gap between
+        /// one-second simulation ticks without flapping.
+        static let idleDelay: TimeInterval = 1.4
+    }
+
+    private var lastActivityAt: TimeInterval = 0
+    private var isIdle = false
 
     private var hqCityID: CityID?
     private var selectedCityID: CityID?
@@ -109,9 +127,49 @@ final class GameMapScene: SKScene {
     override func didMove(to view: SKView) {
         view.ignoresSiblingOrder = true
         view.shouldCullNonVisibleNodes = true
-        // Strategic map: 30 fps is enough and keeps idle heat down on device.
-        view.preferredFramesPerSecond = 30
+        // Strategic map: 30 fps is the ceiling, not the resting rate.
+        view.preferredFramesPerSecond = FrameRate.active
+        noteActivity()
         if !hasFittedCamera { applyCameraFocus(animated: false) }
+    }
+
+    // MARK: - Idle throttling
+
+    /// Something changed on screen: keep (or return to) the active frame rate.
+    /// Called from every input, camera move and non-trivial snapshot apply.
+    func noteActivity() {
+        lastActivityAt = CACurrentMediaTime()
+        guard isIdle else { return }
+        isIdle = false
+        view?.preferredFramesPerSecond = FrameRate.active
+        setDecorativeAnimationsPaused(false)
+    }
+
+    override func update(_ currentTime: TimeInterval) {
+        super.update(currentTime)
+        guard !isIdle else { return }
+        // Camera and vehicle actions are real motion; never sleep through them.
+        guard !isAnimating else {
+            lastActivityAt = CACurrentMediaTime()
+            return
+        }
+        guard CACurrentMediaTime() - lastActivityAt > FrameRate.idleDelay else { return }
+        isIdle = true
+        view?.preferredFramesPerSecond = FrameRate.idle
+        setDecorativeAnimationsPaused(true)
+    }
+
+    private var isAnimating: Bool {
+        if cameraNode.hasActions() { return true }
+        return vehicleNodes.values.contains { $0.hasActions() }
+    }
+
+    /// The HQ/starter halo pulse is a `repeatForever` action, so on its own it
+    /// would keep the scene permanently busy. It sleeps with the map.
+    private func setDecorativeAnimationsPaused(_ paused: Bool) {
+        for node in cityNodes.values {
+            node.setHaloPulsePaused(paused)
+        }
     }
 
     override func didChangeSize(_ oldSize: CGSize) {
@@ -131,6 +189,7 @@ final class GameMapScene: SKScene {
         accentColorHex: String,
         cameraFocus: MapCameraFocus
     ) {
+        noteActivity()
         let framingChanged = self.cameraFocus != cameraFocus || self.hqCityID != hqCityID
         self.hqCityID = hqCityID
         self.selectedCityID = selectedCityID
@@ -156,7 +215,10 @@ final class GameMapScene: SKScene {
         }
     }
 
-    func apply(snapshot: MapRenderSnapshot) {
+    /// - Parameter animateVehicleMotion: When false, vehicles teleport to the
+    ///   snapshot positions (used after the map wakes from a render pause so
+    ///   off-tab simulation progress does not play back as a one-second rush).
+    func apply(snapshot: MapRenderSnapshot, animateVehicleMotion: Bool = true) {
         if snapshot.routes != lastRoutes {
             lastRoutes = snapshot.routes
             rebuildRouteOverlays(snapshot.routes)
@@ -165,14 +227,27 @@ final class GameMapScene: SKScene {
             lastPlannedVisits = snapshot.plannedVisits
             rebuildPlannedVisits(snapshot.plannedVisits)
         }
+        // City chrome depends on these three dictionaries and nothing else. A
+        // vehicle moving along an arc changes none of them, so restyling all
+        // cities on every tick — each one re-measuring its label glyphs — was
+        // work the player could never see.
+        let cityChromeChanged = idleFleetByCity != snapshot.idleFleetByCity
+            || facilitiesByCity != snapshot.facilitiesByCity
+            || attentionByCity != snapshot.attentionByCity
         idleFleetByCity = snapshot.idleFleetByCity
-        updateVehicles(snapshot.vehicles)
-        updateCityStyles()
+        facilitiesByCity = snapshot.facilitiesByCity
+        attentionByCity = snapshot.attentionByCity
+        updateVehicles(snapshot.vehicles, animateMotion: animateVehicleMotion)
+        if cityChromeChanged {
+            updateCityStyles()
+        }
+        noteActivity()
     }
 
     // MARK: - Camera and input
 
     func pan(by screenTranslation: CGPoint) {
+        noteActivity()
         userMovedCamera = true
         cameraNode.position.x -= screenTranslation.x * cameraNode.xScale
         cameraNode.position.y += screenTranslation.y * cameraNode.yScale
@@ -182,6 +257,7 @@ final class GameMapScene: SKScene {
     /// Soft-pan to a city while keeping the current zoom level.
     func centerOnCity(_ cityID: CityID, animated: Bool) {
         guard let city = catalog.city(cityID), size.width > 1, size.height > 1 else { return }
+        noteActivity()
         userMovedCamera = true
         let point = projection.point(for: city)
         let halfWidth = size.width * cameraNode.xScale / 2
@@ -216,6 +292,7 @@ final class GameMapScene: SKScene {
 
     func zoom(by magnification: CGFloat, anchoredAt viewPoint: CGPoint) {
         guard magnification.isFinite, magnification > 0, let view else { return }
+        noteActivity()
         userMovedCamera = true
         let worldBefore = convertPoint(fromView: viewPoint)
         let proposed = cameraNode.xScale / magnification
@@ -227,6 +304,7 @@ final class GameMapScene: SKScene {
     }
 
     func selectAt(viewPoint: CGPoint) {
+        noteActivity()
         let scenePoint = convertPoint(fromView: viewPoint)
         let hitRadius = 34 * cameraNode.xScale
         let vehicleHitRadius = 28 * cameraNode.xScale
@@ -638,7 +716,7 @@ final class GameMapScene: SKScene {
         }
     }
 
-    private func updateVehicles(_ markers: [MapVehicleMarker]) {
+    private func updateVehicles(_ markers: [MapVehicleMarker], animateMotion: Bool) {
         let nextIDs = Set(markers.map(\.id))
         for id in Array(vehicleNodes.keys) where !nextIDs.contains(id) {
             guard let node = vehicleNodes.removeValue(forKey: id) else { continue }
@@ -666,7 +744,7 @@ final class GameMapScene: SKScene {
                 cameraScale: cameraNode.xScale
             )
             let target = displayPosition(for: marker)
-            if marker.isMoving, node.parent != nil, node.position != .zero {
+            if animateMotion, marker.isMoving, node.parent != nil, node.position != .zero {
                 // Match the simulation tick window so motion fills the whole
                 // second instead of a short burst followed by a visible pause.
                 let move = SKAction.move(
@@ -707,14 +785,37 @@ final class GameMapScene: SKScene {
                 isStarter: highlightsStarterCities && city.isStarterCity,
                 isSelected: city.id == selectedCityID,
                 accent: accentColor,
-                idleFleetCount: idleFleetByCity[city.id, default: 0]
+                idleFleetCount: idleFleetByCity[city.id, default: 0],
+                facilities: facilitiesByCity[city.id],
+                attention: attentionByCity[city.id]
             )
         }
         updateSemanticZoom()
     }
 
+    /// Inputs that decide every city's on-screen size and label opacity. Zoom is
+    /// quantized so a pinch still reads as continuous while a still camera
+    /// produces zero work.
+    private struct SemanticZoomKey: Equatable {
+        let zoomStep: Int
+        let selected: CityID?
+        let hq: CityID?
+        let highlightsStarters: Bool
+    }
+
+    private var lastSemanticZoomKey: SemanticZoomKey?
+
     private func updateSemanticZoom() {
         let zoomOut = zoomOutAmount
+        let key = SemanticZoomKey(
+            zoomStep: Int((zoomOut * 400).rounded()),
+            selected: selectedCityID,
+            hq: hqCityID,
+            highlightsStarters: highlightsStarterCities
+        )
+        guard key != lastSemanticZoomKey else { return }
+        lastSemanticZoomKey = key
+
         for city in catalog.cities {
             let isEmphasized = city.id == selectedCityID
                 || city.id == hqCityID
@@ -933,6 +1034,16 @@ private final class MapCityNode: SKNode {
     private let label = SKLabelNode(fontNamed: "AvenirNext-DemiBold")
     private let fleetBadge = SKShapeNode(circleOfRadius: 7)
     private let fleetCount = SKLabelNode(fontNamed: "AvenirNext-Bold")
+    /// Owned buildings, drawn as filled discs under the pin.
+    private let facilityRow = SKNode()
+    private let branchDisc = SKShapeNode(circleOfRadius: 7)
+    private let warehouseDisc = SKShapeNode(circleOfRadius: 7)
+    private let branchIcon = SKSpriteNode()
+    private let warehouseIcon = SKSpriteNode()
+    /// Freight needing attention. Colour carries the urgency; the number
+    /// carries the volume. Everything else lives in the city screen.
+    private let attentionBadge = SKShapeNode(circleOfRadius: 7)
+    private let attentionCount = SKLabelNode(fontNamed: "AvenirNext-Bold")
     private let cityName: String
 
     init(city: CityDefinition) {
@@ -994,7 +1105,55 @@ private final class MapCityNode: SKNode {
         fleetCount.zPosition = 2
         fleetBadge.addChild(fleetCount)
 
+        attentionBadge.strokeColor = MapPalette.water
+        attentionBadge.lineWidth = 1.2
+        attentionBadge.zPosition = 1
+        attentionBadge.isHidden = true
+        labelRow.addChild(attentionBadge)
+
+        attentionCount.fontSize = 9
+        attentionCount.verticalAlignmentMode = .baseline
+        attentionCount.horizontalAlignmentMode = .left
+        attentionCount.zPosition = 2
+        attentionBadge.addChild(attentionCount)
+
+        // Facility strip sits below the pin so it never collides with the name.
+        // Each building is a filled disc with a white glyph: at map scale a bare
+        // tinted glyph reads as a smudge, a disc reads as a deliberate marker.
+        facilityRow.zPosition = 5
+        facilityRow.position = CGPoint(x: 0, y: -15)
+        facilityRow.isHidden = true
+        addChild(facilityRow)
+        for (disc, icon, symbol) in [
+            (branchDisc, branchIcon, "building.2.fill"),
+            (warehouseDisc, warehouseIcon, "shippingbox.fill")
+        ] {
+            disc.lineWidth = 1.4
+            disc.strokeColor = MapPalette.water
+            disc.zPosition = 1
+            disc.isHidden = true
+            facilityRow.addChild(disc)
+
+            icon.texture = Self.symbolTexture(named: symbol)
+            icon.size = CGSize(width: 9, height: 9)
+            icon.colorBlendFactor = 1
+            icon.color = .white
+            icon.zPosition = 2
+            disc.addChild(icon)
+        }
+
         layoutLabelRow()
+    }
+
+    /// Rendered at 3x and downscaled so the glyph stays crisp when the camera
+    /// zooms in — a 9pt symbol rasterised at 9pt turns to mush.
+    private static func symbolTexture(named name: String) -> SKTexture? {
+        let configuration = UIImage.SymbolConfiguration(pointSize: 27, weight: .heavy)
+        guard let image = UIImage(systemName: name, withConfiguration: configuration)?
+            .withTintColor(.white, renderingMode: .alwaysOriginal) else { return nil }
+        let texture = SKTexture(image: image)
+        texture.filteringMode = .linear
+        return texture
     }
 
     @available(*, unavailable)
@@ -1002,13 +1161,45 @@ private final class MapCityNode: SKNode {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// Everything `configure` reads. Re-applying an identical appearance costs
+    /// several SKShapeNode colour writes plus three SKLabelNode frame
+    /// measurements (each a glyph layout), so identical input is skipped.
+    private struct Appearance: Equatable {
+        let isHQ: Bool
+        let isStarter: Bool
+        let isSelected: Bool
+        let accent: UIColor
+        let idleFleetCount: Int
+        let facilities: MapCityFacilities?
+        let attention: MapCityAttention?
+    }
+
+    private var appearance: Appearance?
+    private var isPulseSuspended = false
+
     func configure(
         isHQ: Bool,
         isStarter: Bool,
         isSelected: Bool,
         accent: UIColor,
-        idleFleetCount: Int
+        idleFleetCount: Int,
+        facilities: MapCityFacilities?,
+        attention: MapCityAttention?
     ) {
+        let next = Appearance(
+            isHQ: isHQ,
+            isStarter: isStarter,
+            isSelected: isSelected,
+            accent: accent,
+            idleFleetCount: idleFleetCount,
+            facilities: facilities,
+            attention: attention
+        )
+        guard appearance != next else { return }
+        appearance = next
+
+        configureFacilityStrip(facilities, accent: accent)
+        configureAttentionBadge(attention, isHQ: isHQ)
         marker.isHidden = isHQ
         hqMarker.isHidden = !isHQ
         if isHQ {
@@ -1024,16 +1215,7 @@ private final class MapCityNode: SKNode {
         halo.isHidden = !(isHQ || isStarter)
         selectionRing.isHidden = !isSelected
         selectionRing.strokeColor = isHQ ? accent : .white
-        if halo.isHidden {
-            halo.removeAllActions()
-            halo.alpha = 1
-            halo.setScale(1)
-        } else if halo.action(forKey: "pulse") == nil {
-            halo.run(.repeatForever(.sequence([
-                .group([.scale(to: 1.35, duration: 0.8), .fadeAlpha(to: 0.18, duration: 0.8)]),
-                .group([.scale(to: 0.9, duration: 0), .fadeAlpha(to: 0.85, duration: 0)])
-            ])), withKey: "pulse")
-        }
+        refreshHaloPulse()
 
         let showBadge = idleFleetCount > 0
         fleetBadge.isHidden = !showBadge
@@ -1046,6 +1228,71 @@ private final class MapCityNode: SKNode {
         layoutLabelRow()
     }
 
+    private func configureFacilityStrip(_ facilities: MapCityFacilities?, accent: UIColor) {
+        guard let facilities, facilities.hasBranch || facilities.hasWarehouse else {
+            facilityRow.isHidden = true
+            return
+        }
+        facilityRow.isHidden = false
+        branchDisc.isHidden = !facilities.hasBranch
+        warehouseDisc.isHidden = !facilities.hasWarehouse
+        // Under construction reads as a dimmed marker: present, not yet yours.
+        let alpha: CGFloat = facilities.isBuilding ? 0.5 : 1
+        branchDisc.fillColor = accent
+        branchDisc.alpha = alpha
+        warehouseDisc.fillColor = MapPalette.mint
+        warehouseDisc.alpha = alpha
+
+        let visible = [branchDisc, warehouseDisc].filter { !$0.isHidden }
+        if visible.count == 1 {
+            visible[0].position = .zero
+        } else {
+            branchDisc.position = CGPoint(x: -8, y: 0)
+            warehouseDisc.position = CGPoint(x: 8, y: 0)
+        }
+    }
+
+    private func configureAttentionBadge(_ attention: MapCityAttention?, isHQ: Bool) {
+        guard let attention, attention.total > 0 else {
+            attentionBadge.isHidden = true
+            return
+        }
+        attentionBadge.isHidden = false
+        attentionBadge.fillColor = Self.urgencyColor(attention.urgency)
+        attentionCount.fontColor = attention.urgency >= 0.5 ? .white : MapPalette.onBrand
+        attentionCount.text = attention.total > 9 ? "9+" : "\(attention.total)"
+    }
+
+    /// Calm while there is time, hot as the delivery window runs out.
+    private static func urgencyColor(_ urgency: Double) -> UIColor {
+        if urgency >= 0.85 { return MapPalette.deadhead }
+        if urgency >= 0.5 { return MapPalette.gold }
+        return MapPalette.mint
+    }
+
+    /// Stops the halo's `repeatForever` pulse while the map sleeps. The action
+    /// is removed rather than frozen so the halo rests at full opacity instead
+    /// of sitting mid-fade for as long as the player leaves the map alone.
+    func setHaloPulsePaused(_ paused: Bool) {
+        guard isPulseSuspended != paused else { return }
+        isPulseSuspended = paused
+        refreshHaloPulse()
+    }
+
+    private func refreshHaloPulse() {
+        guard !halo.isHidden, !isPulseSuspended else {
+            halo.removeAction(forKey: "pulse")
+            halo.alpha = 1
+            halo.setScale(1)
+            return
+        }
+        guard halo.action(forKey: "pulse") == nil else { return }
+        halo.run(.repeatForever(.sequence([
+            .group([.scale(to: 1.35, duration: 0.8), .fadeAlpha(to: 0.18, duration: 0.8)]),
+            .group([.scale(to: 0.9, duration: 0), .fadeAlpha(to: 0.85, duration: 0)])
+        ])), withKey: "pulse")
+    }
+
     func setSemanticZoom(markerScale: CGFloat, markerAlpha: CGFloat, labelAlpha: CGFloat) {
         markerContainer.setScale(markerScale)
         markerContainer.alpha = markerAlpha
@@ -1053,6 +1300,18 @@ private final class MapCityNode: SKNode {
         labelRow.setScale(max(0.55, 0.55 + 0.45 * labelAlpha))
         labelRow.alpha = labelAlpha
         labelRow.isHidden = labelAlpha < 0.02
+        facilityRow.position.y = -8 - 6 * markerScale
+        facilityRow.setScale(markerScale)
+        facilityRow.alpha = markerAlpha
+        // The attention badge is the one thing that must survive zoom-out: it
+        // is the signal the player cannot afford to miss.
+        if !attentionBadge.isHidden {
+            labelRow.isHidden = false
+            labelRow.alpha = max(labelAlpha, 0.9)
+            label.alpha = labelAlpha
+        } else {
+            label.alpha = 1
+        }
     }
 
     private func layoutLabelRow() {
@@ -1064,7 +1323,7 @@ private final class MapCityNode: SKNode {
         } else {
             labelRow.position.x = -(CGFloat(cityName.count) * 6.2) / 2
         }
-        guard !fleetBadge.isHidden else { return }
+        guard !fleetBadge.isHidden || !attentionBadge.isHidden else { return }
 
         let gap = label.fontSize * 0.12
         let badgeRadius: CGFloat = 7
@@ -1073,13 +1332,24 @@ private final class MapCityNode: SKNode {
             ? nameFrame.maxX
             : CGFloat(cityName.count) * 6.2
         let nameMidY = nameFrame.width > 1 ? nameFrame.midY : 0
-        fleetBadge.position = CGPoint(x: nameEndX + gap + badgeRadius, y: nameMidY)
+
+        // Aksiyon rozeti isme en yakın konumda: en kritik bilgi en görünür yer.
+        var cursorX = nameEndX + gap + badgeRadius
+        if !attentionBadge.isHidden {
+            attentionBadge.position = CGPoint(x: cursorX, y: nameMidY)
+            cursorX += badgeRadius * 2 + gap
+        }
+        if !fleetBadge.isHidden {
+            fleetBadge.position = CGPoint(x: cursorX, y: nameMidY)
+        }
 
         // Rakam bounding box'unu dairenin merkezine kilitle.
-        fleetCount.position = .zero
-        let digitFrame = fleetCount.frame
-        if digitFrame.width > 0.5, digitFrame.height > 0.5 {
-            fleetCount.position = CGPoint(x: -digitFrame.midX, y: -digitFrame.midY)
+        for counter in [fleetCount, attentionCount] {
+            counter.position = .zero
+            let digitFrame = counter.frame
+            if digitFrame.width > 0.5, digitFrame.height > 0.5 {
+                counter.position = CGPoint(x: -digitFrame.midX, y: -digitFrame.midY)
+            }
         }
     }
 }

@@ -118,7 +118,7 @@ struct MapFoundationTests {
                     capacity: LoadSize(massKg: 1, volumeM3: 1),
                     speedKmh: 100, purchasePrice: 1,
                     costPerKm: 1, driverCostPerHour: 1,
-                    freightRatePerKm: 2.0, fixedCostPerDay: 10
+                    fixedCostPerDay: 10
                 )
             ],
             products: [

@@ -375,7 +375,7 @@ struct GameCatalogTests {
                     id: VehicleTypeID("test_van"), name: "Test Van", symbol: "box.truck",
                     capacity: LoadSize(massKg: 2_000, volumeM3: 20), speedKmh: 100,
                     purchasePrice: 10_000, costPerKm: 0.5, driverCostPerHour: 10,
-                    freightRatePerKm: 2.4, fixedCostPerDay: 60
+                    fixedCostPerDay: 60
                 )
             ],
             products: products ?? [testProduct],

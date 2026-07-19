@@ -82,8 +82,10 @@ enum VehicleTag {}
 enum JobTag {}
 enum ContractTag {}
 enum RouteTag {}
+enum FacilityTag {}
 
 typealias VehicleID = RuntimeID<VehicleTag>
 typealias JobID = RuntimeID<JobTag>
 typealias ContractID = RuntimeID<ContractTag>
 typealias RouteID = RuntimeID<RouteTag>
+typealias FacilityID = RuntimeID<FacilityTag>

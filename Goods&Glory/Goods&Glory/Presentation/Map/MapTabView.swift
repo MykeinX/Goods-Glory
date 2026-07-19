@@ -7,6 +7,7 @@
 //  are accepted from the city popup; deeper city info opens via detail CTA.
 //
 
+import QuartzCore
 import SwiftUI
 
 private enum MapDetailDestination: Identifiable {
@@ -37,6 +38,15 @@ struct MapTabView: View {
         Color(hex: session.state?.config.identity.colorHex ?? "#FFB037")
     }
 
+    /// Developer HUD. Compiled out of release builds entirely.
+    private var showsPerformanceHUD: Bool {
+        #if DEBUG
+        AppSettings.shared.showsPerformanceOverlay
+        #else
+        false
+        #endif
+    }
+
     /// Off-tab or under a full-screen cover: keep the scene, stop presenting.
     /// Background sleep is handled inside InteractiveMapView via scenePhase.
     private var isMapRenderingEnabled: Bool {
@@ -63,11 +73,13 @@ struct MapTabView: View {
 
     private func mapSnapshot(state: GameState) -> MapRenderSnapshot {
         let projection = MapProjection()
+        let startedAt = CACurrentMediaTime()
         let snapshot = MapSceneAdapter.snapshot(
             state: state,
             catalog: session.catalog,
             projection: projection
         )
+        PerformanceMonitor.shared.recordSnapshot(CACurrentMediaTime() - startedAt)
         guard let offer = spotPreviewOffer,
               let origin = session.catalog.city(offer.origin),
               let destination = session.catalog.city(offer.destination) else {
@@ -82,7 +94,9 @@ struct MapTabView: View {
             vehicles: snapshot.vehicles,
             routes: snapshot.routes + [preview],
             plannedVisits: snapshot.plannedVisits,
-            idleFleetByCity: snapshot.idleFleetByCity
+            idleFleetByCity: snapshot.idleFleetByCity,
+            facilitiesByCity: snapshot.facilitiesByCity,
+            attentionByCity: snapshot.attentionByCity
         )
     }
 
@@ -98,6 +112,7 @@ struct MapTabView: View {
                     cameraFocus: mapCameraFocus,
                     cameraPanRequest: cameraPanRequest,
                     isRenderingEnabled: isMapRenderingEnabled,
+                    showsRenderStatistics: showsPerformanceHUD,
                     selection: $selection
                 )
                 .ignoresSafeArea()
@@ -113,6 +128,13 @@ struct MapTabView: View {
                     .frame(maxHeight: .infinity, alignment: .bottom)
                     .allowsHitTesting(false)
                     .ignoresSafeArea()
+
+                if showsPerformanceHUD {
+                    PerformanceOverlay(state: state)
+                        .padding(.leading, 12)
+                        .padding(.top, 96)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
 
                 VStack(spacing: 0) {
                     MapStatusOverlay(accent: accent)
@@ -795,6 +817,12 @@ private struct MapCityPopup: View {
         case .noRoute: "No road connection to the pickup city."
         case .noVehicleAssigned, .incompleteRouteTasks,
              .vehicleAlreadyAssigned, .routeIsRunning: "That vehicle is not available."
+        case .branchRequired: "You need a branch in this city to take contracts here."
+        case .warehouseRequired: "This city has no warehouse."
+        case .facilityAlreadyExists: "You already have that building here."
+        case .facilityNotAvailable: "That building is busy or already at its top level."
+        case .warehouseNotEmpty: "Empty the warehouse before tearing it down."
+        case .cannotDemolishHeadquarters: "Headquarters cannot be demolished."
         case .unknownReference, nil: "The offer or vehicle is no longer available."
         }
     }
@@ -1090,7 +1118,9 @@ private struct MapVehiclePopup: View {
         guard let currentStop else { return String(localized: "Servicing") }
         switch currentStop.task {
         case .pickupShipment, .pickupContract: return String(localized: "Loading")
-        case .deliverShipment, .deliverContract: return String(localized: "Unloading")
+        case .loadFromWarehouse: return String(localized: "Loading from warehouse")
+        case .deliverShipment, .deliverContract, .deliverAll: return String(localized: "Unloading")
+        case .dropToWarehouse: return String(localized: "Storing")
         case .travel: return String(localized: "Servicing")
         }
     }

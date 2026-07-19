@@ -10,10 +10,14 @@
 import SwiftUI
 
 struct AnimatedWorldBackground: View {
+    /// When false the network is drawn once, frozen. Used while a modal card is
+    /// on screen and when the player turns the animation off in Settings.
+    var isAnimating: Bool = true
+
     var body: some View {
         ZStack {
             Theme.backgroundGradient
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !isAnimating)) { timeline in
                 Canvas { context, size in
                     let time = timeline.date.timeIntervalSinceReferenceDate
                     Self.draw(in: &context, size: size, time: time)
@@ -68,8 +72,18 @@ struct AnimatedWorldBackground: View {
 
     // MARK: - Drawing
 
+    /// Distinct freight glyphs across all corridors. Resolving an SF Symbol is
+    /// a rasterization, so it is done once per glyph per frame — never once per
+    /// corridor, which was 11 rasterizations × 30 fps on the main thread.
+    private static let glyphNames = ["airplane", "box.truck.fill", "ferry.fill"]
+
     private static func draw(in context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
         let points = nodes.map { CGPoint(x: $0.x * size.width, y: $0.y * size.height) }
+
+        var glyphs: [String: GraphicsContext.ResolvedImage] = [:]
+        for name in glyphNames {
+            glyphs[name] = context.resolve(Image(systemName: name).renderingMode(.template))
+        }
 
         // Corridor arcs
         for corridor in corridors {
@@ -105,13 +119,10 @@ struct AnimatedWorldBackground: View {
             let tangent = bezierTangent(CGFloat(progress), start, control, end)
             let angle = atan2(tangent.dy, tangent.dx)
 
+            guard var resolved = glyphs[corridor.glyph] else { continue }
             var glyphContext = context
             glyphContext.translateBy(x: position.x, y: position.y)
             glyphContext.rotate(by: .radians(angle + (corridor.glyph == "airplane" ? .pi / 2 : 0)))
-            var resolved = glyphContext.resolve(
-                Image(systemName: corridor.glyph)
-                    .renderingMode(.template)
-            )
             resolved.shading = .color(corridor.tint.opacity(0.75))
             glyphContext.draw(
                 resolved,

@@ -15,8 +15,26 @@ struct SaveEnvelope: Codable {
     let state: GameState
 }
 
+/// Headline facts about the stored campaign, shown on the main menu so the
+/// player knows what "Continue" will resume before tapping it.
+struct SaveSummary: Equatable, Sendable {
+    let identity: CompanyIdentity
+    let day: Int
+    let cash: Money
+    let vehicleCount: Int
+    let savedAt: Date
+
+    init(state: GameState, savedAt: Date) {
+        self.identity = state.config.identity
+        self.day = state.clock.day
+        self.cash = state.cash
+        self.vehicleCount = state.vehicles.count
+        self.savedAt = savedAt
+    }
+}
+
 struct SaveRepository {
-    static let currentSaveVersion = 7
+    static let currentSaveVersion = 8
 
     private let fileURL: URL
 
@@ -31,13 +49,28 @@ struct SaveRepository {
     }
 
     func load() throws -> GameState? {
+        try loadEnvelope()?.state
+    }
+
+    /// Menu-facing digest. Reads the file once at launch and after a delete —
+    /// never from a SwiftUI `body`.
+    func summary() -> SaveSummary? {
+        guard let envelope = try? loadEnvelope() else { return nil }
+        return SaveSummary(state: envelope.state, savedAt: envelope.savedAt)
+    }
+
+    private func loadEnvelope() throws -> SaveEnvelope? {
         guard hasSave else { return nil }
         let data = try Data(contentsOf: fileURL)
-        let envelope = try JSONDecoder().decode(SaveEnvelope.self, from: data)
-        guard envelope.saveVersion == Self.currentSaveVersion else {
-            throw CocoaError(.fileReadCorruptFile)
+        // A save from an older schema cannot be read (no migration chain during
+        // the prototype). Clear it rather than leaving a Continue button that
+        // silently does nothing every time it is tapped.
+        guard let envelope = try? JSONDecoder().decode(SaveEnvelope.self, from: data),
+              envelope.saveVersion == Self.currentSaveVersion else {
+            try? deleteSave()
+            return nil
         }
-        return envelope.state
+        return envelope
     }
 
     func save(_ state: GameState) throws {

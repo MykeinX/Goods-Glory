@@ -48,9 +48,18 @@ struct GameNotification: Identifiable, Equatable, Sendable {
             return destination
         case .routeShipmentDelivered(_, _, let destination, _):
             return destination
+        // Facility and warehouse events are inherently about one place.
+        case .facilityCompleted(_, _, let city, _):
+            return city
+        case .facilityConstructionStarted(_, _, let city, _):
+            return city
+        case .warehouseFull(let city, _):
+            return city
         case .companyFounded, .vehiclePurchased, .jobAccepted, .contractSigned,
              .vehicleAssignedToRoute, .vehicleUnassignedFromRoute, .routeStarted,
-             .routeStopped, .routeShipmentSkipped, .contractShipmentMissed, .contractEnded:
+             .routeStopped, .routeShipmentSkipped, .contractShipmentMissed, .contractEnded,
+             .facilityDemolished, .cargoStored, .cargoLoadedFromWarehouse,
+             .contractCancellationRequested, .contractRouteClosed, .routeNeedsReview:
             return nil
         }
     }
@@ -170,6 +179,58 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 logAt: entry.at,
                 mapFocusCityID: focus
             )
+        case .facilityCompleted(_, let kind, let city, let level):
+            return GameNotification(
+                id: entry.id,
+                kind: .milestone,
+                chrome: .success,
+                title: kind == .branch
+                    ? String(localized: "Branch open")
+                    : String(localized: "Warehouse open"),
+                detail: "\(cityName(city)) · \(String(localized: "level \(level)"))",
+                systemImage: kind == .branch ? "building.2.fill" : "shippingbox.fill",
+                logAt: entry.at,
+                mapFocusCityID: focus
+            )
+        case .warehouseFull(let city, let refusedParcels):
+            return GameNotification(
+                id: entry.id,
+                kind: .operations,
+                chrome: .warning,
+                title: String(localized: "Warehouse full"),
+                detail: String(localized: "\(cityName(city)) · \(refusedParcels) parcel(s) stayed loaded"),
+                systemImage: "exclamationmark.triangle.fill",
+                logAt: entry.at,
+                mapFocusCityID: focus
+            )
+        case .contractRouteClosed:
+            return GameNotification(
+                id: entry.id,
+                kind: .operations,
+                chrome: .brand,
+                title: String(localized: "Contract route closed"),
+                detail: String(localized: "Its contract ended — the vehicles are free"),
+                systemImage: "arrow.triangle.branch",
+                logAt: entry.at,
+                mapFocusCityID: focus
+            )
+        case .routeNeedsReview:
+            // The one case the player must not miss: a route quietly running
+            // laps for work that no longer exists.
+            return GameNotification(
+                id: entry.id,
+                kind: .operations,
+                chrome: .warning,
+                title: String(localized: "Route needs editing"),
+                detail: String(localized: "It still has stops for a contract that ended"),
+                systemImage: "pencil.and.list.clipboard",
+                logAt: entry.at,
+                mapFocusCityID: focus
+            )
+        case .facilityConstructionStarted, .facilityDemolished,
+             .cargoStored, .cargoLoadedFromWarehouse, .contractCancellationRequested:
+            // Routine bookkeeping — visible on the facility and city screens.
+            return nil
         }
     }
 }

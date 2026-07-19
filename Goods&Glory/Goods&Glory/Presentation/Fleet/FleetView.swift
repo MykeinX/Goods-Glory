@@ -345,15 +345,18 @@ private struct RouteRow: View {
         switch task {
         case .travel: return "arrow.triangle.turn.up.right.circle"
         case .pickupShipment, .pickupContract: return "tray.and.arrow.up.fill"
-        case .deliverShipment, .deliverContract: return "tray.and.arrow.down.fill"
+        case .loadFromWarehouse: return "shippingbox.and.arrow.backward.fill"
+        case .deliverShipment, .deliverContract, .deliverAll: return "tray.and.arrow.down.fill"
+        case .dropToWarehouse: return "shippingbox.fill"
         }
     }
 
     private func stopColor(_ task: RouteTask) -> Color {
         switch task {
         case .travel: return Theme.textTertiary
-        case .pickupShipment, .pickupContract: return accent
-        case .deliverShipment, .deliverContract: return Theme.mint
+        case .pickupShipment, .pickupContract, .loadFromWarehouse: return accent
+        case .deliverShipment, .deliverContract, .deliverAll: return Theme.mint
+        case .dropToWarehouse: return Theme.sky
         }
     }
 }

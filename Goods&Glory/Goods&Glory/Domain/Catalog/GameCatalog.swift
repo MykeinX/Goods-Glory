@@ -455,7 +455,7 @@ struct GameCatalog: Sendable {
         for vehicleType in vehicleTypes {
             guard vehicleType.capacity.massKg > 0, vehicleType.capacity.volumeM3 > 0,
                   vehicleType.speedKmh > 0, vehicleType.purchasePrice > 0,
-                  vehicleType.freightRatePerKm > 0, vehicleType.fixedCostPerDay >= 0,
+                  vehicleType.fixedCostPerDay >= 0,
                   vehicleType.costPerKm >= 0, vehicleType.driverCostPerHour >= 0 else {
                 throw CatalogError.validationFailure("vehicle type \(vehicleType.id) has non-positive physical values")
             }

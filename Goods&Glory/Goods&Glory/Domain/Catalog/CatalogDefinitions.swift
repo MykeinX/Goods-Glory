@@ -85,9 +85,9 @@ struct VehicleTypeDefinition: Codable, Identifiable, Sendable {
     let costPerKm: Double
     /// Driver wages, dollars per game hour while on a task.
     let driverCostPerHour: Double
-    /// Spot/contract freight revenue rate, dollars per loaded road-km at full util.
-    let freightRatePerKm: Double
     /// Insurance / ownership, dollars per game day while the vehicle is owned.
+    /// Freight prices are derived from cost, not from a per-class rate: see
+    /// `SimulationEngine.freightPayout`.
     let fixedCostPerDay: Double
 }
 
@@ -164,6 +164,47 @@ struct UrgencyTier: Codable, Hashable, Sendable {
     let weight: Int
 }
 
+/// Authored base values for one facility level. Every money and duration value
+/// here is a *base*: `FacilityEconomics` scales it by the target city's own
+/// catalog data, so no two cities charge the same price.
+struct FacilityLevelSpec: Codable, Sendable {
+    let level: Int
+    let buildCost: Money
+    let buildDays: Int
+    let upkeepPerDay: Money
+    /// Warehouse storage. Zero for branches — a branch stores no cargo.
+    let storageMassKg: Int
+    let storageVolumeM3: Double
+    /// Vehicles that can be serviced simultaneously. Zero disables the limit.
+    let docks: Int
+    /// Load/unload duration multiplier in percent (100 = catalog baseline).
+    let handlingPercent: Int
+    /// Contract offer slot multiplier in percent (branch only).
+    let contractSlotPercent: Int
+    /// Extra payout percent on lanes touching this city (branch only).
+    let lanePremiumPercent: Int
+}
+
+struct FacilityConfig: Codable, Sendable {
+    let branch: [FacilityLevelSpec]
+    let warehouse: [FacilityLevelSpec]
+
+    func levels(for kind: FacilityKind) -> [FacilityLevelSpec] {
+        switch kind {
+        case .branch: branch
+        case .warehouse: warehouse
+        }
+    }
+
+    func spec(kind: FacilityKind, level: Int) -> FacilityLevelSpec? {
+        levels(for: kind).first { $0.level == level }
+    }
+
+    func maxLevel(for kind: FacilityKind) -> Int {
+        levels(for: kind).map(\.level).max() ?? 1
+    }
+}
+
 struct EconomyConfig: Codable, Sendable {
     let startingCash: Money
     let loadingMinutes: Int
@@ -181,6 +222,10 @@ struct EconomyConfig: Codable, Sendable {
     let offerSlotPopulation: Int
     /// Lower bound of the fill factor: fillFloor + (1 - fillFloor) * util.
     let fillFloor: Double
+    /// Base profit margin over a haul's true cost (0-100). Urgency, regional
+    /// price level, trailer fill and local presence scale this margin — never
+    /// the cost recovery underneath it.
+    let spotMarginPercent: Int
     /// Spot urgency bands (economy / normal / urgent). Weights need not sum to 100.
     let urgencyTiers: [UrgencyTier]
     /// How often new open contract offers are generated.
@@ -194,4 +239,27 @@ struct EconomyConfig: Codable, Sendable {
     /// Compensation charged when a shipment misses its deadline, as a percent
     /// of that shipment's payout (0-100).
     let contractPenaltyPercent: Int
+
+    // MARK: Facilities
+
+    /// Extra payout percent on lanes that start or end in the HQ city. Small on
+    /// purpose: the home-field advantage must not decide the whole network.
+    let hqLanePremiumPercent: Int
+    /// Authored base values per facility kind and level.
+    let facilities: FacilityConfig
+
+    // MARK: Contract shaping
+
+    /// Delivery window granted to a posted shipment, as a percent of the
+    /// reference one-way cycle. 100 = exactly one loaded run, no slack.
+    let contractDeliveryWindowPercent: Int
+    /// Lower bound of the delivery window as a percent of the shipment interval,
+    /// so daily lanes still leave a workable margin.
+    let contractDeliveryWindowFloorPercent: Int
+    /// Preparation time granted between signing and the first posted shipment,
+    /// as a percent of one reference cycle. Gives the player time to position.
+    let contractLeadTimePercent: Int
+    /// Deliveries the company must complete before shippers offer recurring
+    /// lanes. The opening hours are spot work; contracts are earned.
+    let contractsUnlockAfterDeliveries: Int
 }

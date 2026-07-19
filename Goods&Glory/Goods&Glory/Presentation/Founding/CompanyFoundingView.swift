@@ -40,12 +40,22 @@ struct CompanyFoundingView: View {
 
     var body: some View {
         ZStack {
+            // The backdrop is a full-screen Canvas. It lives here, outside the
+            // subtree that the name field updates, so a keystroke never
+            // re-rasterizes it. The map covers it in the headquarters stage.
+            if stage == .identity {
+                ThemeBackground(showsRoutes: true)
+            }
+
             switch stage {
             case .identity:
                 IdentityStageView(
-                    draft: $draft,
+                    initialDraft: draft,
                     onCancel: { session.cancelFounding() },
-                    onContinue: { stage = .headquarters }
+                    onContinue: { completed in
+                        draft = completed
+                        stage = .headquarters
+                    }
                 )
                 .transition(.opacity)
             case .headquarters:
@@ -64,16 +74,27 @@ struct CompanyFoundingView: View {
 // MARK: - Stage 1: Identity
 
 private struct IdentityStageView: View {
-    @Binding var draft: FoundingDraft
     let onCancel: () -> Void
-    let onContinue: () -> Void
+    let onContinue: (FoundingDraft) -> Void
 
+    /// The draft is owned here rather than by the parent: typing must not
+    /// invalidate the founding container (and with it the backdrop and the
+    /// stage transition's animation transaction) on every character.
+    @State private var draft: FoundingDraft
     @FocusState private var nameFocused: Bool
+
+    init(
+        initialDraft: FoundingDraft,
+        onCancel: @escaping () -> Void,
+        onContinue: @escaping (FoundingDraft) -> Void
+    ) {
+        self.onCancel = onCancel
+        self.onContinue = onContinue
+        _draft = State(initialValue: initialDraft)
+    }
 
     var body: some View {
         ZStack {
-            ThemeBackground(showsRoutes: true)
-
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     HStack {
@@ -127,10 +148,11 @@ private struct IdentityStageView: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
+        .tint(draft.accentColor)
         .safeAreaInset(edge: .bottom) {
             Button {
                 nameFocused = false
-                onContinue()
+                onContinue(draft)
             } label: {
                 Label("Choose Headquarters", systemImage: "mappin.and.ellipse")
             }

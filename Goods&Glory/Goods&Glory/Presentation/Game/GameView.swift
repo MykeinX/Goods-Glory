@@ -74,7 +74,7 @@ struct GameTabBar: View {
     private let items: [Item] = [
         .init(tab: .map, symbol: "diamond.fill", label: "Map"),
         .init(tab: .fleet, symbol: "truck.box.fill", label: "Fleet"),
-        .init(tab: .jobs, symbol: "list.bullet.rectangle.fill", label: "Jobs"),
+        .init(tab: .jobs, symbol: "list.bullet.rectangle.fill", label: "Operations"),
         .init(tab: .facilities, symbol: "building.fill", label: "Facilities"),
         .init(tab: .company, symbol: "building.columns.fill", label: "Company")
     ]
