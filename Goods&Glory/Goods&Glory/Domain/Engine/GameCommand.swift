@@ -19,13 +19,17 @@ enum GameCommand: Sendable {
     /// Accept an open spot offer and assign an idle vehicle to it.
     /// If the vehicle is in another city it first drives there empty.
     case acceptJob(offerID: JobID, vehicleID: VehicleID)
+
+    /// Sends an idle vehicle onto a persistent freight lane: creates and starts
+    /// a two-stop shuttle route (claim at the origin dock, deliver all at the
+    /// destination) that keeps serving the lane until stopped.
+    case dispatchVehicleToLane(laneID: LaneID, vehicleID: VehicleID)
     /// Sign an open long-term contract; shipments post periodically as job offers.
     case signContract(ContractID)
     /// Dedicate a vehicle to a signed contract. Auto-creates and starts the
     /// contract's two-stop route on first assignment.
     case assignVehicleToContract(contractID: ContractID, vehicleID: VehicleID)
     /// Release a vehicle from a contract route (delegates to route unassign).
-    case unassignVehicleFromContract(contractID: ContractID, vehicleID: VehicleID)
     /// Safe close: stop posting new cycles, let committed parcels finish.
     /// The contract clears itself once nothing of it is left in the network.
     case cancelContract(ContractID)
@@ -34,12 +38,12 @@ enum GameCommand: Sendable {
 
     /// Start construction in a city. Cost and duration come from that city's
     /// own catalog data, so the same building is not the same price twice.
-    case buildFacility(kind: FacilityKind, cityID: CityID)
+    case installModule(kind: FacilityModuleKind, cityID: CityID)
     /// Start a level upgrade. The facility keeps serving at its current level.
-    case upgradeFacility(FacilityID)
+    case upgradeModule(kind: FacilityModuleKind, cityID: CityID)
     /// Tear down a facility. HQ cannot be demolished and a warehouse must be
     /// empty first — the game never silently destroys cargo.
-    case demolishFacility(FacilityID)
+    case removeModule(kind: FacilityModuleKind, cityID: CityID)
 
     // MARK: Routes
 
@@ -111,6 +115,8 @@ enum CommandError: Error, Equatable, Sendable {
     case warehouseRequired
     /// A warehouse must be emptied before it can be demolished.
     case warehouseNotEmpty
+    /// Something on this site is built onto the module being removed.
+    case dependentModuleExists(FacilityModuleKind)
     /// Headquarters cannot be torn down.
     case cannotDemolishHeadquarters
 }

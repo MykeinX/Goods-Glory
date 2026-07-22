@@ -1,0 +1,283 @@
+as_almaty  (pop 2,200,000)
+  supply: processed_food:100, fresh_produce:86, construction_materials:79, industrial_machinery:75, consumer_goods:64
+  demand: automotive_parts:100, pharmaceuticals:100, processed_food:81, consumer_electronics:77, consumer_goods:76
+
+as_ankara  (pop 5,700,000)
+  supply: construction_materials:100, industrial_machinery:91, processed_food:71, consumer_electronics:59, consumer_goods:58
+  demand: consumer_electronics:100, construction_materials:86, pharmaceuticals:83, processed_food:80, beverages:79
+
+as_bangkok  (pop 11,200,000)
+  supply: automotive_parts:100, consumer_electronics:85, refrigerated_goods:71, processed_food:59, industrial_chemicals:49
+  demand: refrigerated_goods:100, pharmaceuticals:95, consumer_electronics:86, fresh_produce:83, automotive_parts:77
+
+as_beijing  (pop 21,900,000)
+  supply: consumer_electronics:100, pharmaceuticals:72, refrigerated_goods:45, processed_food:44, furniture:41
+  demand: consumer_goods:100, consumer_electronics:98, automotive_parts:91, processed_food:91, pharmaceuticals:90
+
+as_chengdu  (pop 17,000,000)
+  supply: consumer_electronics:100, processed_food:70, pharmaceuticals:52, consumer_goods:45, apparel:41
+  demand: consumer_goods:100, construction_materials:94, refrigerated_goods:88, beverages:86, consumer_electronics:82
+
+as_chennai  (pop 11,500,000)
+  supply: automotive_parts:100, consumer_electronics:83, apparel:70, refrigerated_goods:53, construction_materials:48
+  demand: consumer_electronics:100, fresh_produce:100, apparel:96, automotive_parts:96, refrigerated_goods:95
+
+as_delhi  (pop 32,900,000)
+  supply: apparel:100, consumer_goods:88, automotive_parts:87, refrigerated_goods:60, beverages:56
+  demand: pharmaceuticals:100, consumer_goods:93, beverages:91, furniture:86, consumer_electronics:84
+
+as_dhaka  (pop 23,200,000)
+  supply: apparel:100, consumer_goods:43, pharmaceuticals:38, processed_food:38, beverages:37
+  demand: pharmaceuticals:100, consumer_goods:95, apparel:89, beverages:85, processed_food:81
+
+as_dubai  (pop 3,600,000)
+  supply: consumer_electronics:100, consumer_goods:73, apparel:60, refrigerated_goods:51, paper_packaging:49
+  demand: refrigerated_goods:100, pharmaceuticals:93, consumer_electronics:84, fresh_produce:80, processed_food:80
+
+as_guangzhou  (pop 18,700,000)
+  supply: consumer_goods:100, apparel:95, consumer_electronics:92, furniture:62, refrigerated_goods:49
+  demand: pharmaceuticals:100, fresh_produce:99, automotive_parts:98, consumer_goods:95, processed_food:88
+
+as_hanoi  (pop 8,600,000)
+  supply: consumer_electronics:100, apparel:54, automotive_parts:38, furniture:35, refrigerated_goods:35
+  demand: consumer_electronics:100, automotive_parts:93, pharmaceuticals:86, consumer_goods:84, fresh_produce:83
+
+as_ho_chi_minh_city  (pop 9,300,000)
+  supply: apparel:100, consumer_electronics:99, furniture:87, refrigerated_goods:80, pharmaceuticals:60
+  demand: refrigerated_goods:100, consumer_electronics:99, fresh_produce:96, pharmaceuticals:96, consumer_goods:80
+
+as_karachi  (pop 16,800,000)
+  supply: apparel:100, refrigerated_goods:80, processed_food:77, consumer_electronics:62, pharmaceuticals:55
+  demand: pharmaceuticals:100, construction_materials:97, refrigerated_goods:96, automotive_parts:91, beverages:87
+
+as_kolkata  (pop 15,300,000)
+  supply: paper_packaging:100, construction_materials:85, beverages:80, refrigerated_goods:60, pharmaceuticals:59
+  demand: consumer_goods:100, refrigerated_goods:98, construction_materials:93, processed_food:88, automotive_parts:84
+
+as_kuala_lumpur  (pop 8,400,000)
+  supply: consumer_electronics:100, furniture:56, industrial_chemicals:50, construction_materials:46, automotive_parts:43
+  demand: consumer_electronics:100, refrigerated_goods:99, construction_materials:98, pharmaceuticals:89, apparel:86
+
+as_lahore  (pop 13,500,000)
+  supply: apparel:100, consumer_goods:69, consumer_electronics:46, construction_materials:44, fresh_produce:44
+  demand: consumer_electronics:100, automotive_parts:92, consumer_goods:91, apparel:78, refrigerated_goods:78
+
+as_mumbai  (pop 21,300,000)
+  supply: apparel:100, pharmaceuticals:92, industrial_chemicals:64, consumer_electronics:54, automotive_parts:53
+  demand: automotive_parts:100, pharmaceuticals:100, beverages:97, consumer_goods:95, apparel:91
+
+as_novosibirsk  (pop 1,600,000)
+  supply: construction_materials:100, industrial_machinery:85, industrial_chemicals:77, consumer_electronics:59, refrigerated_goods:52
+  demand: consumer_electronics:100, pharmaceuticals:100, construction_materials:96, industrial_chemicals:78, industrial_machinery:78
+
+as_riyadh  (pop 7,700,000)
+  supply: industrial_chemicals:100, construction_materials:76, automotive_parts:63, consumer_goods:59, processed_food:56
+  demand: consumer_electronics:100, automotive_parts:85, construction_materials:82, pharmaceuticals:79, paper_packaging:75
+
+as_seoul  (pop 25,600,000)
+  supply: consumer_electronics:100, automotive_parts:69, industrial_chemicals:54, apparel:49, processed_food:49
+  demand: consumer_goods:100, pharmaceuticals:99, apparel:94, construction_materials:92, automotive_parts:90
+
+as_shanghai  (pop 29,200,000)
+  supply: consumer_electronics:100, automotive_parts:83, industrial_machinery:51, processed_food:50, refrigerated_goods:48
+  demand: consumer_electronics:100, pharmaceuticals:100, furniture:86, fresh_produce:81, consumer_goods:80
+
+as_tashkent  (pop 2,900,000)
+  supply: fresh_produce:100, apparel:95, automotive_parts:91, consumer_electronics:81, industrial_machinery:76
+  demand: pharmaceuticals:100, consumer_electronics:99, automotive_parts:91, apparel:80, industrial_machinery:78
+
+as_tehran  (pop 9,500,000)
+  supply: fresh_produce:100, industrial_chemicals:100, automotive_parts:99, construction_materials:88, consumer_electronics:76
+  demand: pharmaceuticals:100, automotive_parts:91, refrigerated_goods:91, beverages:86, consumer_goods:84
+
+as_xian  (pop 13,000,000)
+  supply: consumer_electronics:100, industrial_machinery:70, pharmaceuticals:51, consumer_goods:44, construction_materials:42
+  demand: pharmaceuticals:100, automotive_parts:95, consumer_goods:90, construction_materials:84, furniture:76
+
+as_yangon  (pop 5,600,000)
+  supply: apparel:100, processed_food:93, refrigerated_goods:85, fresh_produce:84, consumer_electronics:79
+  demand: industrial_chemicals:100, pharmaceuticals:92, automotive_parts:86, refrigerated_goods:85, construction_materials:84
+
+as_yekaterinburg  (pop 1,500,000)
+  supply: industrial_machinery:100, construction_materials:75, industrial_chemicals:48, automotive_parts:45, consumer_electronics:45
+  demand: industrial_machinery:100, pharmaceuticals:100, automotive_parts:98, consumer_electronics:89, construction_materials:87
+
+eu_amsterdam  (pop 2,500,000)
+  supply: fresh_produce:100, refrigerated_goods:57, pharmaceuticals:52, industrial_chemicals:47, beverages:44
+  demand: industrial_chemicals:100, refrigerated_goods:92, consumer_electronics:88, construction_materials:83, fresh_produce:75
+
+eu_athens  (pop 3,800,000)
+  supply: construction_materials:100, fresh_produce:93, consumer_electronics:78, processed_food:77, refrigerated_goods:73
+  demand: automotive_parts:100, refrigerated_goods:95, pharmaceuticals:92, construction_materials:90, industrial_chemicals:87
+
+eu_barcelona  (pop 5,600,000)
+  supply: automotive_parts:100, industrial_chemicals:100, apparel:86, beverages:71, refrigerated_goods:66
+  demand: fresh_produce:100, automotive_parts:89, pharmaceuticals:84, refrigerated_goods:78, industrial_chemicals:77
+
+eu_berlin  (pop 6,100,000)
+  supply: consumer_electronics:100, pharmaceuticals:89, consumer_goods:65, refrigerated_goods:55, automotive_parts:54
+  demand: pharmaceuticals:100, automotive_parts:86, construction_materials:85, consumer_goods:79, paper_packaging:77
+
+eu_brussels  (pop 2,100,000)
+  supply: pharmaceuticals:100, beverages:50, processed_food:50, consumer_electronics:42, consumer_goods:41
+  demand: automotive_parts:100, industrial_machinery:94, construction_materials:91, pharmaceuticals:86, processed_food:81
+
+eu_budapest  (pop 3,000,000)
+  supply: automotive_parts:100, pharmaceuticals:100, consumer_electronics:74, construction_materials:64, industrial_machinery:50
+  demand: consumer_electronics:100, construction_materials:99, industrial_machinery:96, consumer_goods:95, automotive_parts:93
+
+eu_copenhagen  (pop 2,100,000)
+  supply: pharmaceuticals:100, processed_food:69, beverages:55, refrigerated_goods:55, industrial_chemicals:51
+  demand: consumer_electronics:100, fresh_produce:95, industrial_chemicals:95, automotive_parts:87, pharmaceuticals:87
+
+eu_hamburg  (pop 5,300,000)
+  supply: refrigerated_goods:100, industrial_machinery:88, processed_food:70, apparel:69, consumer_goods:66
+  demand: pharmaceuticals:100, refrigerated_goods:98, automotive_parts:96, industrial_machinery:90, consumer_electronics:88
+
+eu_istanbul  (pop 15,900,000)
+  supply: apparel:100, automotive_parts:82, consumer_goods:77, furniture:69, pharmaceuticals:51
+  demand: refrigerated_goods:100, consumer_electronics:90, construction_materials:80, automotive_parts:76, consumer_goods:74
+
+eu_kyiv  (pop 3,500,000)
+  supply: processed_food:100, construction_materials:74, industrial_machinery:72, pharmaceuticals:56, automotive_parts:50
+  demand: construction_materials:100, consumer_electronics:88, industrial_machinery:87, pharmaceuticals:84, automotive_parts:82
+
+eu_lisbon  (pop 2,900,000)
+  supply: apparel:100, fresh_produce:82, beverages:76, industrial_chemicals:74, paper_packaging:73
+  demand: industrial_chemicals:100, construction_materials:96, fresh_produce:96, automotive_parts:93, pharmaceuticals:87
+
+eu_london  (pop 14,800,000)
+  supply: consumer_goods:100, pharmaceuticals:80, consumer_electronics:70, beverages:64, construction_materials:60
+  demand: refrigerated_goods:100, construction_materials:84, consumer_electronics:84, consumer_goods:78, pharmaceuticals:73
+
+eu_madrid  (pop 6,700,000)
+  supply: automotive_parts:100, apparel:66, processed_food:61, pharmaceuticals:51, construction_materials:47
+  demand: consumer_electronics:100, construction_materials:88, beverages:86, paper_packaging:84, industrial_machinery:82
+
+eu_milan  (pop 5,200,000)
+  supply: apparel:100, furniture:81, industrial_machinery:60, construction_materials:53, consumer_goods:45
+  demand: consumer_electronics:100, automotive_parts:99, pharmaceuticals:83, beverages:77, industrial_chemicals:75
+
+eu_moscow  (pop 17,300,000)
+  supply: industrial_machinery:100, consumer_electronics:99, processed_food:87, pharmaceuticals:86, automotive_parts:80
+  demand: consumer_electronics:100, consumer_goods:98, refrigerated_goods:98, apparel:97, automotive_parts:96
+
+eu_munich  (pop 2,900,000)
+  supply: automotive_parts:100, industrial_machinery:87, beverages:49, pharmaceuticals:49, construction_materials:40
+  demand: consumer_electronics:100, pharmaceuticals:99, automotive_parts:81, consumer_goods:80, industrial_machinery:80
+
+eu_paris  (pop 13,100,000)
+  supply: apparel:100, consumer_goods:93, pharmaceuticals:75, beverages:62, consumer_electronics:61
+  demand: consumer_electronics:100, construction_materials:89, refrigerated_goods:84, processed_food:80, fresh_produce:74
+
+eu_prague  (pop 2,700,000)
+  supply: automotive_parts:100, industrial_machinery:56, beverages:46, consumer_electronics:46, pharmaceuticals:44
+  demand: construction_materials:100, automotive_parts:96, pharmaceuticals:93, consumer_electronics:92, industrial_chemicals:81
+
+eu_rome  (pop 4,300,000)
+  supply: fresh_produce:100, processed_food:93, apparel:83, pharmaceuticals:81, consumer_electronics:77
+  demand: refrigerated_goods:100, construction_materials:97, industrial_chemicals:95, apparel:83, consumer_electronics:83
+
+eu_rotterdam  (pop 1,200,000)
+  supply: industrial_chemicals:100, refrigerated_goods:44, construction_materials:41, fresh_produce:37, automotive_parts:35
+  demand: automotive_parts:100, consumer_electronics:100, refrigerated_goods:96, pharmaceuticals:90, apparel:87
+
+eu_stockholm  (pop 2,400,000)
+  supply: industrial_machinery:100, paper_packaging:68, refrigerated_goods:59, consumer_electronics:51, furniture:50
+  demand: refrigerated_goods:100, automotive_parts:87, industrial_chemicals:86, fresh_produce:82, pharmaceuticals:76
+
+eu_vienna  (pop 2,900,000)
+  supply: pharmaceuticals:100, industrial_machinery:86, consumer_electronics:62, automotive_parts:55, consumer_goods:51
+  demand: construction_materials:100, refrigerated_goods:91, consumer_electronics:90, automotive_parts:83, industrial_chemicals:80
+
+eu_warsaw  (pop 3,100,000)
+  supply: consumer_electronics:100, processed_food:96, automotive_parts:94, furniture:93, consumer_goods:62
+  demand: consumer_electronics:100, refrigerated_goods:89, construction_materials:80, consumer_goods:80, pharmaceuticals:79
+
+us_atlanta  (pop 6,482,182)
+  supply: paper_packaging:100, beverages:97, processed_food:78, pharmaceuticals:68, refrigerated_goods:68
+  demand: consumer_electronics:100, processed_food:100, automotive_parts:96, industrial_chemicals:87, apparel:86
+
+us_boston  (pop 5,034,221)
+  supply: pharmaceuticals:100, consumer_electronics:71, industrial_chemicals:42, industrial_machinery:35, construction_materials:34
+  demand: consumer_electronics:100, industrial_chemicals:98, refrigerated_goods:98, pharmaceuticals:92, apparel:85
+
+us_charlotte  (pop 2,938,830)
+  supply: construction_materials:100, furniture:98, industrial_machinery:82, automotive_parts:70, apparel:69
+  demand: industrial_machinery:100, consumer_electronics:95, automotive_parts:87, fresh_produce:76, pharmaceuticals:76
+
+us_chicago  (pop 9,434,123)
+  supply: processed_food:100, paper_packaging:87, industrial_machinery:86, construction_materials:78, automotive_parts:66
+  demand: refrigerated_goods:100, construction_materials:92, pharmaceuticals:90, consumer_goods:86, automotive_parts:84
+
+us_dallas  (pop 8,477,157)
+  supply: consumer_electronics:100, construction_materials:93, industrial_machinery:93, pharmaceuticals:71, automotive_parts:67
+  demand: construction_materials:100, consumer_goods:99, pharmaceuticals:93, refrigerated_goods:84, consumer_electronics:83
+
+us_denver  (pop 3,092,037)
+  supply: beverages:100, construction_materials:92, processed_food:77, consumer_electronics:58, industrial_machinery:57
+  demand: pharmaceuticals:100, construction_materials:93, automotive_parts:92, consumer_electronics:92, industrial_machinery:71
+
+us_detroit  (pop 4,390,913)
+  supply: automotive_parts:100, industrial_machinery:47, construction_materials:43, fresh_produce:34, refrigerated_goods:33
+  demand: refrigerated_goods:100, pharmaceuticals:96, automotive_parts:93, processed_food:88, consumer_electronics:87
+
+us_houston  (pop 7,904,627)
+  supply: industrial_chemicals:100, industrial_machinery:65, construction_materials:55, refrigerated_goods:44, pharmaceuticals:41
+  demand: refrigerated_goods:100, pharmaceuticals:92, construction_materials:77, consumer_goods:76, beverages:70
+
+us_kansas_city  (pop 2,270,682)
+  supply: processed_food:100, automotive_parts:83, fresh_produce:61, construction_materials:48, industrial_machinery:46
+  demand: automotive_parts:100, construction_materials:95, industrial_machinery:90, consumer_goods:89, industrial_chemicals:76
+
+us_las_vegas  (pop 2,407,226)
+  supply: consumer_goods:100, processed_food:69, fresh_produce:66, paper_packaging:66, beverages:65
+  demand: consumer_goods:100, processed_food:99, fresh_produce:87, paper_packaging:84, apparel:83
+
+us_los_angeles  (pop 12,844,441)
+  supply: consumer_electronics:100, fresh_produce:89, refrigerated_goods:82, apparel:81, beverages:70
+  demand: apparel:100, fresh_produce:98, consumer_electronics:95, construction_materials:94, pharmaceuticals:93
+
+us_miami  (pop 6,391,072)
+  supply: fresh_produce:100, refrigerated_goods:96, industrial_chemicals:64, construction_materials:60, consumer_goods:56
+  demand: refrigerated_goods:100, industrial_chemicals:93, automotive_parts:77, pharmaceuticals:74, consumer_goods:73
+
+us_minneapolis  (pop 3,790,295)
+  supply: processed_food:100, pharmaceuticals:90, paper_packaging:81, construction_materials:71, automotive_parts:69
+  demand: construction_materials:100, industrial_machinery:95, consumer_electronics:94, consumer_goods:81, industrial_chemicals:79
+
+us_nashville  (pop 2,197,416)
+  supply: automotive_parts:100, processed_food:56, industrial_machinery:50, furniture:45, apparel:37
+  demand: industrial_machinery:100, construction_materials:98, consumer_goods:95, automotive_parts:94, beverages:85
+
+us_new_orleans  (pop 970,849)
+  supply: industrial_chemicals:100, refrigerated_goods:68, industrial_machinery:50, fresh_produce:49, construction_materials:47
+  demand: industrial_chemicals:100, construction_materials:88, automotive_parts:83, fresh_produce:79, industrial_machinery:78
+
+us_new_york  (pop 20,112,448)
+  supply: apparel:100, pharmaceuticals:82, consumer_goods:61, refrigerated_goods:49, automotive_parts:48
+  demand: apparel:100, pharmaceuticals:97, refrigerated_goods:94, consumer_electronics:93, automotive_parts:91
+
+us_phoenix  (pop 5,228,938)
+  supply: consumer_electronics:100, construction_materials:80, industrial_machinery:61, consumer_goods:53, pharmaceuticals:53
+  demand: consumer_electronics:100, automotive_parts:99, construction_materials:93, beverages:83, processed_food:80
+
+us_salt_lake_city  (pop 1,308,377)
+  supply: construction_materials:100, industrial_machinery:96, industrial_chemicals:70, consumer_goods:55, paper_packaging:49
+  demand: construction_materials:100, consumer_goods:93, industrial_machinery:92, beverages:87, industrial_chemicals:87
+
+us_san_francisco  (pop 4,630,041)
+  supply: consumer_electronics:100, pharmaceuticals:80, beverages:54, automotive_parts:45, refrigerated_goods:45
+  demand: refrigerated_goods:100, pharmaceuticals:85, fresh_produce:78, construction_materials:75, industrial_machinery:74
+
+us_seattle  (pop 4,161,883)
+  supply: refrigerated_goods:100, industrial_machinery:89, consumer_electronics:83, beverages:71, industrial_chemicals:59
+  demand: industrial_chemicals:100, consumer_electronics:93, construction_materials:90, processed_food:84, pharmaceuticals:80
+
+us_st_louis  (pop 2,814,421)
+  supply: automotive_parts:100, beverages:92, industrial_chemicals:85, construction_materials:47, consumer_goods:45
+  demand: automotive_parts:100, construction_materials:99, industrial_machinery:96, industrial_chemicals:83, apparel:75
+
+us_washington  (pop 6,465,724)
+  supply: pharmaceuticals:100, construction_materials:84, processed_food:78, paper_packaging:75, consumer_electronics:74
+  demand: automotive_parts:100, pharmaceuticals:96, construction_materials:89, refrigerated_goods:86, consumer_goods:83

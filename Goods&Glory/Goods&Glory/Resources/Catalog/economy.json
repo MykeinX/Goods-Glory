@@ -1,105 +1,193 @@
 {
-  "startingCash": 75000,
-  "loadingMinutes": 45,
-  "unloadingMinutes": 45,
-  "offerGenerationIntervalMinutes": 240,
-  "offerLifetimeMinutes": 720,
-  "offerChancePercent": 60,
-  "maxOpenOffersPerCity": 4,
-  "offerSlotPopulation": 4500000,
-  "fillFloor": 0.6,
-  "spotMarginPercent": 38,
-  "urgencyTiers": [
-    { "id": "economy", "multiplier": 0.85, "lifetimeMinutes": 1440, "weight": 30 },
-    { "id": "normal", "multiplier": 1.0, "lifetimeMinutes": 720, "weight": 50 },
-    { "id": "urgent", "multiplier": 1.45, "lifetimeMinutes": 300, "weight": 20 }
+ "startingCash": 90000,
+ "loadingMinutes": 45,
+ "unloadingMinutes": 45,
+ "fillFloor": 0.5,
+ "spotMarginPercent": 55,
+ "contractOfferIntervalMinutes": 1440,
+ "maxOpenContractOffers": 3,
+ "contractDurationDays": 14,
+ "contractPenaltyPercent": 40,
+ "hqLanePremiumPercent": 5,
+ "contractDeliveryWindowPercent": 175,
+ "contractDeliveryWindowFloorPercent": 70,
+ "contractLeadTimePercent": 120,
+ "contractsUnlockAfterDeliveries": 2,
+ "facilities": {
+  "warehouse": [
+   {
+    "level": 1,
+    "buildCost": 260000,
+    "buildDays": 5,
+    "upkeepPerDay": 700,
+    "storageMassKg": 400000,
+    "storageVolumeM3": 1600,
+    "docks": 2,
+    "handlingPercent": 100,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   },
+   {
+    "level": 2,
+    "buildCost": 580000,
+    "buildDays": 8,
+    "upkeepPerDay": 1550,
+    "storageMassKg": 1200000,
+    "storageVolumeM3": 4800,
+    "docks": 4,
+    "handlingPercent": 90,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   },
+   {
+    "level": 3,
+    "buildCost": 1250000,
+    "buildDays": 12,
+    "upkeepPerDay": 3200,
+    "storageMassKg": 3500000,
+    "storageVolumeM3": 14000,
+    "docks": 8,
+    "handlingPercent": 75,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   }
   ],
-  "contractOfferIntervalMinutes": 1440,
-  "maxOpenContractOffers": 3,
-  "contractDurationDays": 14,
-  "contractMarginPercent": 25,
-  "contractPenaltyPercent": 40,
-  "hqLanePremiumPercent": 5,
-  "contractDeliveryWindowPercent": 175,
-  "contractDeliveryWindowFloorPercent": 70,
-  "contractLeadTimePercent": 120,
-  "contractsUnlockAfterDeliveries": 2,
-  "facilities": {
-    "branch": [
-      {
-        "level": 1,
-        "buildCost": 85000,
-        "buildDays": 3,
-        "upkeepPerDay": 260,
-        "storageMassKg": 0,
-        "storageVolumeM3": 0,
-        "docks": 0,
-        "handlingPercent": 100,
-        "contractSlotPercent": 100,
-        "lanePremiumPercent": 0
-      },
-      {
-        "level": 2,
-        "buildCost": 190000,
-        "buildDays": 5,
-        "upkeepPerDay": 520,
-        "storageMassKg": 0,
-        "storageVolumeM3": 0,
-        "docks": 0,
-        "handlingPercent": 100,
-        "contractSlotPercent": 150,
-        "lanePremiumPercent": 0
-      },
-      {
-        "level": 3,
-        "buildCost": 420000,
-        "buildDays": 8,
-        "upkeepPerDay": 1050,
-        "storageMassKg": 0,
-        "storageVolumeM3": 0,
-        "docks": 0,
-        "handlingPercent": 100,
-        "contractSlotPercent": 200,
-        "lanePremiumPercent": 3
-      }
-    ],
-    "warehouse": [
-      {
-        "level": 1,
-        "buildCost": 260000,
-        "buildDays": 5,
-        "upkeepPerDay": 700,
-        "storageMassKg": 400000,
-        "storageVolumeM3": 1600,
-        "docks": 2,
-        "handlingPercent": 100,
-        "contractSlotPercent": 100,
-        "lanePremiumPercent": 0
-      },
-      {
-        "level": 2,
-        "buildCost": 580000,
-        "buildDays": 8,
-        "upkeepPerDay": 1550,
-        "storageMassKg": 1200000,
-        "storageVolumeM3": 4800,
-        "docks": 4,
-        "handlingPercent": 90,
-        "contractSlotPercent": 100,
-        "lanePremiumPercent": 0
-      },
-      {
-        "level": 3,
-        "buildCost": 1250000,
-        "buildDays": 12,
-        "upkeepPerDay": 3200,
-        "storageMassKg": 3500000,
-        "storageVolumeM3": 14000,
-        "docks": 8,
-        "handlingPercent": 75,
-        "contractSlotPercent": 100,
-        "lanePremiumPercent": 0
-      }
-    ]
-  }
+  "office": [
+   {
+    "level": 1,
+    "buildCost": 85000,
+    "buildDays": 3,
+    "upkeepPerDay": 117,
+    "storageMassKg": 0,
+    "storageVolumeM3": 0,
+    "docks": 0,
+    "handlingPercent": 100,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   },
+   {
+    "level": 2,
+    "buildCost": 190000,
+    "buildDays": 5,
+    "upkeepPerDay": 234,
+    "storageMassKg": 0,
+    "storageVolumeM3": 0,
+    "docks": 0,
+    "handlingPercent": 100,
+    "contractSlotPercent": 150,
+    "lanePremiumPercent": 0
+   },
+   {
+    "level": 3,
+    "buildCost": 420000,
+    "buildDays": 8,
+    "upkeepPerDay": 472,
+    "storageMassKg": 0,
+    "storageVolumeM3": 0,
+    "docks": 0,
+    "handlingPercent": 100,
+    "contractSlotPercent": 200,
+    "lanePremiumPercent": 3
+   }
+  ],
+  "dock": [
+   {
+    "level": 1,
+    "buildCost": 45000,
+    "buildDays": 2,
+    "upkeepPerDay": 180,
+    "storageMassKg": 0,
+    "storageVolumeM3": 0,
+    "docks": 2,
+    "handlingPercent": 80,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   },
+   {
+    "level": 2,
+    "buildCost": 110000,
+    "buildDays": 3,
+    "upkeepPerDay": 420,
+    "storageMassKg": 0,
+    "storageVolumeM3": 0,
+    "docks": 4,
+    "handlingPercent": 65,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   },
+   {
+    "level": 3,
+    "buildCost": 240000,
+    "buildDays": 5,
+    "upkeepPerDay": 900,
+    "storageMassKg": 0,
+    "storageVolumeM3": 0,
+    "docks": 8,
+    "handlingPercent": 50,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   }
+  ],
+  "racking": [
+   {
+    "level": 1,
+    "buildCost": 70000,
+    "buildDays": 2,
+    "upkeepPerDay": 150,
+    "storageMassKg": 150000,
+    "storageVolumeM3": 600,
+    "docks": 0,
+    "handlingPercent": 100,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   },
+   {
+    "level": 2,
+    "buildCost": 160000,
+    "buildDays": 3,
+    "upkeepPerDay": 340,
+    "storageMassKg": 420000,
+    "storageVolumeM3": 1700,
+    "docks": 0,
+    "handlingPercent": 100,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   }
+  ],
+  "forklift": [
+   {
+    "level": 1,
+    "buildCost": 22000,
+    "buildDays": 1,
+    "upkeepPerDay": 90,
+    "storageMassKg": 0,
+    "storageVolumeM3": 0.0,
+    "docks": 0,
+    "handlingPercent": 85,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   },
+   {
+    "level": 2,
+    "buildCost": 52000,
+    "buildDays": 2,
+    "upkeepPerDay": 210,
+    "storageMassKg": 0,
+    "storageVolumeM3": 0.0,
+    "docks": 0,
+    "handlingPercent": 72,
+    "contractSlotPercent": 100,
+    "lanePremiumPercent": 0
+   }
+  ]
+ },
+ "lanes": {
+  "cityOutboundKgPerDayPer100k": 1500,
+  "minimumRatePerDayKg": 2000,
+  "weeklySwingPercent": 25,
+  "distanceHalfWeightKm": 900,
+  "parcelPatienceMinutes": 2160
+ },
+ "contractPremiumPercent": 25,
+ "emptyReturnSharePercent": 85
 }

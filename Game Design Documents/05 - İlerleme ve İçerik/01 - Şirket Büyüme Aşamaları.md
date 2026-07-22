@@ -8,7 +8,8 @@ kaynaklar:
   - "`docs/02_OYUN_TASARIMI.md`"
   - "`docs/04_KARARLAR_VE_ACIK_SORULAR.md`"
   - "Kullanıcının 2026-07-17 tarihli Ana Tasarım Özeti"
-son_güncelleme: 2026-07-17
+  - "`AKIS_VE_HAT_REVIZYONU_PLAN.md` (2026-07-20 akış revizyonu)"
+son_güncelleme: 2026-07-20
 etiketler:
   - gdd
   - gdd/ilerleme
@@ -36,14 +37,14 @@ açar. Ekonomi yavaş ve inandırıcı büyümeyi destekler; kısa sürede gerç
 
 - Tek başlangıç şehri ve şirket merkezi
 - Az sayıda araç ve çalışan
-- Doğrudan gönderici–alıcı taşıması
-- Spot işler
-- Araç konumu, kapasite ve boş kilometre
+- Yerel yük akışlarını spot ücretle servis etme
+- İlk doğrudan hat (gidiş-dönüş döngüsü)
+- Araç konumu, kapasite, doluluk ve boş kilometre
 - Basit finans ve bakım
 
 ### Oyuncu Kararı
 
-İş seçimi, tekil araç atama, dönüş yükü ve nakit yönetimi.
+Hangi akışı servis edeceği, tekil araç atama, dönüş yükü ve nakit yönetimi.
 
 ### Açılma Koşulu
 

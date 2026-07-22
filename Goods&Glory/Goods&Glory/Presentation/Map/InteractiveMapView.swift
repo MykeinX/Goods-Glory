@@ -214,7 +214,7 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
         func applyCameraPanRequest(_ request: MapCameraPanRequest?) {
             guard let request, request.id != lastCameraPanRequestID else { return }
             lastCameraPanRequestID = request.id
-            scene.centerOnCity(request.cityID, animated: true)
+            scene.centerOnCity(request.cityID, bottomInset: request.bottomInset, animated: true)
         }
 
         func installGestures(on view: SKView) {

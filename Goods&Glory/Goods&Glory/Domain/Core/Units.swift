@@ -57,4 +57,12 @@ struct LoadSize: Hashable, Codable, Sendable {
     func fits(in capacity: LoadSize) -> Bool {
         massKg <= capacity.massKg && volumeM3 <= capacity.volumeM3
     }
+
+    /// How full the vehicle feels: the tighter of mass and volume, so a
+    /// cube-out on bulky freight still reads as a full truck.
+    func fillRatio(in capacity: LoadSize) -> Double {
+        let mass = capacity.massKg > 0 ? Double(massKg) / Double(capacity.massKg) : 0
+        let volume = capacity.volumeM3 > 0 ? volumeM3 / capacity.volumeM3 : 0
+        return min(1, max(mass, volume))
+    }
 }

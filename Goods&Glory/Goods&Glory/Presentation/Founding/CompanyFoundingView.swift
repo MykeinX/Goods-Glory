@@ -2,7 +2,7 @@
 //  CompanyFoundingView.swift
 //  Goods&Glory
 //
-//  Founding flow, two stable stages driven by a simple @State switch (no
+//  Founding lane, two stable stages driven by a simple @State switch (no
 //  fragile navigation teardown):
 //    1. Identity — name, brand color and emblem on one screen with a live
 //       preview. Everything stays visible while typing.
@@ -146,7 +146,10 @@ private struct IdentityStageView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
             }
-            .scrollDismissesKeyboard(.interactively)
+            // Interactive dismissal ties every scroll frame to the keyboard's
+            // position, which is work this screen does not need — one field,
+            // one button. Immediate dismissal is both cheaper and less fiddly.
+            .scrollDismissesKeyboard(.immediately)
         }
         .tint(draft.accentColor)
         .safeAreaInset(edge: .bottom) {

@@ -12,10 +12,8 @@ import SwiftUI
 
 struct FacilitiesView: View {
     @Environment(GameSession.self) private var session
+    private var accent: Color { session.accentColor }
 
-    private var accent: Color {
-        Color(hex: session.state?.config.identity.colorHex ?? "#FFB037")
-    }
 
     var body: some View {
         NavigationStack {
@@ -29,16 +27,14 @@ struct FacilitiesView: View {
 struct FacilitiesContent: View {
     @Environment(GameSession.self) private var session
     @State private var commandError: CommandError?
+    private var accent: Color { session.accentColor }
 
-    private var accent: Color {
-        Color(hex: session.state?.config.identity.colorHex ?? "#FFB037")
-    }
 
-    /// HQ first, then branches, then warehouses; stable city order within each.
+    /// HQ first, then the rest in stable city order. One card per site; the
+    /// modules on it are what make sites differ.
     private var facilities: [Facility] {
         (session.state?.facilities ?? []).sorted { lhs, rhs in
             if lhs.isHeadquarters != rhs.isHeadquarters { return lhs.isHeadquarters }
-            if lhs.kind != rhs.kind { return lhs.kind == .branch }
             return lhs.cityID.rawValue < rhs.cityID.rawValue
         }
     }
@@ -116,6 +112,8 @@ struct FacilitiesContent: View {
         case .facilityNotAvailable: "It is still under construction or already at its top level."
         case .warehouseNotEmpty: "Move the stored freight out first."
         case .cannotDemolishHeadquarters: "Headquarters cannot be demolished."
+        case .dependentModuleExists(let kind):
+            "Remove the \(Format.moduleName(kind).lowercased()) first — it is built onto this."
         default: "That building is no longer available."
         }
     }
@@ -129,42 +127,40 @@ private struct FacilityCard: View {
     var accent: Color
     var perform: (GameCommand) -> Void
 
-    @State private var confirmsDemolition = false
+    @State private var moduleToRemove: FacilityModuleKind?
 
     private var cityName: String {
         session.catalog.city(facility.cityID)?.name ?? facility.cityID.rawValue
     }
 
-    private var isOperational: Bool {
-        session.state.map { facility.isOperational(at: $0.clock) } ?? false
-    }
-
-    private var tint: Color {
-        facility.kind == .branch ? Theme.sky : Theme.mint
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
-            statusLine
-            if facility.kind == .warehouse, isOperational {
-                storageBar
+            ForEach(FacilityModuleKind.installOrder, id: \.self) { kind in
+                if let module = facility.module(kind) {
+                    moduleRow(kind, module: module)
+                }
             }
-            actions
         }
         .padding(14)
         .surfacePanel(cornerRadius: 18)
         .confirmationDialog(
-            "Demolish this facility?",
-            isPresented: $confirmsDemolition,
+            "Remove this module?",
+            isPresented: Binding(
+                get: { moduleToRemove != nil },
+                set: { if !$0 { moduleToRemove = nil } }
+            ),
             titleVisibility: .visible
         ) {
-            Button("Demolish", role: .destructive) {
-                perform(.demolishFacility(facility.id))
+            Button("Remove", role: .destructive) {
+                if let kind = moduleToRemove {
+                    perform(.removeModule(kind: kind, cityID: facility.cityID))
+                }
+                moduleToRemove = nil
             }
-            Button("Keep", role: .cancel) {}
+            Button("Keep", role: .cancel) { moduleToRemove = nil }
         } message: {
-            Text("You get nothing back, and contracts from this city stop being offered.")
+            Text("You get nothing back. Removing the office also stops contracts from this city.")
         }
     }
 
@@ -172,117 +168,132 @@ private struct FacilityCard: View {
         HStack(spacing: 11) {
             ZStack {
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(tint.opacity(0.12))
+                    .fill(accent.opacity(0.12))
                     .frame(width: 38, height: 38)
-                Image(systemName: facility.kind == .branch ? "building.2.fill" : "shippingbox.fill")
+                Image(systemName: facility.isHeadquarters ? "star.fill" : "mappin.and.ellipse")
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(tint)
+                    .foregroundStyle(accent)
             }
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 7) {
-                    Text(title)
-                        .font(.gg(13.5, .heavy))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text(cityName)
-                        .font(.gg(11, .heavy))
-                        .foregroundStyle(Theme.textTertiary)
-                }
-                Text("Level \(facility.level)")
+                Text(cityName)
+                    .font(.gg(13.5, .heavy))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(facility.isHeadquarters
+                     ? String(localized: "Headquarters · \(facility.modules.count) module(s)")
+                     : String(localized: "\(facility.modules.count) module(s)"))
                     .font(.gg(11, .bold))
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer(minLength: 4)
-            if let quote = session.quote(kind: facility.kind, level: facility.level, city: facility.cityID) {
-                Text("\(Format.money(quote.upkeepPerDay)) / day")
-                    .font(.gg(11, .heavy))
-                    .foregroundStyle(Theme.textTertiary)
-            }
+            Text("\(Format.money(siteUpkeep)) / day")
+                .font(.gg(11, .heavy))
+                .foregroundStyle(Theme.textTertiary)
         }
     }
 
-    private var title: String {
-        if facility.isHeadquarters { return String(localized: "Headquarters") }
-        return facility.kind == .branch
-            ? String(localized: "Branch")
-            : String(localized: "Warehouse")
+    private var siteUpkeep: Money {
+        facility.modules.reduce(0) { total, module in
+            total + (session.quote(
+                kind: module.kind, level: module.level, city: facility.cityID
+            )?.upkeepPerDay ?? 0)
+        }
     }
 
-    @ViewBuilder private var statusLine: some View {
-        if let clock = session.state?.clock {
-            if !isOperational {
-                progressLine(
-                    text: String(localized: "Under construction — \(Format.duration(minutes: clock.minutes(until: facility.operationalAt))) left")
-                )
-            } else if let target = facility.upgradingTo, let endsAt = facility.upgradeEndsAt {
-                progressLine(
-                    text: String(localized: "Upgrading to level \(target) — \(Format.duration(minutes: clock.minutes(until: endsAt))) left")
-                )
-            } else if facility.kind == .branch {
+    @ViewBuilder private func moduleRow(_ kind: FacilityModuleKind, module: FacilityModule) -> some View {
+        let clock = session.state?.clock ?? .start
+        let operational = module.isOperational(at: clock)
+        let tint: Color = kind == .office ? Theme.sky : (kind == .warehouse ? Theme.mint : Theme.warning)
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 9) {
+                Image(systemName: Format.moduleSymbol(kind))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(tint)
+                Text("\(Format.moduleName(kind)) · Lv \(module.level)")
+                    .font(.gg(12.5, .heavy))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer(minLength: 4)
+                if !operational {
+                    progressLine(String(localized: "\(Format.shortDuration(minutes: clock.minutes(until: module.operationalAt))) to open"))
+                } else if let target = module.upgradingTo, let endsAt = module.upgradeEndsAt {
+                    progressLine(String(localized: "Lv \(target) in \(Format.shortDuration(minutes: clock.minutes(until: endsAt)))"))
+                }
+            }
+
+            if kind == .warehouse, operational { storageBar }
+            if kind == .office, operational {
                 Text("\(openContractCount) contract lane(s) on offer here")
-                    .font(.gg(11.5, .bold))
+                    .font(.gg(11, .bold))
                     .foregroundStyle(Theme.textSecondary)
             }
+
+            if operational, !module.isUpgrading {
+                HStack(spacing: 8) {
+                    if let upgrade = session.upgradeQuote(for: module, in: facility.cityID) {
+                        Button {
+                            perform(.upgradeModule(kind: kind, cityID: facility.cityID))
+                        } label: {
+                            Text("Upgrade to \(upgrade.level) · \(Format.money(upgrade.cost))")
+                                .font(.gg(11, .heavy))
+                                .foregroundStyle(Theme.onBrand)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(Capsule().fill(accent))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if !(facility.isHeadquarters && kind == .office) {
+                        Button { moduleToRemove = kind } label: {
+                            Text("Remove")
+                                .font(.gg(11, .heavy))
+                                .foregroundStyle(Theme.textSecondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Capsule().stroke(Theme.stroke, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
+        .padding(11)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Theme.surface.opacity(0.5))
+        )
     }
 
     private var openContractCount: Int {
         (session.state?.contractOffers ?? []).count { $0.origin == facility.cityID }
     }
 
-    private func progressLine(text: String) -> some View {
-        HStack(spacing: 6) {
+    private func progressLine(_ text: String) -> some View {
+        HStack(spacing: 5) {
             Image(systemName: "hammer.fill")
                 .font(.caption2)
-                .foregroundStyle(accent)
             Text(text)
-                .font(.gg(11.5, .bold))
-                .foregroundStyle(accent)
+                .font(.gg(10.5, .bold))
         }
+        .foregroundStyle(accent)
     }
 
     @ViewBuilder private var storageBar: some View {
-        if let state = session.state,
-           let quote = session.quote(kind: .warehouse, level: facility.level, city: facility.cityID) {
+        if let state = session.state {
+            // Capacity from the engine, not from the warehouse level alone:
+            // racking adds tonnage to the same building, and a bar that ignored
+            // it would disagree with the rule that decides what fits.
+            let capacity = session.storageCapacity(of: facility)
             let used = state.storedLoad(in: facility.id)
-            let massFill = quote.storage.massKg > 0
-                ? Double(used.massKg) / Double(quote.storage.massKg) : 0
-            let volumeFill = quote.storage.volumeM3 > 0
-                ? used.volumeM3 / quote.storage.volumeM3 : 0
-            VStack(alignment: .leading, spacing: 5) {
+            let massFill = capacity.massKg > 0
+                ? Double(used.massKg) / Double(capacity.massKg) : 0
+            let volumeFill = capacity.volumeM3 > 0
+                ? used.volumeM3 / capacity.volumeM3 : 0
+            VStack(alignment: .leading, spacing: 4) {
                 // Mass and volume fill independently; whichever runs out first
                 // is the real constraint, so the bar shows the worse of the two.
-                ThemeProgressBar(value: max(massFill, volumeFill), tint: tint, height: 5)
-                Text("\(Format.mass(kg: used.massKg)) / \(Format.mass(kg: quote.storage.massKg)) · \(state.shipments(storedIn: facility.id).count) parcel(s)")
-                    .font(.gg(11, .bold))
+                ThemeProgressBar(value: max(massFill, volumeFill), tint: Theme.mint, height: 5)
+                Text("\(Format.mass(kg: used.massKg)) / \(Format.mass(kg: capacity.massKg)) · \(state.shipments(storedIn: facility.id).count) parcel(s)")
+                    .font(.gg(10.5, .bold))
                     .foregroundStyle(Theme.textSecondary)
-            }
-        }
-    }
-
-    @ViewBuilder private var actions: some View {
-        HStack(spacing: 8) {
-            if isOperational, !facility.isUpgrading,
-               let upgrade = session.upgradeQuote(for: facility) {
-                Button { perform(.upgradeFacility(facility.id)) } label: {
-                    Text("Upgrade to \(upgrade.level) · \(Format.money(upgrade.cost))")
-                        .font(.gg(11.5, .heavy))
-                        .foregroundStyle(Theme.onBrand)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
-                        .background(Capsule().fill(accent))
-                }
-                .buttonStyle(.plain)
-            }
-            if !facility.isHeadquarters {
-                Button { confirmsDemolition = true } label: {
-                    Text("Demolish")
-                        .font(.gg(11.5, .heavy))
-                        .foregroundStyle(Theme.textSecondary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .background(Capsule().stroke(Theme.stroke, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
             }
         }
     }

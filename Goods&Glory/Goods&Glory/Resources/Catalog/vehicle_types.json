@@ -1,35 +1,44 @@
 [
-  {
-    "id": "cargo_van",
-    "name": "Cargo Van",
-    "symbol": "box.truck",
-    "capacity": { "massKg": 1200, "volumeM3": 10 },
-    "speedKmh": 100,
-    "purchasePrice": 14000,
-    "costPerKm": 0.8,
-    "driverCostPerHour": 22,
-    "fixedCostPerDay": 90
+ {
+  "id": "cargo_van",
+  "name": "Cargo Van",
+  "symbol": "box.truck",
+  "capacity": {
+   "massKg": 1200,
+   "volumeM3": 10
   },
-  {
-    "id": "box_truck",
-    "name": "Box Truck",
-    "symbol": "truck.box",
-    "capacity": { "massKg": 5000, "volumeM3": 35 },
-    "speedKmh": 90,
-    "purchasePrice": 32000,
-    "costPerKm": 2.3,
-    "driverCostPerHour": 26,
-    "fixedCostPerDay": 320
+  "speedKmh": 100,
+  "purchasePrice": 14000,
+  "costPerKm": 0.45,
+  "driverCostPerHour": 22,
+  "fixedCostPerDay": 38
+ },
+ {
+  "id": "box_truck",
+  "name": "Box Truck",
+  "symbol": "truck.box",
+  "capacity": {
+   "massKg": 5000,
+   "volumeM3": 35
   },
-  {
-    "id": "semi_truck",
-    "name": "Semi-Trailer Truck",
-    "symbol": "truck.box.badge.clock",
-    "capacity": { "massKg": 22000, "volumeM3": 85 },
-    "speedKmh": 85,
-    "purchasePrice": 95000,
-    "costPerKm": 5.2,
-    "driverCostPerHour": 30,
-    "fixedCostPerDay": 850
-  }
+  "speedKmh": 90,
+  "purchasePrice": 32000,
+  "costPerKm": 0.78,
+  "driverCostPerHour": 26,
+  "fixedCostPerDay": 82
+ },
+ {
+  "id": "semi_truck",
+  "name": "Semi-Trailer Truck",
+  "symbol": "truck.box.badge.clock",
+  "capacity": {
+   "massKg": 22000,
+   "volumeM3": 85
+  },
+  "speedKmh": 85,
+  "purchasePrice": 95000,
+  "costPerKm": 1.18,
+  "driverCostPerHour": 30,
+  "fixedCostPerDay": 175
+ }
 ]

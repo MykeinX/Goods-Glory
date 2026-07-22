@@ -36,7 +36,7 @@ struct SaveSummary: Equatable, Sendable {
 struct SaveRepository {
     /// v9 drops `ActiveJob.route` / `deadheadRoute` — full road traversal lists
     /// that were written into every save and read by nothing.
-    static let currentSaveVersion = 9
+    static let currentSaveVersion = 18
 
     private let fileURL: URL
 

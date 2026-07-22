@@ -23,9 +23,15 @@ private enum NetFixture {
     static let van = VehicleTypeID("test_van")
     static let product = ProductID("test_product")
 
+    /// Founding costs scale with the city's cost index (22x), and this fixture
+    /// deliberately uses the 1000 baseline so facility quotes read like the
+    /// real catalog. That makes the free HQ cost 22k, so the fixture economy
+    /// starts with enough cash to found *and* buy a van.
+    static let economy = TestEconomy.make(startingCash: 60_000)
+
     /// Alpha supplies, Beta demands, Hub sits in the middle supplying nothing.
     /// 100 km per leg, 100 km/h, fixed 1000 kg parcels.
-    static func catalog(economy: EconomyConfig = TestEconomy.make()) throws -> GameCatalog {
+    static func catalog(economy: EconomyConfig = NetFixture.economy) throws -> GameCatalog {
         func city(_ id: CityID, _ node: RoadNodeID, _ name: String, lat: Double, starter: Bool) -> CityDefinition {
             CityDefinition(
                 id: id, roadNodeID: node, name: name, country: "TST",
@@ -75,7 +81,7 @@ private enum NetFixture {
         )
     }
 
-    static func newState(seed: UInt64 = 7, economy: EconomyConfig = TestEconomy.make()) -> GameState {
+    static func newState(seed: UInt64 = 7, economy: EconomyConfig = NetFixture.economy) -> GameState {
         GameState.newCampaign(
             config: CampaignConfig(
                 seed: seed,
@@ -85,6 +91,31 @@ private enum NetFixture {
             economy: economy
         )
     }
+
+    /// The derived Alpha → Beta lane (alpha supplies, beta demands).
+    static let laneID = LaneID("\(cityA.rawValue).\(product.rawValue).\(cityB.rawValue)")
+
+    /// A ready-made lane parcel waiting at Alpha, for warehouse and routing
+    /// tests that need cargo without driving the whole dock-claim path.
+    static func stagedParcel(id: Int, payout: Money = 1_000, state: GameState) -> JobOffer {
+        JobOffer(
+            id: JobID(rawValue: id),
+            origin: cityA,
+            destination: cityB,
+            productID: product,
+            load: LoadSize(massKg: 1_000, volumeM3: 2),
+            payout: payout,
+            distanceKm: 200,
+            urgency: .normal,
+            source: .lane,
+            contractID: nil,
+            laneID: laneID,
+            originFirmID: nil,
+            destinationFirmID: nil,
+            createdAt: state.clock,
+            expiresAt: state.clock + 2_160
+        )
+    }
 }
 
 // MARK: - Facilities
@@ -92,12 +123,12 @@ private enum NetFixture {
 struct FacilityTests {
     @Test func foundingCreatesAnOperationalHeadquartersBranch() throws {
         let state = NetFixture.newState()
-        let hq = try #require(state.branch(in: NetFixture.cityA))
+        let hq = try #require(state.module(.office, in: NetFixture.cityA))
         #expect(hq.isHeadquarters)
         #expect(hq.isOperational(at: state.clock))
-        #expect(state.hasOperationalBranch(in: NetFixture.cityA))
+        #expect(state.hasOperationalOffice(in: NetFixture.cityA))
         // Nothing is granted anywhere else for free.
-        #expect(!state.hasOperationalBranch(in: NetFixture.cityB))
+        #expect(!state.hasOperationalOffice(in: NetFixture.cityB))
     }
 
     @Test func facilityPriceDependsOnTheCity() throws {
@@ -133,36 +164,189 @@ struct FacilityTests {
         let engine = SimulationEngine(catalog: catalog)
         var state = NetFixture.newState()
 
-        let quote = try #require(engine.quote(kind: .branch, level: 1, city: NetFixture.cityB))
+        let quote = try #require(engine.quote(kind: .office, level: 1, city: NetFixture.cityB))
         let cashBefore = state.cash
-        try engine.apply(.buildFacility(kind: .branch, cityID: NetFixture.cityB), to: &state)
+        try engine.apply(.installModule(kind: .office, cityID: NetFixture.cityB), to: &state)
         #expect(state.cash == cashBefore - quote.cost)
 
         // Under construction: present in state, but grants nothing.
-        #expect(state.branch(in: NetFixture.cityB) != nil)
-        #expect(!state.hasOperationalBranch(in: NetFixture.cityB))
+        #expect(state.module(.office, in: NetFixture.cityB) != nil)
+        #expect(!state.hasOperationalOffice(in: NetFixture.cityB))
 
         engine.advance(&state, by: quote.buildMinutes)
-        #expect(state.hasOperationalBranch(in: NetFixture.cityB))
+        #expect(state.hasOperationalOffice(in: NetFixture.cityB))
 
         // Building twice in the same city is refused rather than double-charged.
         #expect(throws: CommandError.facilityAlreadyExists) {
-            try engine.apply(.buildFacility(kind: .branch, cityID: NetFixture.cityB), to: &state)
+            try engine.apply(.installModule(kind: .office, cityID: NetFixture.cityB), to: &state)
         }
+    }
+
+    /// A site is a building, not a shopping list. Everything needs the office
+    /// that represents the company in the city, and loading docks are equipment
+    /// bolted to a warehouse — buying them into an empty city was nonsense.
+    @Test func modulesCanOnlyBeBuiltOntoWhatTheyStandOn() throws {
+        let catalog = try NetFixture.catalog()
+        let engine = SimulationEngine(catalog: catalog)
+        var state = NetFixture.newState()
+        state.cash += 1_000_000
+
+        // Hub has nothing at all.
+        #expect(throws: CommandError.branchRequired) {
+            try engine.apply(.installModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
+        }
+        #expect(throws: CommandError.branchRequired) {
+            try engine.apply(.installModule(kind: .dock, cityID: NetFixture.cityH), to: &state)
+        }
+
+        // An office alone still does not justify a loading dock.
+        try engine.apply(.installModule(kind: .office, cityID: NetFixture.cityH), to: &state)
+        #expect(throws: CommandError.warehouseRequired) {
+            try engine.apply(.installModule(kind: .dock, cityID: NetFixture.cityH), to: &state)
+        }
+
+        // With the warehouse ordered, the dock becomes buildable.
+        try engine.apply(.installModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
+        try engine.apply(.installModule(kind: .dock, cityID: NetFixture.cityH), to: &state)
+        #expect(state.module(.dock, in: NetFixture.cityH) != nil)
+    }
+
+    /// Sweeping a city's own dock into its own warehouse is a real strategy:
+    /// it banks freight for one big run later. The engine used to make it
+    /// unbuildable and unreadable — a forced
+    /// delivery stop across the map, no measurable efficiency (it drives no
+    /// kilometres) and a guaranteed loss (storing booked no revenue).
+    @Test func anInCityFeederIsBuildableMeasurableAndNotALoss() throws {
+        let catalog = try NetFixture.catalog()
+        let engine = SimulationEngine(catalog: catalog)
+        var state = NetFixture.newState()
+        state.cash += 1_000_000
+        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
+
+        // A warehouse in the lane's own origin city.
+        try engine.apply(.installModule(kind: .warehouse, cityID: NetFixture.cityA), to: &state)
+        let warehouseQuote = try #require(engine.quote(kind: .warehouse, level: 1, city: NetFixture.cityA))
+        engine.advance(&state, by: warehouseQuote.buildMinutes)
+
+        try engine.apply(.createRoute(name: "Alpha sweep"), to: &state)
+        let routeID = try #require(state.routes.last?.id)
+        try engine.apply(.addTravelStop(routeID: routeID, cityID: NetFixture.cityA), to: &state)
+        let visitID = try #require(state.route(routeID)?.stops.first?.id)
+
+        // Storing here first: the pickup must then *not* drag in a delivery
+        // stop in Beta.
+        try engine.apply(
+            .addNetworkTaskToRoute(routeID: routeID, visitStopID: visitID, task: .dropToWarehouse),
+            to: &state
+        )
+        try engine.apply(
+            .addNetworkTaskToRoute(
+                routeID: routeID, visitStopID: visitID, task: .pickupLane(NetFixture.laneID)
+            ),
+            to: &state
+        )
+        let stops = try #require(state.route(routeID)?.stops)
+        #expect(stops.allSatisfy { $0.cityID == NetFixture.cityA })
+
+        // It runs, and it is not refused for having no delivery.
+        let vehicle = try #require(state.vehicles.first)
+        try engine.apply(.assignVehicleToRoute(routeID: routeID, vehicleID: vehicle.id), to: &state)
+        try engine.apply(.startRoute(routeID), to: &state)
+        engine.advance(&state, by: 3 * GameState.minutesPerDay)
+
+        let route = try #require(state.route(routeID))
+        // Freight actually moved into the warehouse.
+        let warehouse = try #require(state.warehouseSite(in: NetFixture.cityA))
+        #expect(!state.shipments(storedIn: warehouse.id).isEmpty)
+        // Efficiency is measured in worked minutes, so a 0 km route still reports.
+        #expect(route.stats.recentLoadFactor != nil)
+        // And the hand-off settled what the sweep spent, so it is not a hole.
+        #expect(route.stats.revenue > 0)
+        // Nobody is told to find a return load for a route that never leaves town.
+        if case .emptyReturn = engine.bottleneck(of: route, state: state) {
+            Issue.record("a single-city route cannot have a backhaul")
+        }
+    }
+
+    /// Equipment is not a bonus percentage bolted onto a menu — each piece
+    /// moves exactly one physical number, and only while its building stands.
+    @Test func equipmentExtendsTheBuildingItIsInstalledIn() throws {
+        let catalog = try NetFixture.catalog()
+        let engine = SimulationEngine(catalog: catalog)
+        var state = NetFixture.newState()
+        state.cash += 1_000_000
+
+        try engine.apply(.installModule(kind: .office, cityID: NetFixture.cityH), to: &state)
+        try engine.apply(.installModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
+        let warehouseQuote = try #require(engine.quote(kind: .warehouse, level: 1, city: NetFixture.cityH))
+        engine.advance(&state, by: warehouseQuote.buildMinutes)
+
+        let site = try #require(state.facility(in: NetFixture.cityH))
+        let bareStorage = engine.storageCapacity(of: site, state: state)
+        let bareHandling = engine.handlingMinutes(
+            loading: true, massKg: 1_000, at: NetFixture.cityH, state: state
+        )
+
+        // Racking is warehouse shelving: it may not be built anywhere else.
+        #expect(throws: CommandError.warehouseRequired) {
+            try engine.apply(.installModule(kind: .racking, cityID: NetFixture.cityA), to: &state)
+        }
+        try engine.apply(.installModule(kind: .racking, cityID: NetFixture.cityH), to: &state)
+        let rackQuote = try #require(engine.quote(kind: .racking, level: 1, city: NetFixture.cityH))
+        engine.advance(&state, by: rackQuote.buildMinutes)
+
+        let racked = try #require(state.facility(in: NetFixture.cityH))
+        #expect(engine.storageCapacity(of: racked, state: state).massKg > bareStorage.massKg)
+
+        // Forklifts belong to the dock, and they shorten handling.
+        try engine.apply(.installModule(kind: .dock, cityID: NetFixture.cityH), to: &state)
+        try engine.apply(.installModule(kind: .forklift, cityID: NetFixture.cityH), to: &state)
+        let forkQuote = try #require(engine.quote(kind: .forklift, level: 1, city: NetFixture.cityH))
+        let dockQuote = try #require(engine.quote(kind: .dock, level: 1, city: NetFixture.cityH))
+        engine.advance(&state, by: max(forkQuote.buildMinutes, dockQuote.buildMinutes))
+
+        let equipped = engine.handlingMinutes(
+            loading: true, massKg: 1_000, at: NetFixture.cityH, state: state
+        )
+        #expect(equipped < bareHandling)
+    }
+
+    /// And the tree cannot be dismantled from the bottom either.
+    @Test func aModuleCarryingAnotherCannotBeRemoved() throws {
+        let catalog = try NetFixture.catalog()
+        let engine = SimulationEngine(catalog: catalog)
+        var state = NetFixture.newState()
+        state.cash += 1_000_000
+        try engine.apply(.installModule(kind: .office, cityID: NetFixture.cityH), to: &state)
+        try engine.apply(.installModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
+        try engine.apply(.installModule(kind: .dock, cityID: NetFixture.cityH), to: &state)
+
+        #expect(throws: CommandError.dependentModuleExists(.dock)) {
+            try engine.apply(.removeModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
+        }
+        #expect(throws: CommandError.dependentModuleExists(.warehouse)) {
+            try engine.apply(.removeModule(kind: .office, cityID: NetFixture.cityH), to: &state)
+        }
+
+        // Clearing from the top down works.
+        try engine.apply(.removeModule(kind: .dock, cityID: NetFixture.cityH), to: &state)
+        try engine.apply(.removeModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
+        try engine.apply(.removeModule(kind: .office, cityID: NetFixture.cityH), to: &state)
+        #expect(state.facility(in: NetFixture.cityH) == nil)
     }
 
     @Test func headquartersCannotBeDemolishedAndAFullWarehouseRefusesToo() throws {
         let catalog = try NetFixture.catalog()
         let engine = SimulationEngine(catalog: catalog)
         var state = NetFixture.newState()
-        let hq = try #require(state.branch(in: NetFixture.cityA))
+        #expect(state.module(.office, in: NetFixture.cityA) != nil)
 
         #expect(throws: CommandError.cannotDemolishHeadquarters) {
-            try engine.apply(.demolishFacility(hq.id), to: &state)
+            try engine.apply(.removeModule(kind: .office, cityID: NetFixture.cityA), to: &state)
         }
     }
 
-    @Test func contractsAreOnlyOfferedFromBranchCities() throws {
+    @Test func contractsAreOnlyOfferedFromOfficeCities() throws {
         let catalog = try NetFixture.catalog()
         let engine = SimulationEngine(catalog: catalog)
         var state = NetFixture.newState()
@@ -182,7 +366,7 @@ struct FacilityTests {
     }
 
     @Test func contractsStayClosedUntilTheCompanyHasDeliveredSomething() throws {
-        let economy = TestEconomy.make(contractsUnlockAfterDeliveries: 2)
+        let economy = TestEconomy.make(startingCash: 60_000, contractsUnlockAfterDeliveries: 2)
         let catalog = try NetFixture.catalog(economy: economy)
         let engine = SimulationEngine(catalog: catalog)
         var state = NetFixture.newState(economy: economy)
@@ -237,10 +421,13 @@ struct WarehouseNetworkTests {
         engine: SimulationEngine,
         state: inout GameState
     ) throws -> Facility {
+        // A warehouse stands next to an office, not on its own.
+        state.cash += 1_000_000
+        try engine.apply(.installModule(kind: .office, cityID: NetFixture.cityH), to: &state)
         let quote = try #require(engine.quote(kind: .warehouse, level: 1, city: NetFixture.cityH))
-        try engine.apply(.buildFacility(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
+        try engine.apply(.installModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
         engine.advance(&state, by: quote.buildMinutes)
-        let warehouse = try #require(state.warehouse(in: NetFixture.cityH))
+        let warehouse = try #require(state.warehouseSite(in: NetFixture.cityH))
         #expect(warehouse.isOperational(at: state.clock))
         return warehouse
     }
@@ -253,9 +440,8 @@ struct WarehouseNetworkTests {
         engine.advance(&state, by: 0)
         let warehouse = try makeHubWarehouse(engine: engine, state: &state)
         let vehicle = try #require(state.vehicles.first)
-        let offer = try #require(state.offers.first {
-            $0.origin == NetFixture.cityA && $0.destination == NetFixture.cityB
-        })
+        let offer = NetFixture.stagedParcel(id: 5_000, state: state)
+        state.offers.append(offer)
         let expectedRevenue = offer.payout
 
         // Leg 1: collect at Alpha, hand the parcel over at the hub.
@@ -291,6 +477,9 @@ struct WarehouseNetworkTests {
         // Leg 2: collect the lot at the hub, deliver everything at Beta.
         try engine.apply(.stopRoute(leg1), to: &state)
         engine.advance(&state, by: 300)
+        // Stopping ends the run; the vehicle stays rostered to that lane until
+        // it is explicitly taken off, so a second lane cannot poach it.
+        try engine.apply(.unassignVehicleFromRoute(routeID: leg1, vehicleID: vehicle.id), to: &state)
         try engine.apply(.createRoute(name: "Distribution"), to: &state)
         let leg2 = try #require(state.routes.last?.id)
         try engine.apply(.addTravelStop(routeID: leg2, cityID: NetFixture.cityH), to: &state)
@@ -324,7 +513,7 @@ struct WarehouseNetworkTests {
 
     @Test func aFullWarehouseRefusesCargoInsteadOfSwallowingIt() throws {
         let tightStorage = FacilityConfig(
-            branch: TestEconomy.defaultFacilities.branch,
+            office: TestEconomy.defaultFacilities.office,
             warehouse: [
                 FacilityLevelSpec(
                     level: 1, buildCost: 1_000, buildDays: 1, upkeepPerDay: 10,
@@ -334,7 +523,7 @@ struct WarehouseNetworkTests {
                 )
             ]
         )
-        let economy = TestEconomy.make(facilities: tightStorage)
+        let economy = TestEconomy.make(startingCash: 60_000, facilities: tightStorage)
         let catalog = try NetFixture.catalog(economy: economy)
         let engine = SimulationEngine(catalog: catalog)
         var state = NetFixture.newState(economy: economy)
@@ -342,9 +531,8 @@ struct WarehouseNetworkTests {
         engine.advance(&state, by: 0)
         let warehouse = try makeHubWarehouse(engine: engine, state: &state)
         let vehicle = try #require(state.vehicles.first)
-        let offer = try #require(state.offers.first {
-            $0.origin == NetFixture.cityA && $0.destination == NetFixture.cityB
-        })
+        let offer = NetFixture.stagedParcel(id: 5_000, state: state)
+        state.offers.append(offer)
 
         try engine.apply(.createRoute(name: "Overflow"), to: &state)
         let routeID = try #require(state.routes.last?.id)
@@ -362,7 +550,9 @@ struct WarehouseNetworkTests {
         ), to: &state)
         try engine.apply(.assignVehicleToRoute(routeID: routeID, vehicleID: vehicle.id), to: &state)
         try engine.apply(.startRoute(routeID), to: &state)
-        engine.advance(&state, by: 300)
+        // Load (30) + drive to the hub (60) + the refused service (30). Stop
+        // short of Beta: a full lap would deliver the parcel and prove nothing.
+        engine.advance(&state, by: 150)
 
         // The parcel is refused, not destroyed: it stays on the vehicle.
         #expect(state.shipments(storedIn: warehouse.id).isEmpty)
@@ -395,8 +585,10 @@ struct WarehouseNetworkTests {
         let catalog = try NetFixture.catalog()
         let engine = SimulationEngine(catalog: catalog)
         var state = NetFixture.newState()
-        try engine.apply(.buildFacility(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
-        let warehouse = try #require(state.warehouse(in: NetFixture.cityH))
+        state.cash += 1_000_000
+        try engine.apply(.installModule(kind: .office, cityID: NetFixture.cityH), to: &state)
+        try engine.apply(.installModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
+        let warehouse = try #require(state.warehouseSite(in: NetFixture.cityH))
 
         func stage(id: Int, destination: CityID, expiresIn minutes: Int) {
             let offer = JobOffer(
@@ -408,8 +600,9 @@ struct WarehouseNetworkTests {
                 payout: 100,
                 distanceKm: 200,
                 urgency: .normal,
-                source: .spot,
+                source: .lane,
                 contractID: nil,
+                laneID: nil,
                 originFirmID: nil,
                 destinationFirmID: nil,
                 createdAt: state.clock,
@@ -441,109 +634,79 @@ struct WarehouseNetworkTests {
     }
 }
 
-// MARK: - Spot pricing
+// MARK: - Lane spot pricing
 
-struct SpotPricingTests {
-    /// The failure a brand-new player hit on turn one: the board opened with
-    /// jobs that lost money. The cause was a rate attached to the vehicle type,
-    /// so an offer priced for one class and hauled by another was arithmetic,
-    /// not strategy.
-    ///
-    /// This is not asserting a clamp. Price is cost plus a margin, and every
-    /// market factor multiplies the margin rather than the cost, so a price
-    /// below cost is unreachable through the model. The test states that
-    /// property so a future change to the shape of the formula cannot quietly
-    /// reintroduce sub-cost freight.
-    @Test func noAdvertisedSpotJobLosesMoneyForItsOwnVehicleClass() throws {
+struct LanePricingTests {
+    /// The turn-one failure of the old spot board: jobs priced for one vehicle
+    /// class and hauled by another lost money by arithmetic. Lane parcels are
+    /// priced at claim time for the vehicle actually loading, and every market
+    /// factor multiplies the margin, never the cost — so sub-cost freight is
+    /// unreachable through the model. This states that property over the real
+    /// catalog so a formula change cannot quietly reintroduce it.
+    @Test func laneParcelsPriceAboveCostAndWithinAReadableBand() throws {
         let catalog = try GameCatalog.load(from: .main)
         let engine = SimulationEngine(catalog: catalog)
-        let entryVehicleType = try #require(catalog.vehicleTypes
-            .filter { $0.purchasePrice <= catalog.economy.startingCash }
-            .min {
-                $0.purchasePrice == $1.purchasePrice
-                    ? $0.id.rawValue < $1.id.rawValue
-                    : $0.purchasePrice < $1.purchasePrice
-            })
-
-        for hqCity in catalog.starterCities.map(\.id).sorted(by: { $0.rawValue < $1.rawValue }) {
-            for seed in UInt64(0)..<8 {
-                var state = GameState.newCampaign(
-                    config: CampaignConfig(
-                        seed: seed,
-                        identity: CompanyIdentity(
-                            name: "Test Co", colorHex: "#1F6FEB", emblemSymbol: "star.fill"
-                        ),
-                        hqCity: hqCity
-                    ),
-                    economy: catalog.economy
-                )
-                // A full week of freight, not just the opening batch.
-                engine.advance(&state, by: 7 * GameState.minutesPerDay)
-
-                for offer in state.offers where offer.source == .spot {
-                    guard offer.load.fits(in: entryVehicleType.capacity) else { continue }
-                    let haul = engine.haulCost(
-                        origin: offer.origin,
-                        destination: offer.destination,
-                        distanceKm: offer.distanceKm,
-                        vehicleType: entryVehicleType
-                    )
-                    #expect(offer.payout > haul.cost)
-                }
-            }
-        }
-    }
-
-    /// The other half of the same bug: payouts that were wildly high. The
-    /// spread now comes from bounded factors (urgency, region, fill, local
-    /// presence) applied to the margin, so it cannot run away.
-    @Test func spotPayoutsStayWithinAReadableBand() throws {
-        let catalog = try GameCatalog.load(from: .main)
-        let engine = SimulationEngine(catalog: catalog)
-        let entry = try #require(catalog.vehicleTypes
-            .min { $0.purchasePrice < $1.purchasePrice })
-
-        var state = GameState.newCampaign(
+        let state = GameState.newCampaign(
             config: CampaignConfig(
-                seed: 99,
+                seed: 7,
                 identity: CompanyIdentity(name: "Test Co", colorHex: "#1F6FEB", emblemSymbol: "star.fill"),
                 hqCity: try #require(catalog.starterCities.first).id
             ),
             economy: catalog.economy
         )
-        engine.advance(&state, by: 5 * GameState.minutesPerDay)
 
-        for offer in state.offers where offer.source == .spot {
-            guard offer.load.fits(in: entry.capacity) else { continue }
-            let haul = engine.haulCost(
-                origin: offer.origin,
-                destination: offer.destination,
-                distanceKm: offer.distanceKm,
-                vehicleType: entry
+        for lane in catalog.lanes {
+            let product = try #require(catalog.product(lane.productID))
+            let distanceKm = try #require(
+                catalog.roadDistanceKm(from: lane.originCityID, to: lane.destinationCityID)
             )
-            let ratio = Double(offer.payout) / Double(max(1, haul.cost))
-            // Never below cost, never a jackpot that makes planning pointless.
-            #expect(ratio > 1.0)
-            #expect(ratio < 3.0)
+            for vehicleType in catalog.vehicleTypes {
+                // Same sizing the dock claim uses: biggest parcel the product
+                // and this vehicle allow. Skip classes the product cannot ride.
+                let volumeLimitKg = Int(
+                    (vehicleType.capacity.volumeM3 / product.densityM3PerTon * 1000).rounded(.down)
+                )
+                let step = ProductDefinition.shipmentMassStepKg
+                let massKg = (min(
+                    product.maximumShipmentMassKg,
+                    vehicleType.capacity.massKg,
+                    volumeLimitKg
+                ) / step) * step
+                guard massKg >= product.minimumShipmentMassKg else { continue }
+
+                let load = engine.parcelLoad(productID: lane.productID, massKg: massKg)
+                let payout = engine.freightPayout(
+                    origin: lane.originCityID,
+                    destination: lane.destinationCityID,
+                    distanceKm: distanceKm,
+                    load: load,
+                    vehicleType: vehicleType,
+                    state: state
+                )
+                // The price covers a round trip, because that is what a lane
+                // actually costs: the truck has to come back. Compare against
+                // the lap, not the loaded leg, or the ratio measures nothing.
+                let haul = engine.haulCost(
+                    origin: lane.originCityID,
+                    destination: lane.destinationCityID,
+                    distanceKm: distanceKm,
+                    vehicleType: vehicleType
+                )
+                let returnLeg = engine.taskCost(
+                    totalKm: distanceKm,
+                    taskMinutes: engine.travelMinutes(
+                        distanceKm: distanceKm, speedKmh: vehicleType.speedKmh
+                    ),
+                    vehicleType: vehicleType
+                )
+                let lapCost = haul.cost + returnLeg
+                let ratio = Double(payout) / Double(max(1, lapCost))
+                // A full lap must clear its own cost, but never by so much that
+                // planning stops mattering.
+                #expect(ratio > 1.0, "\(lane.id) with \(vehicleType.id) cannot cover its lap")
+                #expect(ratio < 2.0, "\(lane.id) with \(vehicleType.id) is a jackpot")
+            }
         }
-    }
-
-    /// Deliver into a city and the local board is empty by definition — the
-    /// freight there is what you just moved. The driver must not then idle
-    /// until the next timed batch.
-    @Test func aCityWithAnIdleVehicleAlwaysHasSomethingToHaul() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        // Strip the board bare, as a delivery run would.
-        state.offers.removeAll { $0.source == .spot }
-        engine.advance(&state, by: 1)
-
-        let vehicle = try #require(state.vehicles.first)
-        #expect(state.offers.contains { $0.source == .spot && $0.origin == vehicle.cityID })
     }
 }
 
@@ -563,11 +726,47 @@ struct ContractArchetypeTests {
         #expect(longWindow >= 3_000)
     }
 
-    /// The failure this system was rebuilt around: a short lane on a daily
-    /// rhythm used to ask for one load, so a dedicated vehicle sat idle for
-    /// twenty hours while its ownership cost ran. Volume now derives from the
-    /// cadence, so the cadence is work the vehicle can actually fill.
-    @Test func aDedicatedVehicleIsNotStarvedByAShortLane() throws {
+    /// A contract is a relationship, not a listing. A firm reserves part of its
+    /// output for a carrier it has watched deliver — so a lane the company has
+    /// never touched offers nothing, and the share on offer grows with the
+    /// share the company already hauls.
+    @Test func contractsAreOfferedOnlyOnLanesTheCompanyAlreadyHauls() throws {
+        let catalog = try NetFixture.catalog()
+        let engine = SimulationEngine(catalog: catalog)
+        var state = NetFixture.newState()
+        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
+        engine.advance(&state, by: 0)
+
+        // Nothing delivered yet: nobody offers to reserve anything.
+        #expect(state.contractOffers.isEmpty)
+
+        let lane = try #require(catalog.lane(NetFixture.laneID))
+        #expect(engine.servedShareBps(of: lane, state: state) == 0)
+
+        // Now put a real service record on that lane.
+        state.stats.deliveredKgByLane[lane.id] = lane.baseRatePerDayKg
+        let served = engine.servedShareBps(of: lane, state: state)
+        #expect(served > 0)
+
+        engine.replenishContractOffers(state: &state)
+        let offers = state.contractOffers.filter { $0.origin == NetFixture.cityA }
+        #expect(!offers.isEmpty, "a served lane should draw an offer")
+        for offer in offers {
+            for destination in offer.destinations {
+                #expect(destination.laneID == lane.id)
+                // Never more than a little beyond what the company has proven.
+                let ceiling = Int(Double(served) * SimulationEngine.relationshipStretch) + 1
+                #expect(destination.committedShareBps <= ceiling)
+            }
+        }
+    }
+
+    /// A contract does not earn a truck of its own — it reserves part of a lane
+    /// the company already drives past. So the tests are not "does this lane
+    /// pay for a vehicle" (the pre-lane question, which made every honest offer
+    /// read as a loss) but: does signing beat carrying the same freight
+    /// unsigned, and does it stay inside what the world actually produces.
+    @Test func everyPostedLaneBeatsSpotAndFitsInsideItsLane() throws {
         let catalog = try NetFixture.catalog()
         let engine = SimulationEngine(catalog: catalog)
         var state = NetFixture.newState()
@@ -576,12 +775,25 @@ struct ContractArchetypeTests {
 
         for offer in state.contractOffers {
             let brief = try #require(engine.brief(for: offer))
-            // Every posted lane must keep the fleet it demands meaningfully
-            // busy — never a truck reserved for a sliver of work.
-            #expect(brief.utilization > 0.25)
-            // And it must pay for the capacity it ties up.
-            #expect(brief.profitPerDay > 0)
+            #expect(brief.contractRevenuePerDay > 0)
+            #expect(brief.contractRevenuePerDay >= brief.spotRevenuePerDay)
+            #expect(brief.committedKgPerDay > 0)
+
+            // The commitment can never promise more than the lanes it names.
+            let laneRate = offer.destinations.reduce(0) { total, destination in
+                total + (catalog.lane(destination.laneID)?.baseRatePerDayKg ?? 0)
+            }
+            #expect(brief.committedKgPerDay <= laneRate)
+
+            // Priced by the class the parcel fits in, not by whatever is parked
+            // in the garage — otherwise the same tonnage is worth more to a
+            // company that happens to own bigger trucks.
+            let pricingType = try #require(catalog.vehicleType(offer.referenceVehicleTypeID))
+            #expect(offer.parcelMassKg <= pricingType.capacity.massKg)
         }
+        #expect(state.contractOffers.contains { offer in
+            (engine.brief(for: offer)?.premiumPerDay ?? 0) > 0
+        })
     }
 
     /// Loading one parcel into a half-empty truck was the single biggest source
@@ -604,6 +816,7 @@ struct ContractArchetypeTests {
             destinations: [
                 ContractDestination(
                     cityID: NetFixture.cityB, firmID: nil,
+                    laneID: NetFixture.laneID, committedShareBps: 5_000,
                     shareBps: ContractDestination.fullShareBps,
                     distanceKm: 200, payoutPerParcel: 400
                 )
@@ -641,27 +854,29 @@ struct ContractArchetypeTests {
         #expect(state.offers.count { $0.contractID == ContractID(rawValue: 700) } == 1)
     }
 
-    @Test func aQuotedCycleCoversOwnershipNotJustFuelAndWages() throws {
+    /// A commitment must be worth signing: the same parcel earns more under
+    /// contract than it does unsigned, which is what pays for the SLA and the
+    /// penalty risk that come with it.
+    @Test func aCommittedParcelOutEarnsTheSameParcelOnSpot() throws {
         let catalog = try NetFixture.catalog()
         let engine = SimulationEngine(catalog: catalog)
+        var state = NetFixture.newState()
+        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
+        engine.advance(&state, by: 0)
+
+        let offer = try #require(state.contractOffers.first)
         let vanType = try #require(catalog.vehicleType(NetFixture.van))
-        let cycleMinutes = engine.contractCycleMinutes(
-            origin: NetFixture.cityA,
-            destination: NetFixture.cityB,
-            distanceKm: 200,
-            vehicleType: vanType
+        let destination = try #require(offer.destinations.first)
+        let parcel = engine.parcelLoad(productID: offer.productID, massKg: offer.parcelMassKg)
+        let spot = engine.freightPayout(
+            origin: offer.origin,
+            destination: destination.cityID,
+            distanceKm: destination.distanceKm,
+            load: parcel,
+            vehicleType: vanType,
+            state: state
         )
-        let tripOnly = engine.taskCost(totalKm: 400, taskMinutes: cycleMinutes, vehicleType: vanType)
-        let full = engine.contractCycleCost(
-            origin: NetFixture.cityA,
-            destination: NetFixture.cityB,
-            distanceKm: 200,
-            cycleMinutes: cycleMinutes,
-            vehicleType: vanType
-        )
-        // Owning the truck is a real cost of serving the lane; a quote that
-        // ignores it under-prices every contract in the game.
-        #expect(full > tripOnly)
+        #expect(destination.payoutPerParcel > spot)
     }
 
     @Test func archetypesUnlockWithCompanyScale() throws {
@@ -703,6 +918,8 @@ struct ContractArchetypeTests {
                 ContractDestination(
                     cityID: NetFixture.cityB,
                     firmID: nil,
+                    laneID: NetFixture.laneID,
+                    committedShareBps: 5_000,
                     shareBps: ContractDestination.fullShareBps,
                     distanceKm: 200,
                     payoutPerParcel: 500
@@ -741,8 +958,8 @@ struct ContractArchetypeTests {
             productID: NetFixture.product,
             archetype: .multiDrop,
             destinations: [
-                ContractDestination(cityID: NetFixture.cityH, firmID: nil, shareBps: 5_000, distanceKm: 100, payoutPerParcel: 300),
-                ContractDestination(cityID: NetFixture.cityB, firmID: nil, shareBps: 5_000, distanceKm: 200, payoutPerParcel: 500)
+                ContractDestination(cityID: NetFixture.cityH, firmID: nil, laneID: NetFixture.laneID, committedShareBps: 5_000, shareBps: 5_000, distanceKm: 100, payoutPerParcel: 300),
+                ContractDestination(cityID: NetFixture.cityB, firmID: nil, laneID: NetFixture.laneID, committedShareBps: 5_000, shareBps: 5_000, distanceKm: 200, payoutPerParcel: 500)
             ],
             referenceVehicleTypeID: NetFixture.van,
             parcelMassKg: 1_000,
@@ -776,6 +993,7 @@ struct ContractArchetypeTests {
             destinations: [
                 ContractDestination(
                     cityID: NetFixture.cityB, firmID: nil,
+                    laneID: NetFixture.laneID, committedShareBps: 5_000,
                     shareBps: ContractDestination.fullShareBps,
                     distanceKm: 200, payoutPerParcel: 500
                 )
@@ -810,7 +1028,7 @@ struct ContractArchetypeTests {
         #expect(remaining == nil || remaining?.shipmentsIssued == issuedAtCancel)
     }
 
-    @Test func anEndedContractClosesItsOwnRouteAndFlagsCustomOnes() throws {
+    @Test func anEndedContractFlagsItsRoutesButClosesNone() throws {
         let catalog = try NetFixture.catalog()
         let engine = SimulationEngine(catalog: catalog)
         var state = NetFixture.newState()
@@ -823,7 +1041,7 @@ struct ContractArchetypeTests {
             .assignVehicleToContract(contractID: offer.id, vehicleID: vehicle.id),
             to: &state
         )
-        let dedicated = try #require(state.route(forContract: offer.id))
+        let dedicated = try #require(state.route(serving: offer.id))
         #expect(dedicated.isRunning)
 
         // A second, player-built route that also serves the contract.
@@ -843,18 +1061,17 @@ struct ContractArchetypeTests {
         engine.advance(&state, by: max(1, state.clock.minutes(until: term)) + 10)
         #expect(state.activeContract(offer.id) == nil)
 
-        // The contract's own route is closed for the player...
-        #expect(state.route(dedicated.id)?.isRunning != true)
-        #expect(state.log.contains {
-            if case .contractRouteClosed(let id, _) = $0.event { return id == dedicated.id }
-            return false
-        })
-        // ...and their own route is flagged, never silently altered.
-        #expect(state.route(custom) != nil)
-        #expect(state.log.contains {
-            if case .routeNeedsReview(let id, _) = $0.event { return id == custom }
-            return false
-        })
+        // No route is closed for losing its contract: the lane keeps
+        // running on whatever freight remains (its lane stops, if any).
+        #expect(state.route(dedicated.id)?.isRunning == true)
+        // Both routes carrying dead contract stops are flagged for review,
+        // never silently altered.
+        for flagged in [dedicated.id, custom] {
+            #expect(state.log.contains {
+                if case .routeNeedsReview(let id, _) = $0.event { return id == flagged }
+                return false
+            })
+        }
     }
 
     @Test func coverageFollowsFreightNotTheContractRoute() throws {
@@ -901,7 +1118,9 @@ struct ContractArchetypeTests {
         try engine.apply(.startRoute(routeID), to: &state)
         engine.advance(&state, by: 45)
 
-        #expect(state.route(forContract: offer.id) == nil)
+        // Coverage is a property of stops, not ownership: the player's own
+        // route is what serves the contract now.
+        #expect(state.route(serving: offer.id)?.id == routeID)
         let hauling = try #require(state.activeContract(offer.id))
         #expect(engine.coverage(of: hauling, state: state) == .covered)
     }
@@ -917,8 +1136,10 @@ struct FacilityDeterminismTests {
         func run(chunks: [Int]) throws -> GameState {
             var state = NetFixture.newState()
             try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-            try engine.apply(.buildFacility(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
-            try engine.apply(.buildFacility(kind: .branch, cityID: NetFixture.cityB), to: &state)
+            state.cash += 1_000_000
+            try engine.apply(.installModule(kind: .office, cityID: NetFixture.cityH), to: &state)
+            try engine.apply(.installModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
+            try engine.apply(.installModule(kind: .office, cityID: NetFixture.cityB), to: &state)
             engine.advance(&state, by: 0)
             let offer = try #require(state.contractOffers.first)
             try engine.apply(.signContract(offer.id), to: &state)

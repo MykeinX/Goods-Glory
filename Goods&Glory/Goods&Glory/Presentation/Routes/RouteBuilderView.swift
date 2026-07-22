@@ -9,31 +9,34 @@
 import SwiftUI
 
 struct RouteBuilderView: View {
-    @Environment(GameSession.self) private var session
-    @Environment(\.dismiss) private var dismiss
+    @Environment(GameSession.self) var session
+    @Environment(\.dismiss) var dismiss
 
     let routeID: RouteID
 
-    @State private var mapSelection: MapSelection = .none
-    @State private var pendingCityID: CityID?
-    @State private var selectedVisit: CityVisit?
-    @State private var showsVehiclePicker = false
-    @State private var showsCancellation = false
-    @State private var commandError: CommandError?
+    @State var mapSelection: MapSelection = .none
+    @State var pendingCityID: CityID?
+    @State var selectedVisit: CityVisit?
+    @State var showsVehiclePicker = false
+    @State var showsCancellation = false
+    @State var showsRename = false
+    @State var showsRouteOptions = false
+    @State var commandError: CommandError?
+    /// Chrome toggles must not recompute the map snapshot on the main thread —
+    /// that work belongs on clock / route changes only.
+    @State var mapSnapshot: MapRenderSnapshot = .empty
+    var accent: Color { session.accentColor }
 
-    private struct CityVisit: Identifiable, Hashable {
+    struct CityVisit: Identifiable, Hashable {
         let id: Int
         let cityID: CityID
         var stops: [RouteStop]
     }
 
-    private var accent: Color {
-        Color(hex: session.state?.config.identity.colorHex ?? "#FFB037")
-    }
 
-    private var route: Route? { session.state?.route(routeID) }
+    var route: Route? { session.state?.route(routeID) }
 
-    private var assignedVehicles: [Vehicle] {
+    var assignedVehicles: [Vehicle] {
         guard let state = session.state, let route else { return [] }
         return route.vehicleIDs.compactMap(state.vehicle)
     }
@@ -50,6 +53,7 @@ struct RouteBuilderView: View {
         .toolbar(.hidden, for: .navigationBar)
         .tint(accent)
         .onChange(of: mapSelection) { _, selection in
+            showsRouteOptions = false
             switch selection {
             case .city(let cityID):
                 pendingCityID = cityID
@@ -58,6 +62,16 @@ struct RouteBuilderView: View {
             case .none:
                 pendingCityID = nil
             }
+        }
+        .onAppear {
+            syncMapSnapshot()
+            // Rename sheet uses a TextField; warm the keyboard while the map
+            // is idle so the first rename does not pay the cold-start hitch.
+            KeyboardPrewarm.runOnce()
+        }
+        .onChange(of: mapSnapshotDependency) { _, _ in syncMapSnapshot() }
+        .onChange(of: showsRouteOptions) { _, open in
+            if open { KeyboardPrewarm.runOnce() }
         }
         .sheet(item: $selectedVisit) { visit in
             RouteTaskPicker(
@@ -81,6 +95,11 @@ struct RouteBuilderView: View {
             .presentationDetents([.height(330)])
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showsRename) {
+            RouteRenameSheet(routeID: routeID, accent: accent)
+                .presentationDetents([.height(300)])
+                .presentationDragIndicator(.visible)
+        }
         .alert(
             "Could Not Update Route",
             isPresented: Binding(
@@ -94,7 +113,7 @@ struct RouteBuilderView: View {
         }
     }
 
-    private func routeContent(_ route: Route) -> some View {
+    func routeContent(_ route: Route) -> some View {
         VStack(spacing: 0) {
             mapHeader(route)
             editorPanel(route)
@@ -102,21 +121,26 @@ struct RouteBuilderView: View {
         .background(Theme.backgroundTop.ignoresSafeArea())
     }
 
-    private func mapHeader(_ route: Route) -> some View {
+    func mapHeader(_ route: Route) -> some View {
         let visits = cityVisits(route)
         return ZStack(alignment: .topLeading) {
-            if let state = session.state {
+            if session.state != nil {
                 InteractiveMapView(
                     catalog: session.catalog,
-                    hqCityID: state.config.hqCity,
-                    accentColorHex: state.config.identity.colorHex,
-                    renderSnapshot: MapSceneAdapter.snapshot(
-                        state: state,
-                        catalog: session.catalog,
-                        projection: MapProjection(),
-                        previewRoute: route
-                    ),
-                    cameraFocus: visits.isEmpty ? .world : .route(visits.map(\.cityID)),
+                    hqCityID: session.state?.config.hqCity,
+                    accentColorHex: session.state?.config.identity.colorHex ?? "#FFFFFF",
+                    renderSnapshot: mapSnapshot,
+                    cameraFocus: visits.isEmpty
+                        ? .world
+                        // Strip map: editor sits below the scene, not over it —
+                        // only reserve the back/title chrome.
+                        : .route(cities: visits.map(\.cityID), topInset: 52, bottomInset: 16),
+                    // Sheets over a live SKView contend for the main thread;
+                    // sleep Metal while any modal owns the screen.
+                    isRenderingEnabled: !showsRename
+                        && !showsCancellation
+                        && !showsVehiclePicker
+                        && selectedVisit == nil,
                     selection: $mapSelection
                 )
             } else {
@@ -124,32 +148,62 @@ struct RouteBuilderView: View {
             }
 
             LinearGradient(colors: [Theme.backgroundTop, .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: 132)
+                .frame(height: 72)
                 .allowsHitTesting(false)
 
-            HStack(spacing: 10) {
-                Button { dismiss() } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Theme.textPrimary)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Theme.surfaceGlass))
-                        .overlay(Circle().stroke(Theme.stroke, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-
-                VStack(alignment: .leading, spacing: 3) {
+            // Back left, title centered — same overlay chrome idea as city
+            // detail, without the old +56 dead band that ate the map strip.
+            ZStack {
+                VStack(spacing: 4) {
                     Text(route.name)
-                        .font(.gg(21, .heavy))
+                        .font(.gg(17, .heavy))
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     TagPill(text: routeStatus(route).text, color: routeStatus(route).color)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 48)
+                .allowsHitTesting(false)
 
-                Spacer()
+                HStack {
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .frame(width: 36, height: 36)
+                            .background(Circle().fill(Theme.surfaceGlass))
+                            .overlay(Circle().stroke(Theme.stroke, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer(minLength: 0)
+
+                    // SwiftUI `Menu` snapshots the hosting hierarchy (including
+                    // the Metal SKView) and freezes for a beat — use a plain
+                    // overlay list instead.
+                    Button {
+                        showsRouteOptions.toggle()
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .frame(width: 36, height: 36)
+                            .background(Circle().fill(Theme.surfaceGlass))
+                            .overlay(Circle().stroke(Theme.stroke, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Route options")
+                    .accessibilityAddTraits(.isButton)
+                }
             }
             .padding(.horizontal, 14)
-            .padding(.top, 56)
+            .safeAreaPadding(.top, 8)
+
+            if showsRouteOptions {
+                routeOptionsMenu(route)
+                    .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topTrailing)))
+            }
 
             if let pendingCityID {
                 citySelectionCard(pendingCityID, route: route)
@@ -159,11 +213,71 @@ struct RouteBuilderView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(.easeOut(duration: 0.16), value: showsRouteOptions)
         .animation(.easeOut(duration: 0.2), value: pendingCityID)
-        .frame(height: 350)
+        // Editor panel is the strategic surface; keep the map as context only.
+        .frame(height: 298)
     }
 
-    private func citySelectionCard(_ cityID: CityID, route: Route) -> some View {
+    func routeOptionsMenu(_ route: Route) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture { showsRouteOptions = false }
+
+            VStack(spacing: 0) {
+                Button {
+                    showsRouteOptions = false
+                    showsRename = true
+                } label: {
+                    Label("Rename Route", systemImage: "pencil")
+                        .font(.gg(13, .heavy))
+                        .foregroundStyle(Theme.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(route.cancellationRequestedAt != nil)
+                .opacity(route.cancellationRequestedAt == nil ? 1 : 0.4)
+
+                Rectangle()
+                    .fill(Theme.stroke)
+                    .frame(height: 1)
+
+                Button {
+                    showsRouteOptions = false
+                    showsCancellation = true
+                } label: {
+                    Label(destructiveRouteActionTitle(route), systemImage: "trash")
+                        .font(.gg(13, .heavy))
+                        .foregroundStyle(Theme.coral)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(route.cancellationRequestedAt != nil)
+                .opacity(route.cancellationRequestedAt == nil ? 1 : 0.4)
+            }
+            .frame(width: 196)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Theme.surfaceGlass)
+                    .shadow(color: Color.black.opacity(0.28), radius: 16, y: 8)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Theme.stroke, lineWidth: 1)
+            )
+            .padding(.trailing, 14)
+            .safeAreaPadding(.top, 52)
+        }
+    }
+
+    func citySelectionCard(_ cityID: CityID, route: Route) -> some View {
         HStack(spacing: 10) {
             ZStack {
                 Circle().fill(accent.opacity(0.16)).frame(width: 38, height: 38)
@@ -173,7 +287,7 @@ struct RouteBuilderView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(cityName(cityID))
+                Text(session.cityName(cityID))
                     .font(.gg(13.5, .heavy))
                     .foregroundStyle(Theme.textPrimary)
                 Text("Add as visit \(cityVisits(route).count + 1)")
@@ -215,7 +329,7 @@ struct RouteBuilderView: View {
         )
     }
 
-    private func editorPanel(_ route: Route) -> some View {
+    func editorPanel(_ route: Route) -> some View {
         VStack(spacing: 0) {
             Capsule()
                 .fill(Theme.stroke.opacity(1.5))
@@ -230,7 +344,7 @@ struct RouteBuilderView: View {
                     color: Theme.coral
                 )
                 .padding(.horizontal, 14)
-                .padding(.bottom, 4)
+                .padding(.bottom, 6)
             } else if isWindingDown(route) {
                 statusNotice(
                     symbol: "clock.arrow.trianglehead.counterclockwise.rotate.90",
@@ -238,7 +352,7 @@ struct RouteBuilderView: View {
                     color: Theme.warning
                 )
                 .padding(.horizontal, 14)
-                .padding(.bottom, 4)
+                .padding(.bottom, 6)
             }
 
             routeEditorList(route)
@@ -256,179 +370,7 @@ struct RouteBuilderView: View {
         .padding(.top, -26)
     }
 
-    private func routeEditorList(_ route: Route) -> some View {
-        let visits = cityVisits(route)
-        return List {
-            Section {
-                if visits.isEmpty {
-                    HStack(spacing: 10) {
-                        Image(systemName: "map")
-                            .foregroundStyle(accent)
-                        Text("Tap a city on the map to add the first visit.")
-                            .font(.gg(12, .bold))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    .padding(.vertical, 10)
-                    .routeListRow()
-                } else {
-                    ForEach(Array(visits.enumerated()), id: \.element.id) { index, visit in
-                        compactVisitRow(visit, number: index + 1, route: route)
-                            .dropDestination(for: String.self) { items, location in
-                                guard canEdit(route),
-                                      let rawID = items.first,
-                                      let draggedID = Int(rawID),
-                                      draggedID != visit.id else { return false }
-                                dropVisit(
-                                    draggedID,
-                                    on: visit.id,
-                                    placeAfter: location.y > 32,
-                                    route: route
-                                )
-                                return true
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                if canEdit(route) {
-                                    Button(role: .destructive) {
-                                        apply(.removeRouteVisit(routeID: route.id, visitStopID: visit.id))
-                                    } label: {
-                                        Label("Remove", systemImage: "trash")
-                                    }
-                                }
-                            }
-                            .accessibilityAction(named: "Move earlier") {
-                                moveVisit(visit.id, by: -1, route: route)
-                            }
-                            .accessibilityAction(named: "Move later") {
-                                moveVisit(visit.id, by: 1, route: route)
-                            }
-                            .routeListRow()
-                    }
-                }
-
-                HStack(spacing: 7) {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(accent)
-                    Text("Add another city from the map")
-                        .font(.gg(11.5, .heavy))
-                        .foregroundStyle(Theme.textSecondary)
-                    Spacer()
-                }
-                .padding(.vertical, 5)
-                .routeListRow()
-            } header: {
-                HStack {
-                    Text("ROUTE PLAN")
-                    Spacer()
-                    Text("\(visits.count) cit\(visits.count == 1 ? "y" : "ies") · \(taskCount(route)) tasks")
-                }
-                .font(.gg(10.5, .heavy))
-                .foregroundStyle(Theme.textTertiary)
-                .textCase(nil)
-            }
-
-            Section {
-                routeActions(route)
-                    .routeListRow()
-            }
-
-            Color.clear
-                .frame(height: Layout.tabBarClearance)
-                .routeListRow()
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .scrollIndicators(.hidden)
-    }
-
-    private func compactVisitRow(_ visit: CityVisit, number: Int, route: Route) -> some View {
-        let tasks = visit.stops.filter { !isTravel($0.task) }
-        return HStack(spacing: 10) {
-            Text("\(number)")
-                .font(.gg(12, .heavy))
-                .foregroundStyle(Theme.onBrand)
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(accent))
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(cityName(visit.cityID))
-                    .font(.gg(13.5, .heavy))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
-
-                HStack(spacing: 5) {
-                    if tasks.isEmpty {
-                        compactTaskChip(text: "Drive only", symbol: "arrow.right", color: Theme.textTertiary)
-                    } else {
-                        ForEach(Array(tasks.prefix(2))) { stop in
-                            compactTaskChip(
-                                text: taskChipText(stop.task),
-                                symbol: taskSymbol(stop.task),
-                                color: taskColor(stop.task)
-                            )
-                        }
-                        if tasks.count > 2 {
-                            Text("+\(tasks.count - 2)")
-                                .font(.gg(9.5, .heavy))
-                                .foregroundStyle(Theme.textSecondary)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 4)
-                                .background(Capsule().fill(Theme.surface))
-                        }
-                    }
-                }
-            }
-
-            Spacer(minLength: 4)
-
-            Button {
-                selectedVisit = visit
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(canEdit(route) ? accent : Theme.textTertiary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!canEdit(route))
-            .accessibilityLabel("Add work in \(cityName(visit.cityID))")
-
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(canEdit(route) ? Theme.textSecondary : Theme.textTertiary)
-                .frame(width: 30, height: 44)
-                .contentShape(Rectangle())
-                .draggable(String(visit.id))
-                .allowsHitTesting(canEdit(route))
-                .accessibilityHidden(true)
-        }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .fill(Theme.surface.opacity(0.82))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .stroke(Theme.stroke, lineWidth: 1)
-        )
-    }
-
-    private func compactTaskChip(text: String, symbol: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: symbol).font(.system(size: 8.5, weight: .heavy))
-            Text(text)
-                .font(.gg(9, .heavy))
-                .lineLimit(1)
-        }
-        .foregroundStyle(color)
-        .padding(.horizontal, 7)
-        .padding(.vertical, 4)
-        .background(Capsule().fill(color.opacity(0.10)))
-        .overlay(Capsule().stroke(color.opacity(0.20), lineWidth: 1))
-    }
-
-    private func routeActions(_ route: Route) -> some View {
+    func routeActions(_ route: Route) -> some View {
         VStack(spacing: 8) {
             Button { showsVehiclePicker = true } label: {
                 HStack(spacing: 7) {
@@ -442,7 +384,7 @@ struct RouteBuilderView: View {
                             .foregroundStyle(Theme.coral)
                     } else {
                         ForEach(assignedVehicles.prefix(3)) { vehicle in
-                            Text(vehicleCode(vehicle))
+                            Text(session.vehicleCode(vehicle))
                                 .font(.gg(10.5, .heavy))
                                 .foregroundStyle(Theme.textPrimary)
                                 .padding(.horizontal, 9)
@@ -489,41 +431,20 @@ struct RouteBuilderView: View {
                 .foregroundStyle(Theme.warning)
             }
 
-            HStack(spacing: 8) {
-                Button {
-                    primaryAction(route)
-                } label: {
-                    Label(primaryActionTitle(route), systemImage: primaryActionSymbol(route))
-                }
-                .buttonStyle(PrimaryButtonStyle(tint: route.isRunning ? Theme.warning : accent))
-                .disabled(primaryActionDisabled(route))
-                .opacity(primaryActionDisabled(route) ? 0.48 : 1)
-
-                Button { showsCancellation = true } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Theme.coral)
-                        .frame(width: 48, height: 48)
-                        .background(
-                            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                                .fill(Theme.coral.opacity(0.09))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                                .stroke(Theme.coral.opacity(0.22), lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(route.cancellationRequestedAt != nil)
-                .opacity(route.cancellationRequestedAt == nil ? 1 : 0.4)
-                .accessibilityLabel(route.isRunning ? "Cancel route" : "Delete route")
+            Button {
+                primaryAction(route)
+            } label: {
+                Label(primaryActionTitle(route), systemImage: primaryActionSymbol(route))
             }
+            .buttonStyle(PrimaryButtonStyle(tint: route.isRunning ? Theme.warning : accent))
+            .disabled(primaryActionDisabled(route))
+            .opacity(primaryActionDisabled(route) ? 0.48 : 1)
         }
         .padding(.top, 4)
         .padding(.bottom, 8)
     }
 
-    private func metricTile(_ label: String, _ value: String, color: Color = Theme.textPrimary) -> some View {
+    func metricTile(_ label: String, _ value: String, color: Color = Theme.textPrimary) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label.uppercased())
                 .font(.gg(8.5, .heavy))
@@ -540,7 +461,7 @@ struct RouteBuilderView: View {
         .background(RoundedRectangle(cornerRadius: 11).fill(Color.black.opacity(0.14)))
     }
 
-    private func statusNotice(symbol: String, text: String, color: Color) -> some View {
+    func statusNotice(symbol: String, text: String, color: Color) -> some View {
         HStack(spacing: 7) {
             Image(systemName: symbol).foregroundStyle(color)
             Text(text)
@@ -553,7 +474,7 @@ struct RouteBuilderView: View {
         .background(RoundedRectangle(cornerRadius: 13).fill(color.opacity(0.08)))
     }
 
-    private var unavailableContent: some View {
+    var unavailableContent: some View {
         VStack(spacing: 0) {
             HStack {
                 Button { dismiss() } label: {
@@ -578,682 +499,4 @@ struct RouteBuilderView: View {
         }
     }
 
-    private func canEdit(_ route: Route) -> Bool {
-        guard let state = session.state else { return false }
-        return !route.isRunning
-            && route.cancellationRequestedAt == nil
-            && state.routeRuns(of: route.id).isEmpty
-    }
-
-    private func canAppend(_ route: Route) -> Bool {
-        route.cancellationRequestedAt == nil && !isWindingDown(route)
-    }
-
-    private func isWindingDown(_ route: Route) -> Bool {
-        guard let state = session.state else { return false }
-        return !route.isRunning && !state.routeRuns(of: route.id).isEmpty
-    }
-
-    private func routeStatus(_ route: Route) -> (text: String, color: Color) {
-        if route.cancellationRequestedAt != nil { return ("Cancelling", Theme.coral) }
-        if route.isRunning { return ("Running", Theme.mint) }
-        if isWindingDown(route) { return ("Finishing Freight", Theme.warning) }
-        return ("Draft", Theme.textSecondary)
-    }
-
-    private func cityVisits(_ route: Route) -> [CityVisit] {
-        route.stops.reduce(into: []) { visits, stop in
-            if let last = visits.indices.last, visits[last].cityID == stop.cityID {
-                visits[last].stops.append(stop)
-            } else {
-                visits.append(CityVisit(id: stop.id, cityID: stop.cityID, stops: [stop]))
-            }
-        }
-    }
-
-    private func dropVisit(
-        _ draggedID: Int,
-        on targetID: Int,
-        placeAfter: Bool,
-        route: Route
-    ) {
-        var visits = cityVisits(route)
-        guard let source = visits.firstIndex(where: { $0.id == draggedID }),
-              let target = visits.firstIndex(where: { $0.id == targetID }) else { return }
-        let moved = visits.remove(at: source)
-        var insertion = target
-        if source < target { insertion -= 1 }
-        if placeAfter { insertion += 1 }
-        visits.insert(moved, at: min(max(0, insertion), visits.count))
-        apply(.reorderRouteVisits(routeID: route.id, orderedVisitIDs: visits.map(\.id)))
-    }
-
-    private func moveVisit(_ id: Int, by offset: Int, route: Route) {
-        guard canEdit(route) else { return }
-        var visits = cityVisits(route)
-        guard let source = visits.firstIndex(where: { $0.id == id }) else { return }
-        let destination = source + offset
-        guard visits.indices.contains(destination) else { return }
-        visits.swapAt(source, destination)
-        apply(.reorderRouteVisits(routeID: route.id, orderedVisitIDs: visits.map(\.id)))
-    }
-
-    private func taskCount(_ route: Route) -> Int {
-        route.stops.count { !isTravel($0.task) }
-    }
-
-    private func isTravel(_ task: RouteTask) -> Bool {
-        if case .travel = task { return true }
-        return false
-    }
-
-    private func taskSymbol(_ task: RouteTask) -> String {
-        switch task {
-        case .travel: return "arrow.right"
-        case .pickupShipment, .pickupContract: return "tray.and.arrow.up.fill"
-        case .loadFromWarehouse: return "shippingbox.and.arrow.backward.fill"
-        case .deliverShipment, .deliverContract, .deliverAll: return "tray.and.arrow.down.fill"
-        case .dropToWarehouse: return "shippingbox.fill"
-        }
-    }
-
-    private func taskColor(_ task: RouteTask) -> Color {
-        switch task {
-        case .travel: return Theme.textTertiary
-        case .pickupShipment, .pickupContract, .loadFromWarehouse: return accent
-        case .deliverShipment, .deliverContract, .deliverAll: return Theme.mint
-        case .dropToWarehouse: return Theme.sky
-        }
-    }
-
-    private func taskChipText(_ task: RouteTask) -> String {
-        switch task {
-        case .travel:
-            return "Drive"
-        case .pickupContract(let contractID):
-            return "PICK UP · \(contractFirm(contractID, pickup: true))"
-        case .deliverContract(let contractID):
-            return "DELIVER · \(contractFirm(contractID, pickup: false))"
-        case .pickupShipment:
-            return "ONE-OFF PICKUP"
-        case .deliverShipment:
-            return "ONE-OFF DELIVERY"
-        case .dropToWarehouse:
-            return "STORE IN WAREHOUSE"
-        case .loadFromWarehouse(let lotKey):
-            let product = session.catalog.product(lotKey.productID)?.name ?? lotKey.productID.rawValue
-            return "LOAD · \(product) → \(cityName(lotKey.destinationCityID))"
-        case .deliverAll:
-            return "DELIVER EVERYTHING FOR THIS CITY"
-        }
-    }
-
-    private func contractFirm(_ contractID: ContractID, pickup: Bool) -> String {
-        guard let contract = session.state?.activeContract(contractID) else { return "Ended contract" }
-        let firmID = pickup ? contract.originFirmID : contract.destinationFirmID
-        return firmID.flatMap(session.catalog.firm)?.name ?? cityName(pickup ? contract.origin : contract.destination)
-    }
-
-    private func cityName(_ id: CityID) -> String {
-        session.catalog.city(id)?.name ?? id.rawValue
-    }
-
-    private func vehicleCode(_ vehicle: Vehicle) -> String {
-        let typeName = session.catalog.vehicleType(vehicle.typeID)?.name ?? "VEH"
-        return Format.vehicleCode(typeName: typeName, id: vehicle.id)
-    }
-
-    private func planningIssue(_ route: Route) -> String? {
-        if route.stops.isEmpty { return "Add at least one city." }
-        if assignedVehicles.isEmpty { return "Assign a vehicle before starting." }
-        let contractTasks = route.stops.compactMap { stop -> (ContractID, Bool)? in
-            switch stop.task {
-            case .pickupContract(let id): return (id, true)
-            case .deliverContract(let id): return (id, false)
-            default: return nil
-            }
-        }
-        // A warehouse drop or a catch-all delivery is a valid hand-off too:
-        // collection routes legitimately end at a hub instead of a customer.
-        let hasHandoff = route.stops.contains {
-            $0.task == .dropToWarehouse || $0.task == .deliverAll
-        }
-        if !hasHandoff {
-            for id in Set(contractTasks.map(\.0)) {
-                let entries = contractTasks.filter { $0.0 == id }
-                if entries.contains(where: { $0.1 }), !entries.contains(where: { !$0.1 }) {
-                    return "Cargo picked up here has nowhere to go — add a delivery, a warehouse drop, or 'deliver everything'."
-                }
-            }
-        }
-        return nil
-    }
-
-    private func primaryActionTitle(_ route: Route) -> String {
-        if route.cancellationRequestedAt != nil { return "Cancelling Route" }
-        if route.isRunning { return "Stop Route" }
-        if isWindingDown(route) { return "Finishing Freight" }
-        if assignedVehicles.isEmpty { return "Assign Vehicle" }
-        return "Start Route"
-    }
-
-    private func primaryActionSymbol(_ route: Route) -> String {
-        if route.cancellationRequestedAt != nil { return "hourglass" }
-        if route.isRunning { return "stop.fill" }
-        if isWindingDown(route) { return "clock.fill" }
-        if assignedVehicles.isEmpty { return "truck.box.badge.plus" }
-        return "play.fill"
-    }
-
-    private func primaryActionDisabled(_ route: Route) -> Bool {
-        route.cancellationRequestedAt != nil
-            || isWindingDown(route)
-            || (!route.isRunning && assignedVehicles.isEmpty == false && planningIssue(route) != nil)
-    }
-
-    private func primaryAction(_ route: Route) {
-        if route.isRunning {
-            apply(.stopRoute(route.id))
-        } else if assignedVehicles.isEmpty {
-            showsVehiclePicker = true
-        } else {
-            apply(.startRoute(route.id))
-        }
-    }
-
-    private func clearMapSelection() {
-        pendingCityID = nil
-        mapSelection = .none
-    }
-
-    private func apply(_ command: GameCommand) {
-        if let error = session.perform(command) {
-            commandError = error
-        }
-    }
-
-    private var commandErrorMessage: String {
-        switch commandError {
-        case .insufficientFunds(let required):
-            return "This action requires \(Format.money(required))."
-        case .vehicleBusy:
-            return "That vehicle is still busy or carrying freight."
-        case .offerExpired:
-            return "The selected shipment has expired."
-        case .loadExceedsCapacity:
-            return "The shipment does not fit the selected vehicle."
-        case .noRoute:
-            return "Add at least one reachable city before starting."
-        case .noVehicleAssigned:
-            return "Assign at least one vehicle before starting this route."
-        case .incompleteRouteTasks:
-            return "Each recurring pickup needs a matching delivery task."
-        case .vehicleAlreadyAssigned:
-            return "That vehicle already serves another route."
-        case .routeIsRunning:
-            return "Stop the route and wait for committed freight before editing."
-        case .warehouseRequired:
-            return "That city has no warehouse to store or collect cargo."
-        case .branchRequired:
-            return "That city needs a branch first."
-        case .facilityAlreadyExists, .facilityNotAvailable,
-             .warehouseNotEmpty, .cannotDemolishHeadquarters:
-            return "That building action is not available right now."
-        case .unknownReference, nil:
-            return "The route or selected item is no longer available."
-        }
-    }
-}
-
-private struct RouteTaskPicker: View {
-    @Environment(GameSession.self) private var session
-    @Environment(\.dismiss) private var dismiss
-
-    let routeID: RouteID
-    let visitID: Int
-    let cityID: CityID
-    let accent: Color
-
-    @State private var commandError: CommandError?
-
-    private struct TaskOption: Identifiable {
-        let contract: ActiveContract
-        let action: ContractRouteAction
-        var id: String { "\(contract.id.rawValue)-\(action == .pickup ? "pickup" : "deliver")" }
-    }
-
-    private var options: [TaskOption] {
-        guard let state = session.state else { return [] }
-        return state.activeContracts
-            .flatMap { contract -> [TaskOption] in
-                var result: [TaskOption] = []
-                if contract.origin == cityID { result.append(TaskOption(contract: contract, action: .pickup)) }
-                // Multi-drop lanes deliver in several cities.
-                if contract.destinations.contains(where: { $0.cityID == cityID }) {
-                    result.append(TaskOption(contract: contract, action: .deliver))
-                }
-                return result
-            }
-            .sorted { lhs, rhs in
-                if lhs.contract.id == rhs.contract.id { return lhs.action == .pickup }
-                return lhs.contract.id.rawValue < rhs.contract.id.rawValue
-            }
-    }
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Recurring work in \(cityName)")
-                        .font(.gg(12, .bold))
-                        .foregroundStyle(Theme.textSecondary)
-
-                    if options.isEmpty {
-                        Text("No contract work here yet. Sign a contract connected to this city, or use the network actions below.")
-                            .font(.gg(11.5, .bold))
-                            .foregroundStyle(Theme.textTertiary)
-                            .padding(14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .surfacePanel(cornerRadius: 16)
-                    } else {
-                        ForEach(options) { option in
-                            taskOptionRow(option)
-                        }
-                    }
-
-                    networkSection
-                }
-                .padding(14)
-            }
-            .background(Theme.backgroundBottom.ignoresSafeArea())
-            .navigationTitle("City Work")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .font(.gg(12.5, .heavy))
-                }
-            }
-            .alert(
-                "Could Not Update Work",
-                isPresented: Binding(
-                    get: { commandError != nil },
-                    set: { if !$0 { commandError = nil } }
-                )
-            ) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Stop the route and wait for its vehicles before changing recurring work.")
-            }
-        }
-    }
-
-    // MARK: Network actions
-
-    /// The three tasks that turn a lane into a network: store here, collect a
-    /// lot from here, drop everything that belongs here.
-    @ViewBuilder private var networkSection: some View {
-        let warehouse = session.state?.warehouse(in: cityID)
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Network actions")
-                .font(.gg(12, .bold))
-                .foregroundStyle(Theme.textSecondary)
-                .padding(.top, 6)
-
-            networkRow(
-                task: .deliverAll,
-                symbol: "tray.and.arrow.down.fill",
-                tint: Theme.mint,
-                title: String(localized: "Deliver everything for this city"),
-                detail: String(localized: "Unload every carried parcel whose destination is \(cityName)")
-            )
-
-            if let warehouse, warehouse.isOperational(at: session.state?.clock ?? .start) {
-                networkRow(
-                    task: .dropToWarehouse,
-                    symbol: "shippingbox.fill",
-                    tint: Theme.sky,
-                    title: String(localized: "Store in the warehouse"),
-                    detail: String(localized: "Drop everything not yet home, so another route can finish it")
-                )
-                lotOptions(warehouse: warehouse)
-            } else {
-                Text("Build a warehouse in \(cityName) to store and collect freight here.")
-                    .font(.gg(11, .bold))
-                    .foregroundStyle(Theme.textTertiary)
-            }
-        }
-    }
-
-    @ViewBuilder private func lotOptions(warehouse: Facility) -> some View {
-        if let state = session.state {
-            let lots = state.storageLots(in: warehouse.id)
-            if lots.isEmpty {
-                Text("The warehouse is empty — nothing to collect yet.")
-                    .font(.gg(11, .bold))
-                    .foregroundStyle(Theme.textTertiary)
-            } else {
-                ForEach(lots) { lot in
-                    let destination = session.catalog.city(lot.key.destinationCityID)?.name
-                        ?? lot.key.destinationCityID.rawValue
-                    let product = session.catalog.product(lot.key.productID)?.name
-                        ?? lot.key.productID.rawValue
-                    networkRow(
-                        task: .loadFromWarehouse(lot.key),
-                        symbol: "shippingbox.and.arrow.backward.fill",
-                        tint: accent,
-                        title: String(localized: "Collect \(product) → \(destination)"),
-                        detail: String(localized: "\(lot.parcelCount) parcel(s) · \(Format.mass(kg: lot.load.massKg)) · \(Format.money(lot.pendingPayout)) on delivery")
-                    )
-                }
-            }
-        }
-    }
-
-    private func networkRow(
-        task: RouteTask,
-        symbol: String,
-        tint: Color,
-        title: String,
-        detail: String
-    ) -> some View {
-        let existing = session.state?.route(routeID)?.stops.first {
-            $0.cityID == cityID && $0.task == task
-        }
-        return Button {
-            let command: GameCommand = existing.map {
-                .removeRouteStop(routeID: routeID, stopID: $0.id)
-            } ?? .addNetworkTaskToRoute(routeID: routeID, visitStopID: visitID, task: task)
-            commandError = session.perform(command)
-        } label: {
-            HStack(spacing: 11) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(tint.opacity(0.12))
-                        .frame(width: 42, height: 42)
-                    Image(systemName: symbol)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(tint)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.gg(13, .heavy))
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(1)
-                    Text(detail)
-                        .font(.gg(10.5, .bold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(2)
-                }
-                Spacer(minLength: 4)
-                Image(systemName: existing == nil ? "plus.circle" : "checkmark.circle.fill")
-                    .font(.system(size: 19, weight: .bold))
-                    .foregroundStyle(existing == nil ? Theme.textTertiary : tint)
-            }
-            .padding(12)
-            .surfacePanel(cornerRadius: 16)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func taskOptionRow(_ option: TaskOption) -> some View {
-        let selectedStop = matchingStop(option)
-        let pickup = option.action == .pickup
-        let firmID = pickup ? option.contract.originFirmID : option.contract.destinationFirmID
-        let firm = firmID.flatMap(session.catalog.firm)?.name ?? cityName
-        let product = session.catalog.product(option.contract.productID)?.name ?? "Freight"
-        let pending = session.state?.offers.count {
-            $0.source == .contract && $0.contractID == option.contract.id
-        } ?? 0
-
-        return Button {
-            let command: GameCommand
-            if let selectedStop {
-                command = .removeRouteStop(routeID: routeID, stopID: selectedStop.id)
-            } else {
-                command = .addContractTaskToRoute(
-                    routeID: routeID,
-                    visitStopID: visitID,
-                    contractID: option.contract.id,
-                    action: option.action
-                )
-            }
-            commandError = session.perform(command)
-        } label: {
-            HStack(spacing: 11) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill((pickup ? accent : Theme.mint).opacity(0.12))
-                        .frame(width: 42, height: 42)
-                    Image(systemName: pickup ? "tray.and.arrow.up.fill" : "tray.and.arrow.down.fill")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(pickup ? accent : Theme.mint)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(pickup ? "Pick up contract freight" : "Deliver contract freight")
-                        .font(.gg(13, .heavy))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text("\(firm) · \(product) · \(Format.mass(kg: option.contract.parcelMassKg))")
-                        .font(.gg(10.5, .bold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                    Text("\(pending) waiting · every \(Format.duration(minutes: option.contract.shipmentIntervalMinutes))")
-                        .font(.gg(9.5, .bold))
-                        .foregroundStyle(Theme.textTertiary)
-                }
-
-                Spacer(minLength: 4)
-                Image(systemName: selectedStop == nil ? "plus.circle" : "checkmark.circle.fill")
-                    .font(.system(size: 19, weight: .bold))
-                    .foregroundStyle(selectedStop == nil ? accent : Theme.mint)
-            }
-            .padding(12)
-            .surfacePanel(cornerRadius: 16)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func matchingStop(_ option: TaskOption) -> RouteStop? {
-        session.state?.route(routeID)?.stops.first { stop in
-            switch (option.action, stop.task) {
-            case (.pickup, .pickupContract(let id)): return id == option.contract.id
-            case (.deliver, .deliverContract(let id)): return id == option.contract.id
-            default: return false
-            }
-        }
-    }
-
-    private var cityName: String {
-        session.catalog.city(cityID)?.name ?? cityID.rawValue
-    }
-}
-
-private struct RouteVehiclePicker: View {
-    @Environment(GameSession.self) private var session
-    @Environment(\.dismiss) private var dismiss
-
-    let routeID: RouteID
-    let accent: Color
-
-    @State private var commandError: CommandError?
-
-    private var route: Route? { session.state?.route(routeID) }
-
-    private var assigned: [Vehicle] {
-        guard let state = session.state, let route else { return [] }
-        return route.vehicleIDs.compactMap(state.vehicle)
-    }
-
-    private var available: [Vehicle] {
-        guard let state = session.state else { return [] }
-        let busy = state.busyVehicleIDs()
-        let routed = state.routedVehicleIDs()
-        return state.vehicles
-            .filter { !busy.contains($0.id) && !routed.contains($0.id) }
-            .sorted { $0.id.rawValue < $1.id.rawValue }
-    }
-
-    var body: some View {
-        NavigationStack {
-            List {
-                if !assigned.isEmpty {
-                    Section("ASSIGNED") {
-                        ForEach(assigned) { vehicle in
-                            vehicleRow(vehicle, assigned: true)
-                        }
-                    }
-                }
-
-                Section("IDLE VEHICLES") {
-                    if available.isEmpty {
-                        Text("No idle vehicles are available.")
-                            .font(.gg(12, .bold))
-                            .foregroundStyle(Theme.textSecondary)
-                    } else {
-                        ForEach(available) { vehicle in
-                            vehicleRow(vehicle, assigned: false)
-                        }
-                    }
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(Theme.backgroundBottom)
-            .navigationTitle("Route Vehicles")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .font(.gg(12.5, .heavy))
-                }
-            }
-            .alert(
-                "Could Not Update Vehicles",
-                isPresented: Binding(
-                    get: { commandError != nil },
-                    set: { if !$0 { commandError = nil } }
-                )
-            ) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("That vehicle is busy, carrying freight, or already assigned to another route.")
-            }
-        }
-    }
-
-    private func vehicleRow(_ vehicle: Vehicle, assigned isAssigned: Bool) -> some View {
-        Button {
-            commandError = session.perform(
-                isAssigned
-                    ? .unassignVehicleFromRoute(routeID: routeID, vehicleID: vehicle.id)
-                    : .assignVehicleToRoute(routeID: routeID, vehicleID: vehicle.id)
-            )
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "truck.box.fill")
-                    .foregroundStyle(isAssigned ? Theme.mint : accent)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(vehicleCode(vehicle))
-                        .font(.gg(13, .heavy))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text(session.catalog.city(vehicle.cityID)?.name ?? vehicle.cityID.rawValue)
-                        .font(.gg(10.5, .bold))
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                Spacer()
-                Image(systemName: isAssigned ? "checkmark.circle.fill" : "plus.circle")
-                    .foregroundStyle(isAssigned ? Theme.mint : accent)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func vehicleCode(_ vehicle: Vehicle) -> String {
-        let typeName = session.catalog.vehicleType(vehicle.typeID)?.name ?? "VEH"
-        return Format.vehicleCode(typeName: typeName, id: vehicle.id)
-    }
-}
-
-private struct RouteCancellationSheet: View {
-    @Environment(GameSession.self) private var session
-    @Environment(\.dismiss) private var dismiss
-
-    let routeID: RouteID
-    let accent: Color
-    let onRequested: () -> Void
-
-    @State private var commandError: CommandError?
-
-    private var route: Route? { session.state?.route(routeID) }
-    private var hasRuns: Bool { !(session.state?.routeRuns(of: routeID).isEmpty ?? true) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                ZStack {
-                    Circle().fill(Theme.coral.opacity(0.12)).frame(width: 44, height: 44)
-                    Image(systemName: "trash.fill")
-                        .foregroundStyle(Theme.coral)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(hasRuns ? "Cancel this route?" : "Delete this route?")
-                        .font(.gg(20, .heavy))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text(route?.name ?? "Route")
-                        .font(.gg(11.5, .bold))
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                Spacer()
-            }
-
-            Text(
-                hasRuns
-                    ? "New pickups stop immediately. Empty vehicles become idle at their next safe city; loaded vehicles complete committed deliveries first. The route then deletes itself."
-                    : "The route is removed immediately. Assigned vehicles remain idle in their current cities."
-            )
-            .font(.gg(12, .bold))
-            .foregroundStyle(Theme.textSecondary)
-            .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 0)
-
-            Button {
-                commandError = session.perform(.deleteRoute(routeID))
-                guard commandError == nil else { return }
-                dismiss()
-                onRequested()
-            } label: {
-                Text(hasRuns ? "Cancel Route" : "Delete Route")
-            }
-            .buttonStyle(PrimaryButtonStyle(tint: Theme.coral))
-
-            Button("Keep Route") { dismiss() }
-                .font(.gg(12.5, .heavy))
-                .foregroundStyle(accent)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-        }
-        .padding(18)
-        .background(Theme.backgroundBottom.ignoresSafeArea())
-        .alert(
-            "Could Not Cancel Route",
-            isPresented: Binding(
-                get: { commandError != nil },
-                set: { if !$0 { commandError = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("The route changed before it could be cancelled. Please try again.")
-        }
-    }
-}
-
-private extension View {
-    func routeListRow() -> some View {
-        listRowInsets(EdgeInsets(top: 4, leading: 14, bottom: 4, trailing: 14))
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
-    }
 }

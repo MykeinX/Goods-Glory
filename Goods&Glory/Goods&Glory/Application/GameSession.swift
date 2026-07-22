@@ -240,18 +240,25 @@ final class GameSession {
     // MARK: - Facilities & contracts (read-only views for the UI)
 
     /// Price, build time and capacity of a facility in a specific city.
-    func quote(kind: FacilityKind, level: Int = 1, city cityID: CityID) -> FacilityQuote? {
+    func upgradeQuote(for module: FacilityModule, in cityID: CityID) -> FacilityQuote? {
+        engine.upgradeQuote(for: module, in: cityID)
+    }
+
+    func quote(kind: FacilityModuleKind, level: Int = 1, city cityID: CityID) -> FacilityQuote? {
         engine.quote(kind: kind, level: level, city: cityID)
     }
 
-    func upgradeQuote(for facility: Facility) -> FacilityQuote? {
-        engine.upgradeQuote(for: facility)
-    }
 
     /// Remaining room in a warehouse, for the city and facility screens.
     func freeStorage(of facility: Facility) -> LoadSize? {
-        guard let state, facility.kind == .warehouse else { return nil }
+        guard let state, facility.operationalModule(.warehouse, at: state.clock) != nil else { return nil }
         return engine.freeStorage(of: facility, state: state)
+    }
+
+    /// Total storage a site offers, warehouse plus racking.
+    func storageCapacity(of facility: Facility) -> LoadSize {
+        guard let state else { return LoadSize(massKg: 0, volumeM3: 0) }
+        return engine.storageCapacity(of: facility, state: state)
     }
 
     /// Whether a contract's freight is actually moving. Replaces the old
@@ -261,10 +268,54 @@ final class GameSession {
         return engine.coverage(of: contract, state: state)
     }
 
+    /// What signing this offer would do to the fleet's total book: tonnage
+    /// already promised, tonnage after signing, and what the fleet can move on
+    /// a lane that long. Nil until there is a fleet to measure.
+    func commitmentLoad(adding offer: ContractOffer) -> (committed: Int, after: Int, capacity: Int)? {
+        guard let state, !state.vehicles.isEmpty else { return nil }
+        let committed = engine.committedKgPerDay(state: state)
+        let adding = engine.brief(for: offer)?.committedKgPerDay ?? 0
+        let laneKm = offer.destinations.map(\.distanceKm).max() ?? 0
+        let capacity = engine.fleetKgPerDay(state: state, laneDistanceKm: laneKm)
+        guard capacity > 0 else { return nil }
+        return (committed, committed + adding, capacity)
+    }
+
     /// Vehicles tied up, profit per day, utilisation — the whole contract
     /// decision in three numbers.
     func brief(for terms: some ContractTerms) -> SimulationEngine.ContractBrief? {
         engine.brief(for: terms)
+    }
+
+    /// Balancing instrument: wipes the recorded window so the next session
+    /// reads clean. Never touches simulation state.
+    func clearDebugLedger() {
+        state?.debug.clear()
+        persist()
+    }
+
+    /// The campaign written out for diagnosis — the artefact a play session
+    /// hands over when something looks wrong.
+    func diagnosticReport(state: GameState) -> String {
+        engine.diagnosticReport(state: state)
+    }
+
+    /// The whole operation as a per-city network, for the operations tab.
+    func operations() -> OperationsOverview {
+        guard let state else { return .empty }
+        return OperationsOverview.make(state: state, catalog: catalog)
+    }
+
+    /// What exactly is waiting, arriving and parked in one city.
+    func operationsDetail(for cityID: CityID) -> CityOperationsDetail {
+        guard let state else { return .empty }
+        return CityOperationsDetail.make(cityID: cityID, state: state)
+    }
+
+    /// The one constraint holding a lane back, for the lane dashboard.
+    func bottleneck(of route: Route) -> SimulationEngine.RouteBottleneck? {
+        guard let state else { return nil }
+        return engine.bottleneck(of: route, state: state)
     }
 
     func companyTier() -> Int {

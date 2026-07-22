@@ -1,0 +1,34 @@
+=== LANE ECONOMICS ===
+spotMargin 55%  fillFloor 0.5  emptyReturnShare 85%
+
+lap = out loaded + back empty, unless a backhaul is noted
+vehicle        km  fill   revenue   running  standing   NET/lap   NET/day
+cargo_van     250   50%       270      -400       -13      -143      -429
+cargo_van     250  100%       541      -400       -13       128       384
+cargo_van     500   50%       514      -736       -21      -243      -449
+cargo_van     500  100%      1027      -736       -21       270       498
+cargo_van     860   50%       864     -1218       -32      -386      -459
+cargo_van     860  100%      1728     -1218       -32       478       568
+
+box_truck     250   50%       425      -612       -29      -216      -605
+box_truck     250  100%       849      -612       -29       208       583
+box_truck     500   50%       814     -1146       -48      -380      -647
+box_truck     500  100%      1629     -1146       -48       435       740
+box_truck     860   50%      1377     -1916       -76      -615      -668
+box_truck     860  100%      2755     -1916       -76       763       829
+
+semi_truck    250   50%       609      -856       -65      -312      -845
+semi_truck    250  100%      1218      -856       -65       297       804
+semi_truck    500   50%      1176     -1624      -108      -556      -904
+semi_truck    500  100%      2352     -1624      -108       620      1008
+semi_truck    860   50%      1990     -2726      -169      -905      -935
+semi_truck    860  100%      3981     -2726      -169      1086      1122
+
+=== THE REWARD FOR A BALANCED LANE (860 km, full both ways) ===
+cargo_van   empty return    +478/lap → with backhaul   +2206/lap (+1728)
+box_truck   empty return    +763/lap → with backhaul   +3518/lap (+2755)
+semi_truck  empty return   +1086/lap → with backhaul   +5067/lap (+3981)
+
+=== FIRST HOUR: can the opening vehicle pay for itself? ===
+cargo_van   price $14,000 · net $498/day · pays for itself in 28 days
+box_truck   price $32,000 · net $740/day · pays for itself in 43 days

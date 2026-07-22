@@ -17,9 +17,9 @@
 
 import Foundation
 
-/// Fully resolved economics of one facility level in one city.
+/// Fully resolved economics of one module level in one city.
 struct FacilityQuote: Equatable, Sendable {
-    let kind: FacilityKind
+    let kind: FacilityModuleKind
     let cityID: CityID
     let level: Int
     let cost: Money
@@ -29,9 +29,9 @@ struct FacilityQuote: Equatable, Sendable {
     let docks: Int
     /// Handling duration multiplier, 1.0 = catalog baseline.
     let handlingFactor: Double
-    /// Multiplier applied to a city's contract offer slot count (branch only).
+    /// Multiplier applied to a city's contract offer slot count (office only).
     let contractSlotFactor: Double
-    /// Extra payout fraction on lanes touching this city (branch only).
+    /// Extra payout fraction on lanes touching this city (office only).
     let lanePremium: Double
 }
 
@@ -73,7 +73,7 @@ enum FacilityEconomics {
     // MARK: - Quotes
 
     static func quote(
-        kind: FacilityKind,
+        kind: FacilityModuleKind,
         level: Int,
         city: CityDefinition,
         config: FacilityConfig
@@ -99,7 +99,7 @@ enum FacilityEconomics {
     /// Upgrading pays the difference in base cost, never the full new level.
     static func upgradeQuote(
         from currentLevel: Int,
-        kind: FacilityKind,
+        kind: FacilityModuleKind,
         city: CityDefinition,
         config: FacilityConfig
     ) -> FacilityQuote? {

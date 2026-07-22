@@ -21,10 +21,8 @@ enum Layout {
 struct GameView: View {
     @Environment(GameSession.self) private var session
     @State private var selectedTab: GameTab = .map
+    private var accent: Color { session.accentColor }
 
-    private var accent: Color {
-        Color(hex: session.state?.config.identity.colorHex ?? "#FFB037")
-    }
 
     var body: some View {
         ZStack(alignment: .bottom) {

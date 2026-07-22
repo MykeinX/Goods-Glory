@@ -2,7 +2,7 @@
 //  SeededRNG.swift
 //  Goods&Glory
 //
-//  Deterministic randomness. All simulation randomness must flow through
+//  Deterministic randomness. All simulation randomness must lane through
 //  seeds derived from stable identifiers via `SeedDerivation`, never from
 //  SystemRandomNumberGenerator, wall clock, or hash ordering.
 //

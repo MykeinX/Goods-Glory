@@ -11,10 +11,8 @@ import SwiftUI
 struct CompanyView: View {
     @Environment(GameSession.self) private var session
     @State private var showsExitConfirm = false
+    private var accent: Color { session.accentColor }
 
-    private var accent: Color {
-        Color(hex: session.state?.config.identity.colorHex ?? "#FFB037")
-    }
 
     var body: some View {
         NavigationStack {
@@ -24,6 +22,7 @@ struct CompanyView: View {
                     reputationCard
                     statsGrid
                     linkRows
+                    balanceLogRow
                     exitButton
                     Color.clear.frame(height: Layout.tabBarClearance)
                 }
@@ -39,6 +38,8 @@ struct CompanyView: View {
                     FacilitiesContent()
                         .navigationTitle("Facilities")
                         .navigationBarTitleDisplayMode(.inline)
+                case .balanceLog:
+                    DebugLedgerView()
                 case .personnel, .contracts:
                     ComingSoonDetail(
                         title: destination.title,
@@ -116,6 +117,28 @@ struct CompanyView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .surfacePanel(cornerRadius: 16)
+    }
+
+    /// Balancing instrument, deliberately at the very bottom: it is a
+    /// development tool, not part of the company fantasy.
+    private var balanceLogRow: some View {
+        NavigationLink(value: CompanyDestination.balanceLog) {
+            companyLinkRow(
+                title: "Balance Log",
+                subtitle: balanceLogSubtitle,
+                symbol: "ladybug.fill",
+                tint: Theme.warning
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var balanceLogSubtitle: String {
+        guard let state = session.state else { return "" }
+        let lines = state.debug.entries.count
+        return lines == 0
+            ? String(localized: "Cost breakdown for balancing")
+            : String(localized: "\(lines) recorded lines · tap to copy")
     }
 
     private var linkRows: some View {
@@ -217,7 +240,7 @@ struct CompanyView: View {
 }
 
 private enum CompanyDestination: Hashable {
-    case finance, facilities, personnel, contracts
+    case finance, facilities, personnel, contracts, balanceLog
 
     var title: String {
         switch self {
@@ -225,6 +248,7 @@ private enum CompanyDestination: Hashable {
         case .facilities: return "Facilities"
         case .personnel: return "Personnel"
         case .contracts: return "Contracts"
+        case .balanceLog: return "Balance Log"
         }
     }
 
@@ -234,6 +258,7 @@ private enum CompanyDestination: Hashable {
         case .facilities: return ""
         case .personnel: return "Hire drivers and managers when the personnel system ships."
         case .contracts: return "Long-term contracts and tenders will live here."
+        case .balanceLog: return ""
         }
     }
 }

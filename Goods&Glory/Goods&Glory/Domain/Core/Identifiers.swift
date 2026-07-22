@@ -44,6 +44,7 @@ enum RoadNodeTag {}
 enum VehicleTypeTag {}
 enum ProductTag {}
 enum FirmTag {}
+enum LaneTag {}
 
 typealias CityID = CatalogID<CityTag>
 typealias RoadID = CatalogID<RoadTag>
@@ -52,6 +53,9 @@ typealias VehicleTypeID = CatalogID<VehicleTypeTag>
 typealias ProductID = CatalogID<ProductTag>
 /// Derived catalog entity: one trading firm per (city, product, role).
 typealias FirmID = CatalogID<FirmTag>
+/// Derived catalog entity: one persistent freight lane per
+/// (origin city, product, destination city). See `GameCatalog.deriveLanes`.
+typealias LaneID = CatalogID<LaneTag>
 
 /// A type-safe wrapper around a deterministic sequential integer for live entities.
 /// Issued via `GameState.issueID()` so identical command sequences yield identical IDs.

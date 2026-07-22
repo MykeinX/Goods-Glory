@@ -12,10 +12,8 @@ import SwiftUI
 
 struct FinanceView: View {
     @Environment(GameSession.self) private var session
+    private var accent: Color { session.accentColor }
 
-    private var accent: Color {
-        Color(hex: session.state?.config.identity.colorHex ?? "#FFB037")
-    }
     private var revenue: Money { session.state?.stats.totalRevenue ?? 0 }
     private var cost: Money { session.state?.stats.totalCost ?? 0 }
     private var profit: Money { revenue - cost }

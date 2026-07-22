@@ -16,7 +16,7 @@ kaynaklar:
   - docs/08_TEST_ARACLARI_VE_LOGBOOK.md
   - docs/09_ARZ_TALEP_SOZLESME_VE_YONETIM_OMURGASI.md
   - docs/10_DEPO_MERKEZLI_COK_ASAMALI_YUK_AGI.md
-son_güncelleme: 2026-07-18
+son_güncelleme: 2026-07-20
 etiketler: [gdd, gdd/karar]
 ---
 
@@ -35,7 +35,7 @@ Bu günlük yalnızca açıkça kesinleşmiş kararları tutar. Yeni bir öneri,
 
 ## K-002 — Kanonik lojistik alan modeli
 
-- **Durum:** Kabul edildi
+- **Durum:** Revize edildi — [[#K-010 — Kalıcı yük akışları ve hat bağımsızlığı (akış revizyonu)|K-010]] zincirin başına Yük Akışı'nı ekledi; güncel zincir K-010'dadır
 - **Karar:** Ana model **sözleşme → yük partisi → taşıma aşaması → servis hattı** zinciridir. Sözleşme müşteriye verilen uçtan uca sözü; yük partisi oluşan fiziksel hacmi; taşıma aşaması kapıdan kapıya operasyon adımını; servis hattı ise şirketin düzenli kapasite hizmetini temsil eder.
 - **Sonuç:** Bir sözleşme tek araca veya tek rotaya bağlanmaz. Bir servis hattı, uygun olduğunda birden fazla sözleşmenin yük partisini aynı kapasitede birleştirebilir.
 - **Etkilenen notlar:** [[03 - Lojistik Ağı/01 - Kanonik Lojistik Nesne Modeli]], [[04 - Sistemler/01 - İşler, Müşteriler ve Sözleşmeler]], [[03 - Lojistik Ağı/04 - Doğrudan ve Aktarmalı Taşıma]], [[04 - Sistemler/02 - Taşıma Hatları ve Konsolidasyon]]
@@ -103,5 +103,24 @@ Bu günlük yalnızca açıkça kesinleşmiş kararları tutar. Yeni bir öneri,
 - **Etkilenen notlar:** [[05 - İlerleme ve İçerik/02 - Dünya, Şehirler ve Açılımlar]], [[07 - Teknik Tasarım/03 - Veri Odaklı İçerik]]
 - **Kaynak:** Ürün sahibi kararı; native veri temeli uygulaması
 - **Tarih:** 2026-07-18
+
+## K-010 — Kalıcı yük akışları ve hat bağımsızlığı (akış revizyonu)
+
+- **Durum:** Kabul edildi
+- **Karar:** Talebin kaynağı, firmalar arasındaki **kalıcı yük akışlarıdır**; kanonik zincirin başına eklenir: *Yük Akışı → (Sözleşme) → Yük Partisi → Taşıma Aşaması → Servis Hattı*. Ayrı bir "spot iş" nesnesi yoktur; spot, akışın taahhütsüz servis edilme halidir ve maliyet-türevli spot ücretle ödenir. Sözleşme talep yaratmaz; var olan akışın payını prim + SLA + ceza ile taahhüt eder ve teklifi ilişkiden (servis geçmişi + ofis modülü) doğar. Hat hiçbir sözleşmeye bağlı değildir; duraklarındaki uyumlu partileri kendisi çeker ve sözleşme bitince taban akışla çalışmaya devam eder. Servis edilmeyen birikim sabır penceresi üretimiyle sınırlanır; taşan üretim ayrıca sayılmaz veya raporlanmaz.
+- **Gerekçe:** Süresi dolan işlem tabanlı talep, oyuncuda sistem kurma hissi oluşturmuyordu (tıkla-kabul-gönder); kontrat bitince rotanın boşa düşmesi ters kurulan sahiplik yönünün sonucuydu. Kalıcı akış, Mini Motorways/Satisfactory türü "kur-gözlemle-optimize et" döngüsünün önkoşuludur.
+- **Ek ilkeler:** Şehir üretim/tüketim profilleri gerçek ekonomik kimliği yansıtır; taban akışlar sabit, dalgalanma ve olaylar okunabilir; **parametre diyeti** (yeni denge parametresi istisnadır, rekabet fiyata tek noktadan etki eder); **harita-öncelikli okunabilirlik** tasarım sütunudur; hat kurucu akış-önceliklidir (önce yük, sonra rota).
+- **Etkilenen notlar:** [[03 - Lojistik Ağı/01 - Kanonik Lojistik Nesne Modeli]], [[04 - Sistemler/01 - İşler, Müşteriler ve Sözleşmeler]], [[04 - Sistemler/02 - Taşıma Hatları ve Konsolidasyon]], [[02 - Çekirdek Oynanış/01 - Ana Oynanış Döngüsü]], [[02 - Çekirdek Oynanış/02 - Başlangıç Deneyimi]], [[05 - İlerleme ve İçerik/01 - Şirket Büyüme Aşamaları]], [[06 - UX ve Görsel Tasarım/01 - Bilgi Mimarisi ve Ekranlar]]
+- **Kaynak:** Ürün sahibi kararı; `AKIS_VE_HAT_REVIZYONU_PLAN.md`
+- **Tarih:** 2026-07-20
+
+## K-011 — Tek tesis + modül ve eklenti modeli
+
+- **Durum:** Kabul edildi
+- **Karar:** Şehirde şirketin tek tesisi olur; "şube" ve "depo" ayrı yapı türleri değil, aynı tesisin modülleridir (ofis, depo, dok, otopark). Modül seviyesi kapasiteyi büyütür; eklentiler (kendi seviyeleriyle) niteliği değiştirir (forklift, soğuk oda, ek dok…). Her etki tek ve fiziksel bir değere bağlanır; bileşik yüzde bonusu yoktur. Uzmanlaşma seçilen bir rol değil, eklenti dizilişinin doğal sonucudur; Dağıtım Merkezi / Bölgesel Hub / Transit Terminal hedeflenebilir profil örnekleridir.
+- **Gerekçe:** Tek gelişen yapı + eklentiler, her tesisi farklı yönde özelleştirme stratejisi açar ve yapı türü çoğalmasını önler.
+- **Etkilenen notlar:** [[04 - Sistemler/04 - Tesisler]], [[03 - Lojistik Ağı/01 - Kanonik Lojistik Nesne Modeli]]
+- **Kaynak:** Ürün sahibi kararı; `AKIS_VE_HAT_REVIZYONU_PLAN.md`
+- **Tarih:** 2026-07-20
 
 #gdd #gdd/karar

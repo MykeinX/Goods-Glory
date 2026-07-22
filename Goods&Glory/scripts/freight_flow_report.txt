@@ -1,0 +1,476 @@
+814 flows, config {'cityOutboundKgPerDayPer100k': 1500, 'minimumRatePerDayKg': 2000, 'weeklySwingPercent': 25, 'distanceHalfWeightKm': 900}
+
+as_almaty  pop 2,200,000  flows 5  total 13.3 t/day  (budget 33.0, kept 40%)
+    processed_food           → as_tashkent              3.7 t/day
+    fresh_produce            → as_tashkent              2.8 t/day
+    processed_food           → as_lahore                2.7 t/day
+    construction_materials   → as_tashkent              2.1 t/day
+    industrial_machinery     → as_tashkent              2.1 t/day
+
+as_ankara  pop 5,700,000  flows 16  total 70.8 t/day  (budget 85.5, kept 83%)
+    construction_materials   → eu_istanbul             10.1 t/day
+    construction_materials   → eu_athens                8.6 t/day
+    industrial_machinery     → eu_athens                7.7 t/day
+    industrial_machinery     → eu_budapest              7.7 t/day
+    processed_food           → eu_athens                4.8 t/day
+
+as_bangkok  pop 11,200,000  flows 16  total 144.6 t/day  (budget 168.0, kept 86%)
+    automotive_parts         → as_yangon               23.8 t/day
+    automotive_parts         → as_hanoi                19.8 t/day
+    consumer_electronics     → as_ho_chi_minh_city     16.1 t/day
+    consumer_electronics     → as_yangon               15.4 t/day
+    refrigerated_goods       → as_ho_chi_minh_city     11.3 t/day
+
+as_beijing  pop 21,900,000  flows 16  total 277.2 t/day  (budget 328.5, kept 84%)
+    consumer_electronics     → as_shanghai             58.7 t/day
+    consumer_electronics     → as_seoul                49.1 t/day
+    pharmaceuticals          → as_xian                 28.9 t/day
+    pharmaceuticals          → as_shanghai             27.1 t/day
+    industrial_machinery     → as_xian                 11.9 t/day
+
+as_chengdu  pop 17,000,000  flows 16  total 218.8 t/day  (budget 255.0, kept 86%)
+    consumer_electronics     → as_xian                 41.9 t/day
+    consumer_electronics     → as_hanoi                41.7 t/day
+    processed_food           → as_xian                 20.9 t/day
+    processed_food           → as_guangzhou            20.0 t/day
+    pharmaceuticals          → as_xian                 13.3 t/day
+
+as_chennai  pop 11,500,000  flows 16  total 146.7 t/day  (budget 172.5, kept 85%)
+    automotive_parts         → as_mumbai               26.6 t/day
+    automotive_parts         → as_kolkata              18.2 t/day
+    consumer_electronics     → as_mumbai               17.6 t/day
+    consumer_electronics     → as_kolkata              13.3 t/day
+    apparel                  → as_mumbai               12.8 t/day
+
+as_delhi  pop 32,900,000  flows 16  total 414.8 t/day  (budget 493.5, kept 84%)
+    apparel                  → as_lahore               58.4 t/day
+    consumer_goods           → as_lahore               47.3 t/day
+    automotive_parts         → as_lahore               45.5 t/day
+    apparel                  → as_mumbai               41.1 t/day
+    automotive_parts         → as_mumbai               29.8 t/day
+
+as_dhaka  pop 23,200,000  flows 16  total 304.7 t/day  (budget 348.0, kept 88%)
+    apparel                  → as_kolkata             100.3 t/day
+    apparel                  → as_chennai              53.4 t/day
+    consumer_goods           → as_kolkata              20.1 t/day
+    processed_food           → as_kolkata              16.0 t/day
+    beverages                → as_kolkata              13.5 t/day
+
+as_dubai  pop 3,600,000  flows 8  total 32.6 t/day  (budget 54.0, kept 60%)
+    consumer_electronics     → as_riyadh               10.2 t/day
+    consumer_electronics     → as_tehran                4.7 t/day
+    consumer_goods           → as_riyadh                4.6 t/day
+    consumer_goods           → as_tehran                3.3 t/day
+    apparel                  → as_tehran                3.1 t/day
+
+as_guangzhou  pop 18,700,000  flows 16  total 250.5 t/day  (budget 280.5, kept 89%)
+    consumer_goods           → as_hanoi                32.5 t/day
+    apparel                  → as_hanoi                32.2 t/day
+    consumer_goods           → as_chengdu              31.6 t/day
+    consumer_electronics     → as_hanoi                29.7 t/day
+    apparel                  → as_chengdu              25.7 t/day
+
+as_hanoi  pop 8,600,000  flows 16  total 109.9 t/day  (budget 129.0, kept 85%)
+    consumer_electronics     → as_ho_chi_minh_city     28.1 t/day
+    consumer_electronics     → as_guangzhou            26.8 t/day
+    apparel                  → as_guangzhou             8.9 t/day
+    apparel                  → as_chengdu               7.1 t/day
+    automotive_parts         → as_guangzhou             4.6 t/day
+
+as_ho_chi_minh_city  pop 9,300,000  flows 16  total 118.6 t/day  (budget 139.5, kept 85%)
+    apparel                  → as_bangkok              13.8 t/day
+    consumer_electronics     → as_bangkok              13.0 t/day
+    consumer_electronics     → as_hanoi                12.3 t/day
+    furniture                → as_bangkok              12.3 t/day
+    apparel                  → as_hanoi                12.1 t/day
+
+as_karachi  pop 16,800,000  flows 16  total 212.9 t/day  (budget 252.0, kept 84%)
+    apparel                  → as_mumbai               30.5 t/day
+    apparel                  → as_lahore               26.8 t/day
+    refrigerated_goods       → as_mumbai               19.3 t/day
+    processed_food           → as_lahore               17.9 t/day
+    refrigerated_goods       → as_lahore               17.3 t/day
+
+as_kolkata  pop 15,300,000  flows 16  total 193.7 t/day  (budget 229.5, kept 84%)
+    paper_packaging          → as_dhaka                31.2 t/day
+    construction_materials   → as_dhaka                21.1 t/day
+    beverages                → as_dhaka                19.9 t/day
+    paper_packaging          → as_delhi                15.6 t/day
+    construction_materials   → as_yangon               12.8 t/day
+
+as_kuala_lumpur  pop 8,400,000  flows 16  total 106.1 t/day  (budget 126.0, kept 84%)
+    consumer_electronics     → as_bangkok              23.7 t/day
+    consumer_electronics     → as_ho_chi_minh_city     19.7 t/day
+    furniture                → as_bangkok               8.2 t/day
+    industrial_chemicals     → as_yangon                6.7 t/day
+    furniture                → as_yangon                5.4 t/day
+
+as_lahore  pop 13,500,000  flows 16  total 171.7 t/day  (budget 202.5, kept 85%)
+    apparel                  → as_delhi                38.4 t/day
+    apparel                  → as_mumbai               28.5 t/day
+    consumer_goods           → as_delhi                20.3 t/day
+    consumer_goods           → as_mumbai               11.5 t/day
+    fresh_produce            → as_delhi                 8.3 t/day
+
+as_mumbai  pop 21,300,000  flows 16  total 268.6 t/day  (budget 319.5, kept 84%)
+    apparel                  → as_chennai              42.6 t/day
+    pharmaceuticals          → as_karachi              32.9 t/day
+    apparel                  → as_karachi              32.5 t/day
+    pharmaceuticals          → as_delhi                30.7 t/day
+    industrial_chemicals     → as_karachi              16.7 t/day
+
+as_novosibirsk  pop 1,600,000  flows 3  total 7.5 t/day  (budget 24.0, kept 31%)
+    construction_materials   → as_yekaterinburg         3.0 t/day
+    construction_materials   → as_almaty                2.4 t/day
+    industrial_machinery     → as_yekaterinburg         2.2 t/day
+
+as_riyadh  pop 7,700,000  flows 16  total 97.3 t/day  (budget 115.5, kept 84%)
+    industrial_chemicals     → as_dubai                16.5 t/day
+    industrial_chemicals     → as_karachi              12.0 t/day
+    construction_materials   → as_tehran                8.5 t/day
+    construction_materials   → as_dubai                 7.9 t/day
+    automotive_parts         → as_tehran                6.4 t/day
+
+as_seoul  pop 25,600,000  flows 16  total 314.6 t/day  (budget 384.0, kept 82%)
+    consumer_electronics     → as_beijing              64.0 t/day
+    consumer_electronics     → as_shanghai             44.0 t/day
+    automotive_parts         → as_beijing              30.3 t/day
+    automotive_parts         → as_xian                 21.1 t/day
+    industrial_chemicals     → as_yangon               17.7 t/day
+
+as_shanghai  pop 29,200,000  flows 16  total 354.0 t/day  (budget 438.0, kept 81%)
+    consumer_electronics     → as_beijing              65.0 t/day
+    consumer_electronics     → as_guangzhou            49.2 t/day
+    automotive_parts         → as_beijing              39.4 t/day
+    automotive_parts         → as_guangzhou            39.3 t/day
+    industrial_machinery     → as_xian                 17.8 t/day
+
+as_tashkent  pop 2,900,000  flows 10  total 25.5 t/day  (budget 43.5, kept 59%)
+    fresh_produce            → as_delhi                 3.5 t/day
+    apparel                  → as_lahore                3.3 t/day
+    automotive_parts         → as_almaty                3.1 t/day
+    fresh_produce            → as_novosibirsk           2.8 t/day
+    apparel                  → as_delhi                 2.4 t/day
+
+as_tehran  pop 9,500,000  flows 16  total 122.4 t/day  (budget 142.5, kept 86%)
+    automotive_parts         → as_riyadh               11.5 t/day
+    industrial_chemicals     → as_karachi              11.3 t/day
+    fresh_produce            → as_tashkent             11.2 t/day
+    fresh_produce            → as_dubai                11.1 t/day
+    industrial_chemicals     → eu_athens               10.9 t/day
+
+as_xian  pop 13,000,000  flows 16  total 164.8 t/day  (budget 195.0, kept 85%)
+    consumer_electronics     → as_chengdu              31.9 t/day
+    consumer_electronics     → as_beijing              30.8 t/day
+    industrial_machinery     → as_hanoi                17.2 t/day
+    industrial_machinery     → as_almaty               13.5 t/day
+    pharmaceuticals          → as_chengdu               8.4 t/day
+
+as_yangon  pop 5,600,000  flows 16  total 68.2 t/day  (budget 84.0, kept 81%)
+    apparel                  → as_bangkok               6.1 t/day
+    apparel                  → as_dhaka                 6.0 t/day
+    processed_food           → as_bangkok               5.7 t/day
+    refrigerated_goods       → as_bangkok               5.2 t/day
+    fresh_produce            → as_bangkok               4.9 t/day
+
+as_yekaterinburg  pop 1,500,000  flows 3  total 9.8 t/day  (budget 22.5, kept 43%)
+    industrial_machinery     → as_novosibirsk           4.0 t/day
+    industrial_machinery     → eu_moscow                3.5 t/day
+    construction_materials   → as_novosibirsk           2.3 t/day
+
+eu_amsterdam  pop 2,500,000  flows 3  total 15.2 t/day  (budget 37.5, kept 41%)
+    fresh_produce            → eu_rotterdam             6.8 t/day
+    fresh_produce            → eu_brussels              6.1 t/day
+    refrigerated_goods       → eu_rotterdam             2.4 t/day
+
+eu_athens  pop 3,800,000  flows 14  total 44.2 t/day  (budget 57.0, kept 77%)
+    construction_materials   → eu_budapest              5.0 t/day
+    construction_materials   → eu_istanbul              4.6 t/day
+    fresh_produce            → eu_istanbul              4.2 t/day
+    fresh_produce            → eu_budapest              4.2 t/day
+    processed_food           → as_ankara                3.1 t/day
+
+eu_barcelona  pop 5,600,000  flows 14  total 66.6 t/day  (budget 84.0, kept 79%)
+    industrial_chemicals     → eu_lisbon                8.2 t/day
+    automotive_parts         → eu_milan                 8.1 t/day
+    automotive_parts         → eu_madrid                7.5 t/day
+    industrial_chemicals     → eu_amsterdam             7.4 t/day
+    apparel                  → eu_madrid                6.6 t/day
+
+eu_berlin  pop 6,100,000  flows 16  total 76.0 t/day  (budget 91.5, kept 83%)
+    consumer_electronics     → eu_prague               10.9 t/day
+    consumer_electronics     → eu_hamburg              10.7 t/day
+    pharmaceuticals          → eu_hamburg               8.9 t/day
+    pharmaceuticals          → eu_prague                8.1 t/day
+    consumer_goods           → eu_prague                4.7 t/day
+
+eu_brussels  pop 2,100,000  flows 3  total 13.1 t/day  (budget 31.5, kept 42%)
+    pharmaceuticals          → eu_rotterdam             6.5 t/day
+    pharmaceuticals          → eu_hamburg               5.0 t/day
+    beverages                → eu_rotterdam             1.6 t/day
+
+eu_budapest  pop 3,000,000  flows 7  total 27.5 t/day  (budget 45.0, kept 61%)
+    automotive_parts         → eu_vienna                5.1 t/day
+    pharmaceuticals          → eu_vienna                5.1 t/day
+    pharmaceuticals          → eu_prague                4.8 t/day
+    automotive_parts         → eu_prague                4.8 t/day
+    consumer_electronics     → eu_vienna                3.0 t/day
+
+eu_copenhagen  pop 2,100,000  flows 3  total 11.5 t/day  (budget 31.5, kept 37%)
+    pharmaceuticals          → eu_hamburg               4.9 t/day
+    pharmaceuticals          → eu_berlin                4.1 t/day
+    processed_food           → eu_hamburg               2.5 t/day
+
+eu_hamburg  pop 5,300,000  flows 16  total 61.4 t/day  (budget 79.5, kept 77%)
+    refrigerated_goods       → eu_rotterdam             6.9 t/day
+    refrigerated_goods       → eu_amsterdam             6.9 t/day
+    industrial_machinery     → eu_rotterdam             5.4 t/day
+    industrial_machinery     → eu_brussels              5.3 t/day
+    apparel                  → eu_rotterdam             3.4 t/day
+
+eu_istanbul  pop 15,900,000  flows 16  total 201.4 t/day  (budget 238.5, kept 84%)
+    apparel                  → eu_athens               30.7 t/day
+    apparel                  → eu_budapest             24.7 t/day
+    automotive_parts         → eu_athens               20.5 t/day
+    automotive_parts         → as_ankara               16.7 t/day
+    consumer_goods           → as_ankara               16.7 t/day
+
+eu_kyiv  pop 3,500,000  flows 8  total 32.8 t/day  (budget 52.5, kept 62%)
+    processed_food           → eu_moscow                8.1 t/day
+    processed_food           → eu_prague                5.7 t/day
+    construction_materials   → eu_budapest              3.9 t/day
+    industrial_machinery     → eu_budapest              3.9 t/day
+    construction_materials   → eu_vienna                3.6 t/day
+
+eu_lisbon  pop 2,900,000  flows 8  total 23.3 t/day  (budget 43.5, kept 53%)
+    apparel                  → eu_madrid                4.9 t/day
+    paper_packaging          → eu_madrid                2.9 t/day
+    apparel                  → eu_barcelona             2.9 t/day
+    beverages                → eu_madrid                2.9 t/day
+    fresh_produce            → eu_madrid                2.7 t/day
+
+eu_london  pop 14,800,000  flows 16  total 183.4 t/day  (budget 222.0, kept 83%)
+    consumer_goods           → eu_amsterdam            24.5 t/day
+    consumer_goods           → eu_brussels             23.2 t/day
+    pharmaceuticals          → eu_brussels             15.7 t/day
+    pharmaceuticals          → eu_rotterdam            14.8 t/day
+    consumer_electronics     → eu_rotterdam            12.3 t/day
+
+eu_madrid  pop 6,700,000  flows 16  total 82.9 t/day  (budget 100.5, kept 83%)
+    automotive_parts         → eu_lisbon               14.3 t/day
+    automotive_parts         → eu_barcelona            14.1 t/day
+    apparel                  → eu_lisbon                6.6 t/day
+    apparel                  → eu_barcelona             5.7 t/day
+    processed_food           → eu_barcelona             5.3 t/day
+
+eu_milan  pop 5,200,000  flows 11  total 55.5 t/day  (budget 78.0, kept 71%)
+    apparel                  → eu_rome                 11.7 t/day
+    apparel                  → eu_prague                9.7 t/day
+    furniture                → eu_prague                7.2 t/day
+    furniture                → eu_hamburg               6.9 t/day
+    industrial_machinery     → eu_munich                4.3 t/day
+
+eu_moscow  pop 17,300,000  flows 16  total 198.1 t/day  (budget 259.5, kept 76%)
+    industrial_machinery     → eu_kyiv                 18.3 t/day
+    consumer_electronics     → eu_kyiv                 17.5 t/day
+    consumer_electronics     → eu_warsaw               14.9 t/day
+    industrial_machinery     → as_yekaterinburg        14.8 t/day
+    processed_food           → eu_kyiv                 14.3 t/day
+
+eu_munich  pop 2,900,000  flows 4  total 23.3 t/day  (budget 43.5, kept 54%)
+    automotive_parts         → eu_prague                6.7 t/day
+    automotive_parts         → eu_milan                 6.6 t/day
+    industrial_machinery     → eu_budapest              5.4 t/day
+    industrial_machinery     → eu_prague                4.7 t/day
+
+eu_paris  pop 13,100,000  flows 16  total 164.8 t/day  (budget 196.5, kept 84%)
+    apparel                  → eu_rotterdam            24.4 t/day
+    consumer_goods           → eu_amsterdam            18.5 t/day
+    consumer_goods           → eu_brussels             17.6 t/day
+    apparel                  → eu_hamburg              17.4 t/day
+    pharmaceuticals          → eu_brussels             12.1 t/day
+
+eu_prague  pop 2,700,000  flows 4  total 18.8 t/day  (budget 40.5, kept 46%)
+    automotive_parts         → eu_berlin                7.2 t/day
+    automotive_parts         → eu_vienna                7.1 t/day
+    industrial_machinery     → eu_budapest              2.3 t/day
+    industrial_machinery     → eu_munich                2.2 t/day
+
+eu_rome  pop 4,300,000  flows 16  total 52.7 t/day  (budget 64.5, kept 82%)
+    fresh_produce            → eu_milan                 5.0 t/day
+    fresh_produce            → eu_barcelona             4.9 t/day
+    processed_food           → eu_milan                 4.8 t/day
+    apparel                  → eu_milan                 3.8 t/day
+    processed_food           → eu_munich                3.7 t/day
+
+eu_rotterdam  pop 1,200,000  flows 3  total 9.5 t/day  (budget 18.0, kept 53%)
+    industrial_chemicals     → eu_amsterdam             5.2 t/day
+    industrial_chemicals     → eu_brussels              3.3 t/day
+    refrigerated_goods       → eu_amsterdam             0.9 t/day
+
+eu_stockholm  pop 2,400,000  flows 4  total 14.1 t/day  (budget 36.0, kept 39%)
+    industrial_machinery     → eu_budapest              4.9 t/day
+    industrial_machinery     → eu_hamburg               4.7 t/day
+    paper_packaging          → eu_moscow                2.3 t/day
+    paper_packaging          → eu_budapest              2.2 t/day
+
+eu_vienna  pop 2,900,000  flows 5  total 20.7 t/day  (budget 43.5, kept 48%)
+    pharmaceuticals          → eu_budapest              5.4 t/day
+    pharmaceuticals          → eu_prague                5.2 t/day
+    industrial_machinery     → eu_budapest              4.5 t/day
+    industrial_machinery     → eu_munich                3.3 t/day
+    consumer_electronics     → eu_budapest              2.2 t/day
+
+eu_warsaw  pop 3,100,000  flows 8  total 27.3 t/day  (budget 46.5, kept 59%)
+    consumer_electronics     → eu_budapest              3.9 t/day
+    processed_food           → eu_prague                3.6 t/day
+    consumer_electronics     → eu_prague                3.5 t/day
+    furniture                → eu_hamburg               3.4 t/day
+    automotive_parts         → eu_prague                3.3 t/day
+
+us_atlanta  pop 6,482,182  flows 16  total 81.2 t/day  (budget 97.2, kept 84%)
+    paper_packaging          → us_nashville            11.0 t/day
+    beverages                → us_nashville             9.3 t/day
+    beverages                → us_charlotte             7.5 t/day
+    paper_packaging          → us_detroit               6.8 t/day
+    processed_food           → us_nashville             6.1 t/day
+
+us_boston  pop 5,034,221  flows 6  total 50.0 t/day  (budget 75.5, kept 66%)
+    pharmaceuticals          → us_new_york             17.6 t/day
+    pharmaceuticals          → us_washington           12.1 t/day
+    consumer_electronics     → us_new_york              9.5 t/day
+    consumer_electronics     → us_charlotte             5.5 t/day
+    industrial_chemicals     → us_detroit               2.8 t/day
+
+us_charlotte  pop 2,938,830  flows 7  total 21.4 t/day  (budget 44.1, kept 49%)
+    construction_materials   → us_nashville             3.8 t/day
+    construction_materials   → us_atlanta               3.6 t/day
+    furniture                → us_washington            3.6 t/day
+    furniture                → us_new_york              3.5 t/day
+    industrial_machinery     → us_nashville             2.8 t/day
+
+us_chicago  pop 9,434,123  flows 16  total 117.4 t/day  (budget 141.5, kept 83%)
+    processed_food           → us_detroit              14.8 t/day
+    processed_food           → us_st_louis             11.8 t/day
+    paper_packaging          → us_detroit              10.9 t/day
+    industrial_machinery     → us_st_louis             10.5 t/day
+    paper_packaging          → us_nashville             9.2 t/day
+
+us_dallas  pop 8,477,157  flows 16  total 107.1 t/day  (budget 127.2, kept 84%)
+    consumer_electronics     → us_houston              12.0 t/day
+    consumer_electronics     → us_atlanta              10.5 t/day
+    construction_materials   → us_houston              10.4 t/day
+    industrial_machinery     → us_nashville             9.8 t/day
+    industrial_machinery     → us_kansas_city           9.7 t/day
+
+us_denver  pop 3,092,037  flows 6  total 23.1 t/day  (budget 46.4, kept 50%)
+    beverages                → us_salt_lake_city        5.4 t/day
+    construction_materials   → us_salt_lake_city        4.2 t/day
+    beverages                → us_kansas_city           4.1 t/day
+    construction_materials   → us_kansas_city           3.8 t/day
+    processed_food           → us_las_vegas             3.1 t/day
+
+us_detroit  pop 4,390,913  flows 6  total 41.2 t/day  (budget 65.9, kept 63%)
+    automotive_parts         → us_chicago              15.4 t/day
+    automotive_parts         → us_st_louis             13.9 t/day
+    industrial_machinery     → us_nashville             3.3 t/day
+    industrial_machinery     → us_st_louis              3.1 t/day
+    construction_materials   → us_chicago               3.0 t/day
+
+us_houston  pop 7,904,627  flows 16  total 101.2 t/day  (budget 118.6, kept 85%)
+    industrial_chemicals     → us_new_orleans          24.8 t/day
+    industrial_chemicals     → us_atlanta              14.7 t/day
+    industrial_machinery     → us_dallas                8.4 t/day
+    industrial_machinery     → us_new_orleans           8.3 t/day
+    construction_materials   → us_dallas                6.8 t/day
+
+us_kansas_city  pop 2,270,682  flows 4  total 16.2 t/day  (budget 34.1, kept 47%)
+    processed_food           → us_st_louis              5.1 t/day
+    processed_food           → us_nashville             4.4 t/day
+    automotive_parts         → us_st_louis              3.9 t/day
+    automotive_parts         → us_nashville             2.7 t/day
+
+us_las_vegas  pop 2,407,226  flows 4  total 12.0 t/day  (budget 36.1, kept 33%)
+    consumer_goods           → us_salt_lake_city        4.2 t/day
+    consumer_goods           → us_los_angeles           3.6 t/day
+    fresh_produce            → us_los_angeles           2.2 t/day
+    paper_packaging          → us_salt_lake_city        2.1 t/day
+
+us_los_angeles  pop 12,844,441  flows 16  total 167.6 t/day  (budget 192.7, kept 87%)
+    consumer_electronics     → us_phoenix              21.9 t/day
+    fresh_produce            → us_las_vegas            17.3 t/day
+    consumer_electronics     → us_las_vegas            16.1 t/day
+    apparel                  → us_las_vegas            14.6 t/day
+    refrigerated_goods       → us_san_francisco        13.6 t/day
+
+us_miami  pop 6,391,072  flows 16  total 79.3 t/day  (budget 95.9, kept 83%)
+    fresh_produce            → us_atlanta              11.0 t/day
+    refrigerated_goods       → us_atlanta              10.2 t/day
+    fresh_produce            → us_charlotte             9.5 t/day
+    refrigerated_goods       → us_houston               8.6 t/day
+    industrial_chemicals     → us_new_orleans           4.2 t/day
+
+us_minneapolis  pop 3,790,295  flows 10  total 35.3 t/day  (budget 56.9, kept 62%)
+    processed_food           → us_chicago               5.2 t/day
+    processed_food           → us_detroit               5.1 t/day
+    pharmaceuticals          → us_chicago               4.5 t/day
+    pharmaceuticals          → us_detroit               3.8 t/day
+    paper_packaging          → us_chicago               3.7 t/day
+
+us_nashville  pop 2,197,416  flows 3  total 14.4 t/day  (budget 33.0, kept 44%)
+    automotive_parts         → us_atlanta               6.1 t/day
+    automotive_parts         → us_st_louis              6.0 t/day
+    processed_food           → us_atlanta               2.3 t/day
+
+us_new_orleans  pop 970,849  flows 3  total 5.8 t/day  (budget 14.6, kept 40%)
+    industrial_chemicals     → us_atlanta               2.5 t/day
+    industrial_chemicals     → us_houston               2.1 t/day
+    refrigerated_goods       → us_houston               1.2 t/day
+
+us_new_york  pop 20,112,448  flows 16  total 255.0 t/day  (budget 301.7, kept 85%)
+    apparel                  → us_boston               47.3 t/day
+    apparel                  → us_washington           33.8 t/day
+    pharmaceuticals          → us_boston               28.8 t/day
+    pharmaceuticals          → us_washington           25.7 t/day
+    consumer_goods           → us_boston               15.3 t/day
+
+us_phoenix  pop 5,228,938  flows 13  total 59.8 t/day  (budget 78.4, kept 76%)
+    consumer_electronics     → us_los_angeles          12.8 t/day
+    construction_materials   → us_los_angeles           8.0 t/day
+    consumer_electronics     → us_denver                7.9 t/day
+    construction_materials   → us_salt_lake_city        5.2 t/day
+    industrial_machinery     → us_salt_lake_city        4.1 t/day
+
+us_salt_lake_city  pop 1,308,377  flows 4  total 9.1 t/day  (budget 19.6, kept 46%)
+    construction_materials   → us_denver                2.5 t/day
+    industrial_machinery     → us_denver                2.3 t/day
+    construction_materials   → us_los_angeles           2.2 t/day
+    industrial_machinery     → us_las_vegas             2.1 t/day
+
+us_san_francisco  pop 4,630,041  flows 10  total 50.9 t/day  (budget 69.5, kept 73%)
+    consumer_electronics     → us_los_angeles          12.2 t/day
+    consumer_electronics     → us_phoenix               9.4 t/day
+    pharmaceuticals          → us_los_angeles           8.4 t/day
+    pharmaceuticals          → us_seattle               5.4 t/day
+    beverages                → us_los_angeles           3.2 t/day
+
+us_seattle  pop 4,161,883  flows 12  total 45.0 t/day  (budget 62.4, kept 72%)
+    refrigerated_goods       → us_san_francisco         7.0 t/day
+    refrigerated_goods       → us_los_angeles           5.2 t/day
+    industrial_machinery     → us_salt_lake_city        5.1 t/day
+    industrial_machinery     → us_san_francisco         4.5 t/day
+    consumer_electronics     → us_los_angeles           4.4 t/day
+
+us_st_louis  pop 2,814,421  flows 6  total 26.1 t/day  (budget 42.2, kept 62%)
+    automotive_parts         → us_kansas_city           5.4 t/day
+    automotive_parts         → us_nashville             4.7 t/day
+    beverages                → us_nashville             4.6 t/day
+    beverages                → us_kansas_city           4.0 t/day
+    industrial_chemicals     → us_kansas_city           3.9 t/day
+
+us_washington  pop 6,465,724  flows 16  total 75.9 t/day  (budget 97.0, kept 78%)
+    pharmaceuticals          → us_new_york              8.7 t/day
+    pharmaceuticals          → us_detroit               7.1 t/day
+    construction_materials   → us_nashville             5.8 t/day
+    construction_materials   → us_charlotte             5.3 t/day
+    processed_food           → us_new_york              4.8 t/day

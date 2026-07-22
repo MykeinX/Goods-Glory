@@ -96,153 +96,156 @@ private enum Fixture {
         )
     }
 
-    static func urgencyMultiplier(_ urgency: JobUrgency) -> Double {
-        switch urgency {
-        case .economy: return 0.85
-        case .normal: return 1.0
-        case .urgent: return 1.45
-        }
+    /// The fixture's single derived lane: alpha's supplier → beta's receiver,
+    /// 1500 kg/day (kept below the rate floor by the minimum-lanes rule).
+    static let laneID = LaneID("\(cityA.rawValue).\(product.rawValue).\(cityB.rawValue)")
+
+    /// Minutes of accrual ticks that guarantee the dock holds at least one
+    /// 1000 kg parcel: even at the weekly swing's minimum (1125 kg/day,
+    /// ~187 kg per 240-minute tick), eight ticks clear 1000 kg.
+    static let minutesToFirstParcel = 8 * LaneConfig.tickMinutes
+
+    /// A hand-built lane parcel offer, for tests that exercise the legacy
+    /// accept/route paths without going through the dock claim.
+    static func laneOffer(
+        id: Int,
+        massKg: Int = 1000,
+        payout: Money = 1000,
+        state: GameState
+    ) -> JobOffer {
+        JobOffer(
+            id: JobID(rawValue: id),
+            origin: cityA,
+            destination: cityB,
+            productID: product,
+            load: LoadSize(massKg: massKg, volumeM3: Double(massKg) / 1000 * 2),
+            payout: payout,
+            distanceKm: 100,
+            urgency: .normal,
+            source: .lane,
+            contractID: nil,
+            laneID: laneID,
+            originFirmID: nil,
+            destinationFirmID: nil,
+            createdAt: state.clock,
+            expiresAt: state.clock + 2_160
+        )
     }
 }
 
 // MARK: - Engine rules
 
 struct SimulationEngineTests {
-    @Test func bundledInitialOffersUseFreightPricingAndFitEntryVehicle() throws {
-        let catalog = try GameCatalog.load(from: .main)
-        let engine = SimulationEngine(catalog: catalog)
-        let entryVehicleType = try #require(catalog.vehicleTypes
-            .filter { $0.purchasePrice <= catalog.economy.startingCash }
-            .min {
-                $0.purchasePrice == $1.purchasePrice
-                    ? $0.id.rawValue < $1.id.rawValue
-                    : $0.purchasePrice < $1.purchasePrice
-            })
-        let headquarters = catalog.starterCities.map(\.id).sorted { $0.rawValue < $1.rawValue }
-        #expect(headquarters.count >= 6)
-
-        for hqCity in headquarters {
-            for seed in UInt64(0)..<12 {
-                var state = GameState.newCampaign(
-                    config: CampaignConfig(
-                        seed: seed,
-                        identity: CompanyIdentity(
-                            name: "Test Co", colorHex: "#1F6FEB", emblemSymbol: "star.fill"
-                        ),
-                        hqCity: hqCity
-                    ),
-                    economy: catalog.economy
-                )
-
-                engine.advance(&state, by: 0)
-
-                #expect(!state.offers.isEmpty)
-                #expect(state.offers.count <= catalog.economy.maxOpenOffersPerCity)
-                for offer in state.offers where offer.source == .spot {
-                    let product = try #require(catalog.product(offer.productID))
-                    #expect(offer.origin == hqCity)
-                    #expect(offer.destination != hqCity)
-                    #expect(catalog.shortestRoute(from: offer.origin, to: offer.destination) != nil)
-                    #expect(offer.load.fits(in: entryVehicleType.capacity))
-                    #expect(offer.load.massKg % ProductDefinition.shipmentMassStepKg == 0)
-                    #expect((product.minimumShipmentMassKg...product.maximumShipmentMassKg)
-                        .contains(offer.load.massKg))
-
-                    let expectedVolume = (
-                        Double(offer.load.massKg) / 1000 * product.densityM3PerTon * 10
-                    ).rounded() / 10
-                    #expect(offer.load.volumeM3 == expectedVolume)
-
-                    let multiplier = catalog.economy.urgencyTiers
-                        .first(where: { $0.id == offer.urgency.rawValue })?.multiplier ?? 1
-                    let expected = engine.freightPayout(
-                        origin: offer.origin,
-                        destination: offer.destination,
-                        distanceKm: offer.distanceKm,
-                        load: offer.load,
-                        vehicleType: entryVehicleType,
-                        urgencyMultiplier: multiplier,
-                        state: state
-                    )
-                    #expect(offer.payout == expected)
-
-                    // The promise a new player is owed: the very first jobs on
-                    // the board are worth taking with the vehicle they can
-                    // actually afford.
-                    let haul = engine.haulCost(
-                        origin: offer.origin,
-                        destination: offer.destination,
-                        distanceKm: offer.distanceKm,
-                        vehicleType: entryVehicleType
-                    )
-                    #expect(offer.payout > haul.cost)
-                }
-            }
-        }
+    @Test func fixtureCatalogDerivesTheExpectedLane() throws {
+        let catalog = try Fixture.catalog()
+        let lane = try #require(catalog.lane(Fixture.laneID))
+        #expect(lane.originCityID == Fixture.cityA)
+        #expect(lane.destinationCityID == Fixture.cityB)
+        #expect(lane.baseRatePerDayKg == 1_500)
+        #expect(catalog.lanes.count == 1)
     }
 
-    @Test func offersFollowAnAvailableVehicleLocation() throws {
+    @Test func laneAccrualBuildsAndStaysWithinThePatienceWindow() throws {
         let catalog = try Fixture.catalog()
         let engine = SimulationEngine(catalog: catalog)
         var state = Fixture.newState()
-        state.vehicles.append(Vehicle(
-            id: VehicleID(rawValue: 999),
-            typeID: Fixture.van,
-            cityID: Fixture.cityB,
-            assignedJobID: nil,
-            odometerKm: 0
-        ))
 
-        engine.advance(&state, by: 0)
+        // Nobody serves the lane: freight accrues, while the dock retains no
+        // more than the patience window's production.
+        engine.advance(&state, by: 14 * GameState.minutesPerDay)
 
-        #expect(!state.offers.isEmpty)
-        #expect(state.offers.allSatisfy { $0.origin == Fixture.cityB })
-        #expect(state.offers.allSatisfy { $0.load.massKg == 1_000 })
+        let lane = try #require(catalog.lane(Fixture.laneID))
+        let cap = lane.baseRatePerDayKg * catalog.economy.lanes.parcelPatienceMinutes
+            / GameState.minutesPerDay
+        // The weekly swing moves the per-tick rate, so allow its amplitude.
+        let swing = Double(catalog.economy.lanes.weeklySwingPercent) / 100
+        let waiting = state.laneAccrualKg[Fixture.laneID] ?? 0
+        #expect(waiting > 0)
+        #expect(Double(waiting) <= Double(cap) * (1 + swing) + 1)
+
     }
 
-    @Test func fullJobLifecycleSettlesCorrectly() throws {
+    @Test func dispatchedVehicleShuttlesTheLaneAndSettlesAtSpotRate() throws {
+        let catalog = try Fixture.catalog()
+        let engine = SimulationEngine(catalog: catalog)
+        var state = Fixture.newState()
+        try engine.apply(.buyVehicle(Fixture.van), to: &state)
+        let vehicle = try #require(state.vehicles.first)
+        #expect(vehicle.cityID == Fixture.cityA)
+
+        // Let the dock fill past one parcel, then send the truck.
+        engine.advance(&state, by: Fixture.minutesToFirstParcel)
+        let waitingBefore = state.laneAccrualKg[Fixture.laneID] ?? 0
+        #expect(waitingBefore >= 1_000)
+
+        try engine.apply(
+            .dispatchVehicleToLane(laneID: Fixture.laneID, vehicleID: vehicle.id),
+            to: &state
+        )
+        let route = try #require(state.routes.first)
+        #expect(route.isRunning)
+        #expect(route.vehicleIDs == [vehicle.id])
+        #expect(route.stops.map(\.task).contains(.pickupLane(Fixture.laneID)))
+        #expect(route.stops.map(\.task).contains(.deliverAll))
+
+        let cashBefore = state.cash
+        // One lap: load (30), drive (60), unload (30) plus slack.
+        engine.advance(&state, by: 6 * 60)
+
+        #expect(state.stats.deliveredJobs >= 1)
+        #expect(state.cash > cashBefore, "a served lane must clear its costs")
+        // Parcel identity survived end to end: minted from the lane, carried
+        // the supplier/receiver firms, settled at the spot rate.
+        let deliveredLog = state.log.contains { entry in
+            if case .routeShipmentDelivered(_, _, let destination, _) = entry.event {
+                return destination == Fixture.cityB
+            }
+            return false
+        }
+        #expect(deliveredLog)
+        // The shuttle keeps serving the lane: its run still exists (parked or
+        // driving), it was not torn down after one delivery.
+        #expect(state.routeRun(for: vehicle.id) != nil)
+        // The dock was debited by what was loaded.
+        let waitingAfter = state.laneAccrualKg[Fixture.laneID] ?? 0
+        #expect(waitingAfter < waitingBefore + 1_000)
+    }
+
+    @Test func claimedLaneParcelIsPricedForTheLoadingVehicle() throws {
         let catalog = try Fixture.catalog()
         let engine = SimulationEngine(catalog: catalog)
         var state = Fixture.newState()
         let vanType = try #require(catalog.vehicleType(Fixture.van))
-
         try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        #expect(state.cash == 10_000)
         let vehicle = try #require(state.vehicles.first)
-        #expect(vehicle.cityID == Fixture.cityA)
 
-        engine.advance(&state, by: 0)
-        let offer = try #require(state.offers.first { $0.origin == Fixture.cityA })
-        #expect(offer.load.massKg == 1000)
-        let expectedPayout = engine.freightPayout(
-            origin: offer.origin,
-            destination: offer.destination,
-            distanceKm: offer.distanceKm,
-            load: offer.load,
+        engine.advance(&state, by: Fixture.minutesToFirstParcel)
+        try engine.apply(
+            .dispatchVehicleToLane(laneID: Fixture.laneID, vehicleID: vehicle.id),
+            to: &state
+        )
+        // Service starts immediately (vehicle is already in alpha): parcels
+        // exist as shipments claimed by the route.
+        engine.advance(&state, by: 1)
+        let shipment = try #require(state.shipments.first)
+        #expect(shipment.offer.source == .lane)
+        #expect(shipment.offer.laneID == Fixture.laneID)
+        let expected = engine.freightPayout(
+            origin: Fixture.cityA,
+            destination: Fixture.cityB,
+            distanceKm: 100,
+            load: shipment.offer.load,
             vehicleType: vanType,
-            urgencyMultiplier: Fixture.urgencyMultiplier(offer.urgency),
             state: state
         )
-        #expect(offer.payout == expectedPayout)
-
-        try engine.apply(.acceptJob(offerID: offer.id, vehicleID: vehicle.id), to: &state)
-        #expect(state.activeJobs.count == 1)
-        #expect(state.activeJobs[0].phase == .loading)
-        #expect(state.activeJobs[0].route == [
-            RoadTraversal(roadID: Fixture.roadAB, direction: .forward)
-        ])
-
-        engine.advance(&state, by: 120)
-        #expect(state.activeJobs.isEmpty)
-
-        let delivered = try #require(state.vehicles.first)
-        #expect(delivered.cityID == Fixture.cityB)
-        #expect(delivered.isAvailable)
-        #expect(abs(delivered.odometerKm - 100) < 0.001)
-
-        // Cost: 100 km * 0.5 + 2 h * 10 = 70. Same-day job: no fixed ownership charge.
-        #expect(state.cash == 10_000 + offer.payout - 70)
-        #expect(state.stats.deliveredJobs == 1)
+        #expect(shipment.offer.payout == expected)
+        let haul = engine.haulCost(
+            origin: Fixture.cityA,
+            destination: Fixture.cityB,
+            distanceKm: 100,
+            vehicleType: vanType
+        )
+        #expect(shipment.offer.payout > haul.cost, "spot price is cost plus margin by construction")
     }
 
     @Test func oversizedLoadIsRejected() throws {
@@ -260,8 +263,9 @@ struct SimulationEngineTests {
             payout: 1000,
             distanceKm: 100,
             urgency: .normal,
-            source: .spot,
+            source: .lane,
             contractID: nil,
+            laneID: Fixture.laneID,
             originFirmID: nil,
             destinationFirmID: nil,
             createdAt: state.clock,
@@ -284,18 +288,6 @@ struct SimulationEngineTests {
         #expect(throws: CommandError.insufficientFunds(required: 10_000)) {
             try engine.apply(.buyVehicle(Fixture.van), to: &state)
         }
-    }
-
-    @Test func expiredOffersAreRemoved() throws {
-        let engine = SimulationEngine(catalog: try Fixture.catalog())
-        var state = Fixture.newState()
-        engine.advance(&state, by: 0)
-        #expect(!state.offers.isEmpty)
-        let firstBatchIDs = Set(state.offers.map(\.id))
-
-        // Past the longest urgency lifetime (economy = 1440).
-        engine.advance(&state, by: 1500)
-        #expect(state.offers.allSatisfy { !firstBatchIDs.contains($0.id) })
     }
 
     @Test func signingContractPostsDiscountedShipments() throws {
@@ -341,18 +333,11 @@ struct SimulationEngineTests {
             vehicleType: vanType
         )
         #expect(shipment.payout > cycleCost)
-        let spotNormal = engine.freightPayout(
-            origin: shipment.origin,
-            destination: shipment.destination,
-            distanceKm: shipment.distanceKm,
-            load: shipment.load,
-            vehicleType: vanType,
-            urgencyMultiplier: 1.0,
-            state: state
-        )
-        // A dedicated lane trades margin for certainty: it pays less per haul
-        // than the open market would for the same freight.
-        #expect(shipment.payout < spotNormal)
+        // Note: a contract parcel prices the *round trip* (the lane commits the
+        // vehicle to come back for the next cycle) while a spot parcel prices
+        // the loaded leg only, so the two are not directly comparable here.
+        // Phase 3 replaces this with the real relation — a contract pays the
+        // lane's spot rate plus a commitment premium — and tests it there.
     }
 
     @Test func assignedVehicleRunsContractCycleAndReturns() throws {
@@ -372,14 +357,17 @@ struct SimulationEngineTests {
             to: &state
         )
 
-        // Assignment created the running contract route with its two stops.
-        let route = try #require(state.route(forContract: contractOffer.id))
+        // Assignment created a running lane: the contract dock first, then the
+        // same-lane pickup so the truck leaves full, then one catch-all delivery.
+        let route = try #require(state.route(serving: contractOffer.id))
         #expect(route.vehicleIDs == [vehicle.id])
         #expect(route.isRunning)
-        #expect(route.stops.map(\.task) == [
-            .pickupContract(contractOffer.id), .deliverContract(contractOffer.id)
+        #expect(route.stops.first?.task == .pickupContract(contractOffer.id))
+        #expect(route.stops.last?.task == .deliverAll)
+        #expect(route.coveredLaneIDs == [Fixture.laneID])
+        #expect(route.stops.map(\.cityID) == [
+            contractOffer.origin, contractOffer.origin, contractOffer.destination
         ])
-        #expect(route.stops.map(\.cityID) == [contractOffer.origin, contractOffer.destination])
         #expect(state.routeRun(for: vehicle.id) != nil)
 
         // A double vehicle assignment to any route is rejected.
@@ -451,9 +439,12 @@ struct SimulationEngineTests {
 
         let loaded = try #require(state.shipment(claimedID))
         #expect(loaded.loadedVehicleID == vehicle.id)
-        let traveling = try #require(state.routeRun(for: vehicle.id))
-        #expect(traveling.phase == .traveling)
-        #expect(traveling.stopIndex == 1)
+        // The lap moved past the contract dock. Whether it is topping up at
+        // the lane dock or already driving, it must not be parked: a loaded
+        // vehicle never waits.
+        let moving = try #require(state.routeRun(for: vehicle.id))
+        #expect(moving.stopIndex > 0)
+        #expect(moving.phase != .waiting)
     }
 
     @Test func customRouteExecutesRecurringContractTasks() throws {
@@ -744,7 +735,9 @@ struct SimulationEngineTests {
         #expect(state.shipments(of: routeID).isEmpty)
         #expect(state.vehicle(vehicle.id)?.cityID == contractOffer.destination)
         #expect(state.isVehicleIdle(vehicle.id))
-        #expect(state.activeContract(contractOffer.id)?.shipmentsCompleted == 1)
+        // A dock visit fills the vehicle rather than taking one box, so the
+        // wind-down may legitimately finish more than a single parcel.
+        #expect((state.activeContract(contractOffer.id)?.shipmentsCompleted ?? 0) >= 1)
     }
 
     @Test func customRouteCarriesAnAcceptedJobAroundTheLoop() throws {
@@ -752,9 +745,9 @@ struct SimulationEngineTests {
         let engine = SimulationEngine(catalog: catalog)
         var state = Fixture.newState()
         try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        engine.advance(&state, by: 0)
         let vehicle = try #require(state.vehicles.first)
-        let offer = try #require(state.offers.first { $0.origin == Fixture.cityA })
+        let offer = Fixture.laneOffer(id: 999, state: state)
+        state.offers.append(offer)
 
         try engine.apply(.createRoute(name: "Loop"), to: &state)
         let route = try #require(state.routes.last)
@@ -796,8 +789,9 @@ struct SimulationEngineTests {
             payout: 1_000,
             distanceKm: 100,
             urgency: .normal,
-            source: .spot,
+            source: .lane,
             contractID: nil,
+            laneID: Fixture.laneID,
             originFirmID: nil,
             destinationFirmID: nil,
             createdAt: state.clock,
@@ -827,16 +821,16 @@ struct SimulationEngineTests {
         #expect(skipLogs.count == 1)
     }
 
-    @Test func twoRouteVehiclesCannotClaimTheSameSpotShipment() throws {
+    @Test func twoRouteVehiclesCannotClaimTheSameLaneShipment() throws {
         let engine = SimulationEngine(catalog: try Fixture.catalog())
         var state = Fixture.newState()
         try engine.apply(.buyVehicle(Fixture.van), to: &state)
         try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        engine.advance(&state, by: 0)
 
         let vehicles = state.vehicles
         #expect(vehicles.count == 2)
-        let offer = try #require(state.offers.first { $0.source == .spot })
+        let offer = Fixture.laneOffer(id: 999, state: state)
+        state.offers.append(offer)
         try engine.apply(.createRoute(name: "Shared"), to: &state)
         let route = try #require(state.routes.last)
         try engine.apply(.addJobToRoute(offerID: offer.id, routeID: route.id), to: &state)
@@ -944,7 +938,8 @@ struct SimulationEngineTests {
         engine.advance(&state, by: 0)
 
         let vehicle = try #require(state.vehicles.first)
-        let spot = try #require(state.offers.first { $0.source == .spot })
+        let spot = Fixture.laneOffer(id: 999, state: state)
+        state.offers.append(spot)
         let contractOffer = try #require(state.contractOffers.first)
         try engine.apply(.signContract(contractOffer.id), to: &state)
         // Signing grants preparation time; skip past it so the first cycle posts.
@@ -1010,7 +1005,10 @@ struct DeterminismTests {
         engine.advance(&state, by: 0)
 
         let vehicle = try #require(state.vehicles.first)
-        let offer = try #require(state.offers.first { $0.source == .spot })
+        // A lane shuttle in the mix: dispatch claims parcels from the dock on
+        // its own; the encoded state must still be chunk-invariant.
+        let offer = Fixture.laneOffer(id: 999_999, state: state)
+        state.offers.append(offer)
         try engine.apply(.createRoute(name: "Deterministic loop"), to: &state)
         let route = try #require(state.routes.last)
         try engine.apply(.addJobToRoute(offerID: offer.id, routeID: route.id), to: &state)
@@ -1036,11 +1034,14 @@ struct DeterminismTests {
             let engine = SimulationEngine(catalog: try Fixture.catalog())
             var state = Fixture.newState(seed: 1234)
             try engine.apply(.buyVehicle(Fixture.van), to: &state)
-            engine.advance(&state, by: 0)
-
-            let offer = try #require(state.offers.first { $0.origin == Fixture.cityA })
+            // Let the dock fill, then serve the lane: accrual ticks, the claim,
+            // pricing and capped accrual all sit on the determinism contract.
+            engine.advance(&state, by: Fixture.minutesToFirstParcel)
             let vehicle = try #require(state.vehicles.first)
-            try engine.apply(.acceptJob(offerID: offer.id, vehicleID: vehicle.id), to: &state)
+            try engine.apply(
+                .dispatchVehicleToLane(laneID: Fixture.laneID, vehicleID: vehicle.id),
+                to: &state
+            )
 
             for chunk in chunks {
                 engine.advance(&state, by: chunk)

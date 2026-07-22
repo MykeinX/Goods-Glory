@@ -59,7 +59,7 @@ struct GameNotification: Identifiable, Equatable, Sendable {
              .vehicleAssignedToRoute, .vehicleUnassignedFromRoute, .routeStarted,
              .routeStopped, .routeShipmentSkipped, .contractShipmentMissed, .contractEnded,
              .facilityDemolished, .cargoStored, .cargoLoadedFromWarehouse,
-             .contractCancellationRequested, .contractRouteClosed, .routeNeedsReview:
+             .contractCancellationRequested, .routeNeedsReview:
             return nil
         }
     }
@@ -184,11 +184,11 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 id: entry.id,
                 kind: .milestone,
                 chrome: .success,
-                title: kind == .branch
+                title: kind == .office
                     ? String(localized: "Branch open")
                     : String(localized: "Warehouse open"),
                 detail: "\(cityName(city)) · \(String(localized: "level \(level)"))",
-                systemImage: kind == .branch ? "building.2.fill" : "shippingbox.fill",
+                systemImage: Format.moduleSymbol(kind),
                 logAt: entry.at,
                 mapFocusCityID: focus
             )
@@ -203,26 +203,15 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 logAt: entry.at,
                 mapFocusCityID: focus
             )
-        case .contractRouteClosed:
-            return GameNotification(
-                id: entry.id,
-                kind: .operations,
-                chrome: .brand,
-                title: String(localized: "Contract route closed"),
-                detail: String(localized: "Its contract ended — the vehicles are free"),
-                systemImage: "arrow.triangle.branch",
-                logAt: entry.at,
-                mapFocusCityID: focus
-            )
         case .routeNeedsReview:
             // The one case the player must not miss: a route quietly running
-            // laps for work that no longer exists.
+            // laps below its potential.
             return GameNotification(
                 id: entry.id,
                 kind: .operations,
                 chrome: .warning,
                 title: String(localized: "Route needs editing"),
-                detail: String(localized: "It still has stops for a contract that ended"),
+                detail: String(localized: "A contract ended — the lane runs on spot freight now"),
                 systemImage: "pencil.and.list.clipboard",
                 logAt: entry.at,
                 mapFocusCityID: focus

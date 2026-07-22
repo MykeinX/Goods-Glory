@@ -7,7 +7,8 @@ kaynaklar:
   - "`docs/01_URUN_VIZYONU.md`"
   - "`docs/02_OYUN_TASARIMI.md`"
   - "Kullanıcının 2026-07-17 tarihli Ana Tasarım Özeti"
-son_güncelleme: 2026-07-17
+  - "`AKIS_VE_HAT_REVIZYONU_PLAN.md` (2026-07-20 akış revizyonu)"
+son_güncelleme: 2026-07-20
 etiketler:
   - gdd
   - gdd/çekirdek-oynanış
@@ -20,10 +21,10 @@ etiketler:
 
 ## Döngünün Özeti
 
-1. **Pazarı oku:** Talep, mevcut taahhütler, araç konumları, kapasite, risk ve nakit durumunu incele.
-2. **Fırsatı değerlendir:** Spot iş, düzenli sözleşme, ihale veya özel operasyonun gelirini, şartlarını ve stratejik değerini karşılaştır.
-3. **Hizmet sözü ver:** Hacim, süre, güvenilirlik ve fiyat taahhüdünü kabul et veya teklif oluştur.
-4. **Operasyon zincirini kur:** Doğrudan ya da aktarmalı rota; araç, servis hattı, tesis ve dış kapasite planla.
+1. **Akışları oku:** Haritadaki kalıcı yük akışlarını, mevcut taahhütleri, araç konumlarını, kapasiteyi, riski ve nakdi incele.
+2. **Fırsatı değerlendir:** Hangi akışı servis edeceğini, hangi taahhüdü (sözleşme, ihale, özel operasyon) alacağını getiri ve stratejik değere göre karşılaştır.
+3. **Hizmet sözü ver:** Bir akışın payını hacim, süre, güvenilirlik ve fiyatla taahhüt et — veya taahhütsüz spot ücretle servis et.
+4. **Operasyon zincirini kur:** Doğrudan ya da aktarmalı hat; araç, tesis ve dış kapasite planla. Hat, kapsadığı akışların partilerini kendisi çeker.
 5. **Kapasiteyi tahsis et:** Sözleşmeli yük, spot yük, yedek pay ve bakım ihtiyacı arasında kaynak ayır.
 6. **Zamanı çalıştır:** Sevkiyatlar sürekli simülasyon içinde yüklenir, taşınır, aktarılır ve teslim edilir.
 7. **Sapmaları yönet:** Gecikme, arıza, talep değişimi, kriz ve fırsatlara müdahale et.
@@ -35,10 +36,10 @@ etiketler:
 
 ### Başlangıçta
 
-- Tek seferlik iş
+- Servis edilecek yük akışı seçimi
 - Tekil araç ve ekipman
 - Araç konumu
-- Doğrudan rota
+- Doğrudan hat (gidiş-dönüş döngüsü)
 - Dönüş yükü veya boş hareket
 
 ### Büyüme Sonrasında
@@ -54,13 +55,13 @@ Bu geçiş [[01 - Ürün Vizyonu/02 - Tasarım Sütunları|Tasarım Sütunları]
 
 ## İş ve Sözleşme Akışı
 
-### Spot İş
+### Yük Akışı (spot servis)
 
-Tek seferliktir. Başlangıç eğitimini, acil nakdi, yeni pazar testini, fazla kapasite kullanımını ve dönüş yükü bulmayı destekler. İleri oyunun ana gelir motoru değildir.
+Talebin kaynağı, firmalar arasındaki kalıcı yük akışlarıdır; ayrı bir "spot iş" nesnesi yoktur. Taahhütsüz servis edilen akış partileri spot ücretle ödenir. Tek partiyi manuel taşımak başlangıç eğitimini, acil nakdi, yeni pazar testini ve boş aracın ücretli konumlandırılmasını destekler; olgun oyunda hatlar bu partileri kendisi çeker.
 
 ### Düzenli Sözleşme
 
-Belirli dönem boyunca hacim ve hizmet seviyesi üretir. Yükler koşullara göre otomatik oluşur; oyuncu her partiyi tekrar kabul etmez. Ana görev yeterli ve dayanıklı ağı sürdürmektir.
+Bir akışın payını belirli dönem boyunca hacim ve hizmet seviyesiyle taahhüt eder. Partiler akıştan otomatik oluşur; oyuncu her partiyi tekrar kabul etmez. Ana görev yeterli ve dayanıklı ağı sürdürmektir. Sözleşme bitince akış tabana döner; hat boşa düşmez.
 
 ### Büyük İhale
 

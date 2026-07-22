@@ -71,3 +71,19 @@ before implementation rather than after mistakes.
 ## Imported Claude Cowork project instructions
 
 iPhone logistics simulation game
+
+## 5. Kod Düzeni — Tekrar ve Şişme Yasağı
+
+**Bu proje bu iki hatayı zaten ödedi; tekrarlanmamalı.**
+
+- **Dosya ~400 satırda bölünür, 700 üst sınır.** Klasör açmak bölmek değildir.
+  Yeni bir tip yazıyorsan ve tek bir ekranın iç detayı değilse kendi dosyasına
+  gider; bir alt bileşen ikinci kez kullanıldığı anda kendi dosyasına taşınır.
+- **Aynı hesabı/bileşeni ikinci kez yazma.** İki kopya zamanla ayrışır ve tek
+  bir değişiklik birden çok yeri düzeltmeyi gerektirir. Ortak yerler:
+  `Domain` (kural/hesap), `Format` (biçim), `SessionDisplay` (katalog aramaları),
+  `DesignSystem` (görsel bileşen), `<Tip>Display` (domain tipinin sunumu).
+- **Hesap Domain'de, görüntü Presentation'da.** Bir sayı birden çok ekranda
+  görünüyorsa onu motor hesaplar; view yalnız okur.
+
+Ayrıntı ve gerekçe: `Goods&Glory/ARCHITECTURE.md` → "Kod düzeni kuralları".

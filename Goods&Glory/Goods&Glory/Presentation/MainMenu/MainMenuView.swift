@@ -46,6 +46,10 @@ struct MainMenuView: View {
         .sheet(isPresented: $showsSettings) {
             SettingsView()
         }
+        // The founding screen's name field is the first text input in the game;
+        // paying for the keyboard here, while the menu sits idle, keeps that
+        // first tap instant.
+        .prewarmsKeyboard()
     }
 
     // MARK: - Brand

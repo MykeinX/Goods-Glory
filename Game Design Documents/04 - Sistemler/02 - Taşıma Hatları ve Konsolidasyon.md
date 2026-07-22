@@ -6,7 +6,8 @@ kaynaklar:
   - "[[01 - Kanonik Lojistik Nesne Modeli]]"
   - "[[02 - Rota ve Operasyon Planlama]]"
   - docs/10_DEPO_MERKEZLI_COK_ASAMALI_YUK_AGI.md
-son_güncelleme: 2026-07-17
+  - "`AKIS_VE_HAT_REVIZYONU_PLAN.md` (2026-07-20 akış revizyonu)"
+son_güncelleme: 2026-07-20
 etiketler:
   - gdd
   - servis-hatları
@@ -39,7 +40,9 @@ Servis hattı bir müşteri sözleşmesi değil, şirketin iki düğüm arasınd
 - maliyet, güvenilirlik ve olay hassasiyeti;
 - açık, askıda, kapanıyor veya kapalı durum.
 
-Hat açılması yük yaratmaz. Hacim, kabul edilen sözleşmelerin partilerinden ve spot pazardan gelir.
+Hat açılması yük yaratmaz. Hacim, hattın kapsadığı kalıcı yük akışlarından gelir: taahhütlü (sözleşmeli) partiler önceliklidir, kalan kapasite akışların taahhütsüz partileriyle spot ücretten dolar. Hat, duraklarında biriken uyumlu partileri yerleştirme politikasına göre **kendisi çeker**; oyuncu parti parti kabul işlemi yapmaz.
+
+Bir sözleşme sona erdiğinde hat boşa düşmez: taban akış kaldığı sürece spot partilerle çalışmaya devam eder. Düşen doluluk ve marj, hattı düzenleme veya kapatma kararının sinyalidir.
 
 ## Konsolidasyon
 

@@ -86,8 +86,9 @@ enum ScaleFixture {
                 kind: .city,
                 cityID: cityID(index)
             ))
-            // Every city both supplies and demands, so offer generation has
-            // work to do everywhere — the realistic late-game shape.
+            // Every city both supplies and demands, so lane derivation has
+            // work to do everywhere — the realistic late-game shape (200 lanes
+            // accruing on the tick, contract lanes on top).
             markets.append(CityMarketProfile(
                 cityID: cityID(index),
                 supply: [CityProductWeight(productID: product, weight: 10)],
@@ -166,10 +167,10 @@ enum ScaleFixture {
         state.cash = 1_000_000_000
 
         for index in 0..<cityCount where index != 0 {
-            try engine.apply(.buildFacility(kind: .branch, cityID: cityID(index)), to: &state)
+            try engine.apply(.installModule(kind: .office, cityID: cityID(index)), to: &state)
         }
         for index in stride(from: 0, to: cityCount, by: 4) {
-            try engine.apply(.buildFacility(kind: .warehouse, cityID: cityID(index)), to: &state)
+            try engine.apply(.installModule(kind: .warehouse, cityID: cityID(index)), to: &state)
         }
         // Contract boards only open once the company has proven it delivers.
         state.stats.deliveredJobs = catalog.economy.contractsUnlockAfterDeliveries + 1

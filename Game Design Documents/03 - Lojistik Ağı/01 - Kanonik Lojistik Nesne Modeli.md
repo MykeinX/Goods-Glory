@@ -6,7 +6,8 @@ kaynaklar:
   - docs/10_DEPO_MERKEZLI_COK_ASAMALI_YUK_AGI.md
   - docs/09_ARZ_TALEP_SOZLESME_VE_YONETIM_OMURGASI.md
   - docs/06_DATA_DRIVEN_MODELLER_VE_ZAMAN.md
-son_güncelleme: 2026-07-17
+  - "`AKIS_VE_HAT_REVIZYONU_PLAN.md` (2026-07-20 akış revizyonu)"
+son_güncelleme: 2026-07-20
 etiketler:
   - gdd
   - lojistik-ağı
@@ -21,17 +22,31 @@ etiketler:
 
 Oyunun lojistik omurgası aşağıdaki zincirdir:
 
-> **Sözleşme → Yük Partisi → Taşıma Aşaması → Servis Hattı**
+> **Yük Akışı → (Sözleşme) → Yük Partisi → Taşıma Aşaması → Servis Hattı**
 
-Bu zincir ticari taahhüt ile fiziksel icrayı ayırır. **Sözleşme hiçbir araca doğrudan bağlanmaz.** Araçlar, sözleşmelerin ürettiği yük partilerinin belirli taşıma aşamalarını servis hatları üzerindeki fiziksel görevlerle yürütür.
+Talebin kaynağı dünyadır: şehirlerdeki firmalar arasında **kalıcı yük akışları** vardır ve partileri bu akışlar üretir. Sözleşme talep yaratmaz; var olan bir akışın payını taahhüt eden ticari katmandır ve bu yüzden parantezlidir — akış sözleşmesiz de yaşar ve spot ücretle servis edilebilir.
+
+Bu zincir ticari taahhüt ile fiziksel icrayı ayırır. **Sözleşme hiçbir araca doğrudan bağlanmaz.** Araçlar, akışların ürettiği yük partilerinin belirli taşıma aşamalarını servis hatları üzerindeki fiziksel görevlerle yürütür.
 
 Bu ayrım [[02 - Rota ve Operasyon Planlama]], [[03 - Kapasite ve Hibrit Simülasyon]] ve [[02 - Taşıma Hatları ve Konsolidasyon]] için değişmez temeldir.
 
 ## Nesneler ve sorumlulukları
 
+### 0. Yük akışı
+
+İki firma arasındaki kalıcı ticari ilişkidir; dünyanın süresiz talep kaynağıdır. Şunları tanımlar:
+
+- kaynak firma ve tesisi (yükün alındığı adres);
+- hedef firma ve tesisi (yükün teslim edildiği adres);
+- ürün kategorisi;
+- taban debi (kütle/gün) ve haftalık dalgalanma;
+- sezon, olay ve kriz çarpanlarına açık geçici değişimler.
+
+Akışlar şehir pazar verisinden (`city_markets.json`) deterministik türetilir ve şehrin gerçek ekonomik kimliğini yansıtır (otomotiv şehri sürekli otomotiv parçası üretir). Akış süresiz yaşar; kimse taşımazsa dokta en fazla sabır penceresi kadar üretim birikir. Taşan üretim ayrıca sayılmaz veya raporlanmaz. Servis edilen akış partileri, sözleşme yoksa maliyet-türevli **spot ücretle** ödenir; şehirdeki rekabet bu ücretin marjını tek noktadan kırpar.
+
 ### 1. Sözleşme
 
-Müşteriye verilen uçtan uca hizmet sözüdür. Şunları tanımlar:
+Bir yük akışının (veya bir kaynağın birden çok akışının) belirli payını süre, hizmet seviyesi ve fiyatla taahhüt eden, müşteriye verilen uçtan uca hizmet sözüdür. Talep üretmez; akışa bağlanır. Şunları tanımlar:
 
 - yükün alınacağı üretici, tesis, şehir veya bölge;
 - nihai müşteri, şehir ya da dağıtım bölgesi;
@@ -45,9 +60,10 @@ Sözleşme, müşterinin sonucunu tarif eder; hangi aracın hangi yoldan gidece�
 
 ### 2. Yük partisi
 
-Sözleşmenin belirli bir zamanda ürettiği fiziksel yük miktarıdır. En az şu durumu taşır:
+Bir akışın belirli bir zamanda ürettiği fiziksel yük miktarıdır. En az şu durumu taşır:
 
-- kaynak sözleşme kimliği;
+- kaynak akış kimliği ve varsa bağlı sözleşme kimliği;
+- müşteri firması, alış tesisi ve teslim tesisi (farklı firmaların aynı türdeki yükleri kimlik olarak karışmaz);
 - miktar ve kapasite birimi;
 - mevcut düğüm veya hareket hâli;
 - son teslim zamanı ve bekleme süresi;
@@ -56,7 +72,7 @@ Sözleşmenin belirli bir zamanda ürettiği fiziksel yük miktarıdır. En az �
 - bölünebilirlik ve başka partilerle konsolide edilebilirlik;
 - gecikme, hasar veya sıcaklık riski.
 
-Bir sözleşmenin 80 birimlik partisi, 20 birim kapasiteli dört seferle; iki aracın paralel görevleriyle; ya da farklı kalkışlara bölünerek taşınabilir. Aynı servis hattı, uyumluluk ve kapasite elverdiğinde birden fazla sözleşmenin partilerini birlikte taşıyabilir.
+Bir akışın 80 birimlik partisi, 20 birim kapasiteli dört seferle; iki aracın paralel görevleriyle; ya da farklı kalkışlara bölünerek taşınabilir. Aynı servis hattı, uyumluluk ve kapasite elverdiğinde birden fazla akışın ve sözleşmenin partilerini birlikte taşıyabilir.
 
 ### 3. Taşıma aşaması
 
@@ -126,7 +142,7 @@ görebilmelidir. Büyük ölçekte arayüz partileri gruplayabilir; bu, simülas
 
 ## Değişmez doğrulamalar
 
-1. Her yük partisi tam olarak bir sözleşmeden doğar.
+1. Her yük partisi tam olarak bir yük akışından doğar; en fazla bir sözleşmeye bağlı olabilir.
 2. Her aktif parti miktarı; düğümde bekleyen, görevde taşınan ve teslim edilmiş miktarlara izlenebilir.
 3. Bir fiziksel görevdeki toplam uyumlu yük, kullanılabilir kapasiteyi aşamaz.
 4. Her aşamanın bitiş düğümü, sonraki aşamanın başlangıç düğümüdür.

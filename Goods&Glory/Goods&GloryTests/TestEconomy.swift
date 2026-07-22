@@ -9,16 +9,10 @@ import Foundation
 @testable import Goods_Glory
 
 enum TestEconomy {
-    static let defaultUrgencyTiers: [UrgencyTier] = [
-        UrgencyTier(id: "economy", multiplier: 0.85, lifetimeMinutes: 1440, weight: 30),
-        UrgencyTier(id: "normal", multiplier: 1.0, lifetimeMinutes: 720, weight: 50),
-        UrgencyTier(id: "urgent", multiplier: 1.45, lifetimeMinutes: 300, weight: 20)
-    ]
-
     /// Compact facility ladder for fixtures: cheap enough that a test can
     /// afford to build, small enough that capacity limits are reachable.
     static let defaultFacilities = FacilityConfig(
-        branch: [
+        office: [
             FacilityLevelSpec(
                 level: 1, buildCost: 8_000, buildDays: 1, upkeepPerDay: 20,
                 storageMassKg: 0, storageVolumeM3: 0, docks: 0,
@@ -41,6 +35,27 @@ enum TestEconomy {
                 storageMassKg: 200_000, storageVolumeM3: 1_400, docks: 4,
                 handlingPercent: 90, contractSlotPercent: 100, lanePremiumPercent: 0
             )
+        ],
+        dock: [
+            FacilityLevelSpec(
+                level: 1, buildCost: 6_000, buildDays: 1, upkeepPerDay: 15,
+                storageMassKg: 0, storageVolumeM3: 0, docks: 2,
+                handlingPercent: 80, contractSlotPercent: 100, lanePremiumPercent: 0
+            )
+        ],
+        racking: [
+            FacilityLevelSpec(
+                level: 1, buildCost: 5_000, buildDays: 1, upkeepPerDay: 12,
+                storageMassKg: 30_000, storageVolumeM3: 200, docks: 0,
+                handlingPercent: 100, contractSlotPercent: 100, lanePremiumPercent: 0
+            )
+        ],
+        forklift: [
+            FacilityLevelSpec(
+                level: 1, buildCost: 3_000, buildDays: 1, upkeepPerDay: 8,
+                storageMassKg: 0, storageVolumeM3: 0, docks: 0,
+                handlingPercent: 85, contractSlotPercent: 100, lanePremiumPercent: 0
+            )
         ]
     )
 
@@ -48,14 +63,10 @@ enum TestEconomy {
         startingCash: Money = 20_000,
         loadingMinutes: Int = 30,
         unloadingMinutes: Int = 30,
-        offerGenerationIntervalMinutes: Int = 480,
-        offerLifetimeMinutes: Int = 720,
-        offerChancePercent: Int = 100,
-        maxOpenOffersPerCity: Int = 3,
-        offerSlotPopulation: Int = 4_500_000,
-        fillFloor: Double = 0.6,
-        spotMarginPercent: Int = 38,
-        contractMarginPercent: Int = 25,
+        fillFloor: Double = 0.5,
+        emptyReturnSharePercent: Int = 85,
+        spotMarginPercent: Int = 55,
+        contractPremiumPercent: Int = 25,
         contractPenaltyPercent: Int = 40,
         hqLanePremiumPercent: Int = 0,
         facilities: FacilityConfig = defaultFacilities,
@@ -64,31 +75,38 @@ enum TestEconomy {
         contractLeadTimePercent: Int = 120,
         // Fixtures exercise contract rules directly, so the delivery gate is
         // off by default; the gate itself has its own test.
-        contractsUnlockAfterDeliveries: Int = 0
+        contractsUnlockAfterDeliveries: Int = 0,
+        lanes: LaneConfig = defaultLanes
     ) -> EconomyConfig {
         EconomyConfig(
             startingCash: startingCash,
             loadingMinutes: loadingMinutes,
             unloadingMinutes: unloadingMinutes,
-            offerGenerationIntervalMinutes: offerGenerationIntervalMinutes,
-            offerLifetimeMinutes: offerLifetimeMinutes,
-            offerChancePercent: offerChancePercent,
-            maxOpenOffersPerCity: maxOpenOffersPerCity,
-            offerSlotPopulation: offerSlotPopulation,
             fillFloor: fillFloor,
+            emptyReturnSharePercent: emptyReturnSharePercent,
             spotMarginPercent: spotMarginPercent,
-            urgencyTiers: defaultUrgencyTiers,
             contractOfferIntervalMinutes: 2880,
             maxOpenContractOffers: 3,
             contractDurationDays: 14,
-            contractMarginPercent: contractMarginPercent,
+            contractPremiumPercent: contractPremiumPercent,
             contractPenaltyPercent: contractPenaltyPercent,
             hqLanePremiumPercent: hqLanePremiumPercent,
             facilities: facilities,
             contractDeliveryWindowPercent: contractDeliveryWindowPercent,
             contractDeliveryWindowFloorPercent: contractDeliveryWindowFloorPercent,
             contractLeadTimePercent: contractLeadTimePercent,
-            contractsUnlockAfterDeliveries: contractsUnlockAfterDeliveries
+            contractsUnlockAfterDeliveries: contractsUnlockAfterDeliveries,
+            lanes: lanes
         )
     }
+
+    /// Mirrors the bundled economy.json lane block so fixture-derived lanes
+    /// stay in the same band as the real catalog.
+    static let defaultLanes = LaneConfig(
+        cityOutboundKgPerDayPer100k: 1_500,
+        minimumRatePerDayKg: 2_000,
+        weeklySwingPercent: 25,
+        distanceHalfWeightKm: 900,
+        parcelPatienceMinutes: 2_160
+    )
 }

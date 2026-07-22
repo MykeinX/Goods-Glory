@@ -9,18 +9,46 @@
 
 import Foundation
 
+/// A transport mode a city can be reached by. Road is universal; the rest are
+/// authored capabilities. Ordered the way the UI lists them.
+enum CityAccess: String, CaseIterable, Sendable {
+    case road
+    case rail
+    case sea
+    case air
+
+    var label: String {
+        switch self {
+        case .road: String(localized: "Road")
+        case .rail: String(localized: "Rail freight")
+        case .sea: String(localized: "Sea port")
+        case .air: String(localized: "Air cargo")
+        }
+    }
+}
+
 struct CityInsight: Equatable, Sendable {
     /// Relative market size in the current catalog, 0...1.
     let marketSizePercent: Double
     /// Static baseline competition pressure, 0...1 (rivals later replace this).
     let competitionPercent: Double
     let foundingCost: Money
-    /// Localized capability labels for UI chips.
-    let perkLabels: [String]
+    /// Transport modes serving this city. Single source for both the icon row
+    /// and the text chips — the two used to read the city flags separately.
+    let access: Set<CityAccess>
+    /// Localized capability labels for UI chips (road omitted: every city has it).
+    var perkLabels: [String] {
+        CityAccess.allCases
+            .filter { $0 != .road && access.contains($0) }
+            .map(\.label)
+    }
 
     private static let costIndexNormLower: Double = 800
     private static let costIndexNormUpper: Double = 1_400
-    private static let foundingCostPerCostIndex: Int = 40
+    /// Founding plus a first vehicle has to leave a working buffer. At 40 the
+    /// company began its first lap with a few hundred dollars, so one bad
+    /// decision ended the campaign before it could teach anything.
+    private static let foundingCostPerCostIndex: Int = 22
 
     static func foundingCost(for city: CityDefinition) -> Money {
         Money(Int(city.costIndex) * foundingCostPerCostIndex)
@@ -42,22 +70,16 @@ struct CityInsight: Equatable, Sendable {
             marketSizePercent: popNorm,
             competitionPercent: (0.55 * popNorm) + (0.45 * costNorm),
             foundingCost: foundingCost(for: city),
-            perkLabels: perkLabels(for: city)
+            access: access(for: city)
         )
     }
 
-    private static func perkLabels(for city: CityDefinition) -> [String] {
-        var labels: [String] = []
-        if city.hasSeaPortAccess {
-            labels.append(String(localized: "Sea port"))
-        }
-        if city.hasRailFreightAccess {
-            labels.append(String(localized: "Rail freight"))
-        }
-        if city.hasAirCargoAccess {
-            labels.append(String(localized: "Air cargo"))
-        }
-        return labels
+    private static func access(for city: CityDefinition) -> Set<CityAccess> {
+        var modes: Set<CityAccess> = [.road]
+        if city.hasSeaPortAccess { modes.insert(.sea) }
+        if city.hasRailFreightAccess { modes.insert(.rail) }
+        if city.hasAirCargoAccess { modes.insert(.air) }
+        return modes
     }
 
     private static func normalized(_ value: Double, min lower: Double, max upper: Double) -> Double {

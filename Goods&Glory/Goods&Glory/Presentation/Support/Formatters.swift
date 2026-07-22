@@ -68,6 +68,38 @@ enum Format {
         String(localized: "\(m3.formatted(.number.precision(.fractionLength(0...1)))) m³")
     }
 
+    /// Player-facing name of a facility module.
+    static func moduleName(_ kind: FacilityModuleKind) -> String {
+        switch kind {
+        case .office: return String(localized: "Office")
+        case .warehouse: return String(localized: "Warehouse")
+        case .dock: return String(localized: "Loading docks")
+        case .racking: return String(localized: "Racking")
+        case .forklift: return String(localized: "Forklifts")
+        }
+    }
+
+    /// What installing this module lets the site do.
+    static func moduleSummary(_ kind: FacilityModuleKind) -> String {
+        switch kind {
+        case .office: return String(localized: "Your presence here: sign contracts, and build the rest of the site")
+        case .warehouse: return String(localized: "Store and consolidate freight — and take loading docks")
+        case .dock: return String(localized: "Warehouse equipment: load and unload trucks faster")
+        case .racking: return String(localized: "Shelving: more tonnage in the same warehouse")
+        case .forklift: return String(localized: "Dock equipment: faster still on every load")
+        }
+    }
+
+    static func moduleSymbol(_ kind: FacilityModuleKind) -> String {
+        switch kind {
+        case .office: return "building.2.fill"
+        case .warehouse: return "shippingbox.fill"
+        case .dock: return "arrow.left.arrow.right.square.fill"
+        case .racking: return "square.grid.3x3.fill"
+        case .forklift: return "bolt.fill"
+        }
+    }
+
     /// Fleet / map vehicle code, e.g. `VAN-03` from type name + runtime id.
     static func vehicleCode(typeName: String, id: VehicleID) -> String {
         let prefix = typeName.prefix(3).uppercased()
@@ -127,20 +159,11 @@ extension LogEntry {
         case .contractEnded(_, let completed, let missed):
             return String(localized: "Contract ended: \(completed) delivered, \(missed) missed.")
         case .facilityConstructionStarted(_, let kind, let city, let level):
-            let what = kind == .branch
-                ? String(localized: "Branch")
-                : String(localized: "Warehouse")
-            return String(localized: "\(what) level \(level) started in \(cityName(city)).")
+            return String(localized: "\(Format.moduleName(kind)) level \(level) started in \(cityName(city)).")
         case .facilityCompleted(_, let kind, let city, let level):
-            let what = kind == .branch
-                ? String(localized: "Branch")
-                : String(localized: "Warehouse")
-            return String(localized: "\(what) in \(cityName(city)) is now open at level \(level).")
+            return String(localized: "\(Format.moduleName(kind)) in \(cityName(city)) is now open at level \(level).")
         case .facilityDemolished(let kind, let city):
-            let what = kind == .branch
-                ? String(localized: "Branch")
-                : String(localized: "Warehouse")
-            return String(localized: "\(what) in \(cityName(city)) was demolished.")
+            return String(localized: "\(Format.moduleName(kind)) in \(cityName(city)) was removed.")
         case .cargoStored(let city, let parcels, let massKg):
             return String(localized: "Stored \(parcels) parcel(s) (\(Format.mass(kg: massKg))) in \(cityName(city)).")
         case .cargoLoadedFromWarehouse(let city, let parcels, let massKg):
@@ -149,10 +172,8 @@ extension LogEntry {
             return String(localized: "The \(cityName(city)) warehouse is full — \(refusedParcels) parcel(s) stayed on the vehicle.")
         case .contractCancellationRequested:
             return String(localized: "Contract closing — no new loads, committed freight still runs.")
-        case .contractRouteClosed:
-            return String(localized: "The contract's dedicated route was closed with it.")
         case .routeNeedsReview:
-            return String(localized: "A route still has stops for an ended contract — edit it or its vehicles run empty.")
+            return String(localized: "A contract ended — its route keeps running on spot freight. Edit the dead stops.")
         }
     }
 }

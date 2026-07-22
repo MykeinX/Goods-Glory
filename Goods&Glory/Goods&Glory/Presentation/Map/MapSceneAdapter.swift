@@ -36,13 +36,15 @@ enum MapCameraFocus: Equatable {
     case free
     /// City centered at the closest allowed zoom (detail headers).
     case city(CityID)
-    /// Fit the listed cities in view. `bottomInset` reserves space for bottom UI
-    /// (route editor panel, map city card, tab bar).
-    case route(cities: [CityID], bottomInset: CGFloat)
+    /// Fit the listed cities in view. Insets reserve space for chrome that
+    /// overlays the *same* map surface (status strip, bottom card, tab bar).
+    /// Do not invent insets for UI that lives *below* the map in the layout
+    /// (e.g. the route builder editor panel) — that just zooms out for empty space.
+    case route(cities: [CityID], topInset: CGFloat, bottomInset: CGFloat)
 
-    /// Default inset used by the route builder map strip.
+    /// Full-screen live map defaults: status chrome above, city card / tab bar below.
     static func route(_ cities: [CityID]) -> MapCameraFocus {
-        .route(cities: cities, bottomInset: 126)
+        .route(cities: cities, topInset: 130, bottomInset: 126)
     }
 
     /// Frames a whole continent. Built from its cities rather than a hardcoded
@@ -50,7 +52,7 @@ enum MapCameraFocus: Equatable {
     static func continent(_ continent: Continent, catalog: GameCatalog, bottomInset: CGFloat) -> MapCameraFocus {
         let cities = catalog.cities.filter { $0.continent == continent }.map(\.id)
         guard !cities.isEmpty else { return .world }
-        return .route(cities: cities, bottomInset: bottomInset)
+        return .route(cities: cities, topInset: 80, bottomInset: bottomInset)
     }
 }
 
@@ -59,10 +61,14 @@ enum MapCameraFocus: Equatable {
 struct MapCameraPanRequest: Equatable, Identifiable {
     let id: UUID
     let cityID: CityID
+    /// Screen points hidden by chrome sitting over the bottom of the map (the
+    /// city sheet). The city is centered in what is left visible above it.
+    let bottomInset: CGFloat
 
-    init(cityID: CityID) {
+    init(cityID: CityID, bottomInset: CGFloat = 0) {
         self.id = UUID()
         self.cityID = cityID
+        self.bottomInset = bottomInset
     }
 }
 
@@ -75,7 +81,8 @@ struct MapVehicleMarker: Identifiable, Equatable {
     /// Visual capsule fill 0…1 while loading/unloading (`nil` when traveling).
     /// Loading rises 0→1; unloading falls 1→0.
     let serviceProgress: CGFloat?
-    /// Stationed at a city: 0 = just above the city name, 1+ = stacked higher.
+    /// Same map spot or overlapping name plates: 0 = lowest label, 1+ = stacked
+    /// higher. Assigned by the scene from live camera scale (not the snapshot).
     let labelStackIndex: Int
 }
 
@@ -205,7 +212,6 @@ enum MapSceneAdapter {
         var markers: [MapVehicleMarker] = []
         var routes: [MapRouteOverlay] = []
         var idleCountPerCity: [CityID: Int] = [:]
-        var labelStackByCity: [CityID: Int] = [:]
 
         // This runs once per simulation tick for the whole fleet. Looking each
         // vehicle's job / run / route up with `first { }` made the snapshot cost
@@ -285,12 +291,6 @@ enum MapSceneAdapter {
                 leg: leg
             )
             let isServicing = job.phase == .loading || job.phase == .unloading
-            var labelStackIndex = 0
-            if isServicing {
-                let cityID = job.phase == .loading ? job.offer.origin : job.offer.destination
-                labelStackIndex = labelStackByCity[cityID, default: 0]
-                labelStackByCity[cityID] = labelStackIndex + 1
-            }
             // Loading: 0→1 fill. Unloading: 1→0 drain.
             let serviceProgress: CGFloat? = {
                 guard isServicing else { return nil }
@@ -303,7 +303,7 @@ enum MapSceneAdapter {
                 headingRadians: placement.heading,
                 isMoving: job.phase == .deadheading || job.phase == .enRoute,
                 serviceProgress: serviceProgress,
-                labelStackIndex: labelStackIndex
+                labelStackIndex: 0
             ))
         }
 
@@ -337,10 +337,12 @@ enum MapSceneAdapter {
         var result: [CityID: MapCityFacilities] = [:]
         for facility in state.facilities {
             let existing = result[facility.cityID]
-            let building = !facility.isOperational(at: state.clock) || facility.isUpgrading
+            let building = facility.modules.contains {
+                !$0.isOperational(at: state.clock) || $0.isUpgrading
+            }
             result[facility.cityID] = MapCityFacilities(
-                hasBranch: (existing?.hasBranch ?? false) || facility.kind == .branch,
-                hasWarehouse: (existing?.hasWarehouse ?? false) || facility.kind == .warehouse,
+                hasBranch: (existing?.hasBranch ?? false) || facility.module(.office) != nil,
+                hasWarehouse: (existing?.hasWarehouse ?? false) || facility.module(.warehouse) != nil,
                 isBuilding: (existing?.isBuilding ?? false) || building
             )
         }
@@ -413,9 +415,9 @@ enum MapSceneAdapter {
         for stop in route.stops {
             let flags: (pickup: Bool, delivery: Bool)
             switch stop.task {
-            case .pickupShipment, .pickupContract, .loadFromWarehouse:
+            case .pickupShipment, .pickupContract, .pickupLane, .loadFromWarehouse:
                 flags = (true, false)
-            case .deliverShipment, .deliverContract, .deliverAll, .dropToWarehouse:
+            case .deliverShipment, .deliverContract, .deliverAll, .dropToWarehouse, .deliverLane:
                 flags = (false, true)
             case .travel:
                 flags = (false, false)
@@ -541,7 +543,7 @@ enum MapSceneAdapter {
             let progress = fraction(started: run.phaseStartedAt, ends: run.phaseEndsAt, clock: state.clock)
             let isPickup: Bool
             switch route.stops[run.stopIndex].task {
-            case .pickupShipment, .pickupContract, .loadFromWarehouse: isPickup = true
+            case .pickupShipment, .pickupContract, .pickupLane, .loadFromWarehouse: isPickup = true
             default: isPickup = false
             }
             return MapVehicleMarker(
@@ -553,6 +555,71 @@ enum MapSceneAdapter {
                 serviceProgress: isPickup ? progress : 1 - progress,
                 labelStackIndex: 0
             )
+        }
+    }
+
+    /// Stacks vehicle name plates when their on-screen capsules start to nest.
+    /// Labels are counter-scaled with the camera, so the threshold is expressed
+    /// in world units via `nodeScale` (= camera × semantic scale).
+    enum VehicleLabelStacking {
+        /// Typical name-plate size in vehicle-node local units.
+        static let plateLocalWidth: CGFloat = 40
+        static let plateLocalHeight: CGFloat = 12
+        /// Start stacking once plates are this far into each other (0.18 ≈ 18%).
+        static let overlapStart: CGFloat = 0.18
+
+        static func indices(
+            positions: [(id: VehicleID, position: CGPoint)],
+            nodeScale: CGFloat
+        ) -> [VehicleID: Int] {
+            guard positions.count > 1, nodeScale > 0 else {
+                return Dictionary(uniqueKeysWithValues: positions.map { ($0.id, 0) })
+            }
+
+            let maxDx = plateLocalWidth * nodeScale * (1 - overlapStart)
+            let maxDy = plateLocalHeight * nodeScale * (1 - overlapStart)
+            guard maxDx > 0, maxDy > 0 else {
+                return Dictionary(uniqueKeysWithValues: positions.map { ($0.id, 0) })
+            }
+
+            var result: [VehicleID: Int] = [:]
+            result.reserveCapacity(positions.count)
+            var assigned = Set<Int>()
+            assigned.reserveCapacity(positions.count)
+
+            for start in positions.indices {
+                guard !assigned.contains(start) else { continue }
+                var cluster = [start]
+                assigned.insert(start)
+
+                var cursor = 0
+                while cursor < cluster.count {
+                    let anchor = positions[cluster[cursor]].position
+                    for candidate in positions.indices where !assigned.contains(candidate) {
+                        let other = positions[candidate].position
+                        let dx = abs(anchor.x - other.x)
+                        let dy = abs(anchor.y - other.y)
+                        // Axis-aligned plate test — corridor traffic mostly
+                        // shares one axis, so a circle under-detects nesting.
+                        guard dx < maxDx, dy < maxDy else { continue }
+                        cluster.append(candidate)
+                        assigned.insert(candidate)
+                    }
+                    cursor += 1
+                }
+
+                let ordered = cluster.sorted {
+                    positions[$0].id.rawValue < positions[$1].id.rawValue
+                }
+                if ordered.count == 1 {
+                    result[positions[ordered[0]].id] = 0
+                } else {
+                    for (stack, index) in ordered.enumerated() {
+                        result[positions[index].id] = stack
+                    }
+                }
+            }
+            return result
         }
     }
 

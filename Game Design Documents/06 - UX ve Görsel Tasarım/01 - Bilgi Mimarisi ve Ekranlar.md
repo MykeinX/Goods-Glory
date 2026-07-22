@@ -7,7 +7,8 @@ kaynaklar:
   - docs/03_BROWSER_PROTOTIP_PLANI.md
   - docs/05_GORSEL_YON_VE_HARITA.md
   - web/README.md
-son_güncelleme: 2026-07-17
+  - "`AKIS_VE_HAT_REVIZYONU_PLAN.md` (2026-07-20 akış revizyonu)"
+son_güncelleme: 2026-07-20
 etiketler: [gdd, ux, bilgi-mimarisi, ios]
 ---
 
@@ -17,17 +18,24 @@ etiketler: [gdd, ux, bilgi-mimarisi, ios]
 
 Oyuncunun birkaç dakika içinde şirketin durumunu okuyup anlamlı bir karar verebildiği, büyüyen operasyonu bilgi kalabalığına dönüştürmeyen bir iPhone portrait arayüzü kurmak. Arayüz, “araç sürücüsü” değil “şirket CEO’su” rolünü destekler.
 
+## Harita-öncelikli okunabilirlik (tasarım sütunu)
+
+Oyuncu ağının durumunu **sekme sekme gezmeden haritadan okur**; sekmeler detay ve toplu yönetim içindir. Her UI kararının ilk sorusu: "Bu bilgiyi görmek için kaç dokunuş gerekiyor?"
+
+- Dokunmadan görünür: akış çizgileri (kalınlık ≈ debi; servissiz soluk, taşınan marka renginde), hat üzerindeki araçlar ve doluluk, şehirde dikkat gerektiren durum (tek aksiyon rozeti), tesis mini şeridi.
+- Tek dokunuşla görünür: akış detayı (debi, firma, spot ücret, "hat kur"), şehir detayı (akışlar, bekleyen yük, tesis), hat panosu (doluluk, boş km, $/gün, darboğaz kaynağı).
+- Sistem kurma eylemleri (hat kur, kapsama ekle) haritadan başlatılabilir; sekmeye gitmek zorunlu değildir.
+
 ## Kalıcı ürün kararı
 
 Native uygulama SwiftUI ile geliştirilir. Ana navigasyon `TabView`, ekran içi akışlar `NavigationStack`, bağlamsal ayrıntılar sheet ve inspector benzeri yüzeylerle kurulur. Harita ayrı bir ürün alanı olsa da şirket durumu, sözleşme ve finans ekranlarıyla aynı seçimi ve zamanı paylaşır.
 
-Önerilen beş ana alan:
+Önerilen ana alanlar:
 
-1. **Harita:** Ağ, tesisler, hareket, darboğaz ve seçili analiz katmanı.
-2. **İş:** Spot işler, müşteriler, düzenli sözleşmeler ve ihaleler.
-3. **Operasyon:** Hatlar, yük partileri, aktarmalar, kapasite ve otomasyon kuralları.
-4. **Varlıklar:** Filo, ekipman, şubeler, depolar ve terminaller.
-5. **Şirket:** Finans, itibar, çalışanlar, politikalar ve Logbook.
+1. **Harita:** Ağ, akışlar, tesisler, hareket, darboğaz ve seçili analiz katmanı — ana yüzey.
+2. **Operasyon:** Hatlar, akışlar, sözleşmeler; yük partileri, aktarmalar, kapasite ve otomasyon kuralları.
+3. **Varlıklar:** Filo, ekipman, tesisler ve modülleri.
+4. **Şirket:** Finans, itibar, çalışanlar, politikalar ve Logbook.
 
 Alan adları kullanıcı testleriyle doğrulanır. İlk sürümde bir alanın kapsamı küçükse ayrı sekme yerine ilgili üst alan içinde kalır.
 
@@ -47,13 +55,13 @@ Her KPI “neden değişti?” açıklamasına bağlanır. Kritik durumdan ilgil
 
 Şirket adı, logo ve kurumsal renk → başlangıç şehri karşılaştırması → genel merkez kurulumu → başlangıç varlıkları → ilk uyumlu iş. Depo kuruluşun zorunlu adımı değildir.
 
-### Spot iş
+### Akış servisi ve hat kurma
 
-Fırsatı karşılaştır → yükün fiziksel gereksinimlerini ve marjı gör → uygun araç/kapasite seç → doğrudan veya aşamalı plan kur → sonucu Harita ve Logbook’tan izle.
+Haritada akışı gör → debi, adresler, spot ücret ve maliyeti karşılaştır → aracı gönder veya "hat kur" de → alış/teslim durakları otomatik gelir, güzergâhtaki uyumlu dönüş akışları önerilir → sonucu harita ve hat panosundan izle. Kurulum akış-önceliklidir: önce yük, sonra rota; durak eklemek istisnadır (depo aktarması, çok duraklı dağıtım).
 
 ### Düzenli sözleşme
 
-Talep tahminini incele → hizmet sözü ver → taşıma hattı ve kapasite ayır → performansı izle → yenile, yeniden fiyatla veya çık.
+Servis ettiğin akıştan gelen teklifi incele → hizmet sözü ver → hat ve kapasite ayır → performansı (kapsam, doluluk) izle → yenile, yeniden fiyatla veya güvenli kapat.
 
 ### Ağ yönetimi
 

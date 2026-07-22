@@ -7,7 +7,8 @@ kaynaklar:
   - "`docs/02_OYUN_TASARIMI.md`"
   - "`docs/04_KARARLAR_VE_ACIK_SORULAR.md`"
   - "Kullanıcının 2026-07-17 tarihli Ana Tasarım Özeti"
-son_güncelleme: 2026-07-17
+  - "`AKIS_VE_HAT_REVIZYONU_PLAN.md` (2026-07-20 akış revizyonu)"
+son_güncelleme: 2026-07-20
 etiketler:
   - gdd
   - gdd/çekirdek-oynanış
@@ -26,6 +27,8 @@ Başlangıç deneyimi oyuncuya üç şeyi hızla öğretir:
 1. Bu şirket bana ait.
 2. Araçlar fiziksel konum ve kapasite taşıyan varlıklardır.
 3. Kâr, işi kabul etmekten değil doğru operasyonu kurmaktan doğar.
+
+İlk saatin hedef duygusu "iş kabul ettim" değil, **"ilk yük döngümü kurdum"**dur.
 
 ## Kuruluş Akışı
 
@@ -65,28 +68,21 @@ Oyuncu sınırlı nakit ve krediyle ilk hafif/standart ticari aracını edinir. 
 
 **Öneri:** Başlangıç varlıklarının kesin sayısı, araç sınıfı ve kredi limiti denge testiyle belirlenmelidir.
 
-### 5. İlk Müşteri ve İş
+### 5. İlk Akış ve Sevk
 
-İlk işler, başlangıç şehrindeki göndericiden başka bir şehirdeki alıcıya doğrudan taşımadır. Yük otomatik olarak şirket deposuna gelmez.
+Harita açıldığında başlangıç şehrinden çıkan az sayıda (2–3) kalıcı yük akışı görünür: hangi firma, hangi şehre, hangi üründen günde kaç ton. Tek iş teklifi ekranı yoktur; talep haritada durur ve beklemektedir.
 
 Oyuncu:
 
-- yük ve teslim şartlarını okur,
-- aracı seçer,
-- tahmini gelir ve maliyeti görür,
-- işi başlatır,
+- bir akışa dokunur; debi, adresler, spot ücret ve tahmini maliyeti görür,
+- aracını akışa gönderir (bekleyen partiyi alır),
 - haritada fazları takip eder.
 
-### 6. İlk Sonuç
+### 6. İlk Sonuç ve Döngü
 
-Teslimat tamamlandığında araç hedef şehirde kalır. Oyuncu ilk kez:
+Teslimat tamamlandığında araç hedef şehirde kalır. Varış şehrindeki geri yönlü akış öne çıkarılır: oyuncu dönüş yükü alma, başka şehre yönelme, boş dönme veya bekleme kararını verir. Konumlandırma ve boş kilometre böylece erken öğretilir.
 
-- dönüş yükü alma,
-- başka şehre yönelme,
-- boş dönme,
-- bekleme
-
-kararlarından birini verir. Böylece konumlandırma ve boş kilometre çekirdek strateji olarak erken öğretilir.
+2–3 manuel seferden sonra oyun ilk hattı önerir: "Bu iki şehir arasında hat kur." Araç hatta bağlanır, döngü otomatikleşir ve ekranda ilk kez doluluk yüzdesi ile boş kilometre görünür. Bundan sonrası kurulan sistemi büyütmek ve optimize etmektir: ikinci akışı kapsama almak, ikinci araç, ilk sözleşme teklifi, ilk depo modülü.
 
 ## Kademeli Sistem Açılımı
 
@@ -96,13 +92,13 @@ Başlangıçta yalnızca mevcut kararı destekleyen ekran ve eylemler açılır.
 
 1. Kimlik ve şehir
 2. Merkez ve ilk araç
-3. Spot iş
+3. Akış okuma ve ilk sevk
 4. Araç konumu ve dönüş yükü
-5. Finans özeti ve bakım
-6. İkinci araç veya yeni şehir erişimi
-7. Düzenli sözleşme
-8. İlk taşıma hattı
-9. Şube/tesis ve delegasyon
+5. İlk hat: döngü, doluluk ve boş km
+6. Finans özeti ve bakım
+7. İkinci araç veya ikinci akış
+8. İlk sözleşme (akış payı taahhüdü)
+9. Tesis modülleri (depo, ofis) ve delegasyon
 
 Oyuncuya kilitli sistemlerin varlığı gösterilebilir; ancak gereksiz ayrıntıyla başlangıç ekranı doldurulmaz.
 

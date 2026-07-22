@@ -310,7 +310,7 @@ struct CompanyMark: View {
     }
 }
 
-/// Step dots for the founding flow.
+/// Step dots for the founding lane.
 struct StepIndicator: View {
     let current: Int
     let total: Int
@@ -327,3 +327,45 @@ struct StepIndicator: View {
         .animation(.easeInOut(duration: 0.2), value: current)
     }
 }
+
+/// Screen title with an optional trailing figure. Lived in FleetView while
+/// every other tab used it — a shared component hiding inside a feature.
+struct ScreenHeader: View {
+    let title: String
+    var trailing: String? = nil
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .font(.gg(26, .heavy))
+                .foregroundStyle(Theme.textPrimary)
+            Spacer()
+            if let trailing {
+                Text(trailing)
+                    .font(.gg(11.5, .heavy))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .padding(.top, 44)
+        .padding(.bottom, 10)
+    }
+}
+
+/// A live route card: contract lane, its stops, serving vehicles and status.
+
+// MARK: - List rows as cards
+
+extension View {
+    /// Strips a `List` row back to nothing: no inset, no background, no
+    /// separator — so the row's own card styling is all the player sees.
+    ///
+    /// `List` is used (rather than `ScrollView`) where rows need drag, swipe or
+    /// accessibility reordering; this modifier is what keeps it from looking
+    /// like a settings table.
+    func plainListRow() -> some View {
+        listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+}
+

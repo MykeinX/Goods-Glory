@@ -29,10 +29,12 @@ struct GameCatalogTests {
         #expect(!catalog.vehicleTypes.isEmpty)
         #expect(!catalog.products.isEmpty)
         #expect(catalog.cityMarkets.count == catalog.cities.count)
-        #expect(catalog.cities.count == 22)
+        #expect(catalog.cities.count == 71)
         #expect(catalog.networkNodes.count >= 500)
         #expect(catalog.roads.count >= 700)
-        #expect(catalog.cities.allSatisfy { $0.id.rawValue.hasPrefix("us_") })
+        #expect(catalog.cities.allSatisfy {
+            ["us_", "eu_", "as_"].contains(where: $0.id.rawValue.hasPrefix)
+        })
         #expect(catalog.product(ProductID("consumer_electronics")) != nil)
         for city in catalog.cities {
             #expect(city.population > 0)
@@ -141,10 +143,28 @@ struct GameCatalogTests {
         }
     }
 
-    @Test func allCitiesAreConnected() throws {
+    /// Roads connect a landmass, not the world: America genuinely has no road
+    /// to Eurasia. What must hold is that every city can reach every *other
+    /// city on its own continent* — a stranded city would have lanes nobody
+    /// can ever haul.
+    @Test func everyCityReachesItsOwnContinent() throws {
         let catalog = try GameCatalog.load(from: .main)
+        var cityCountByContinent: [Continent: Int] = [:]
+        for city in catalog.cities {
+            cityCountByContinent[city.continent, default: 0] += 1
+        }
+
         for origin in catalog.cities {
-            #expect(catalog.reachableCities(from: origin.id).count == catalog.cities.count - 1)
+            let reachable = catalog.reachableCities(from: origin.id)
+            let expected = (cityCountByContinent[origin.continent] ?? 1) - 1
+            #expect(
+                reachable.count == expected,
+                "\(origin.id) reaches \(reachable.count) of \(expected) cities on \(origin.continent)"
+            )
+            // And never off it: a truck must not drive across an ocean.
+            for destination in reachable {
+                #expect(catalog.city(destination)?.continent == origin.continent)
+            }
         }
     }
 

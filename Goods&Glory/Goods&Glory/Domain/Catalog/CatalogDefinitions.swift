@@ -42,7 +42,7 @@ struct CityDefinition: Codable, Identifiable, Sendable {
     let hasSeaPortAccess: Bool
     /// Local cost proxy used by gameplay formulas. 1000 means the shared baseline.
     let costIndex: UInt16
-    /// Static urban traffic proxy. 1000 means free-flow travel time; runtime
+    /// Static urban traffic proxy. 1000 means free-lane travel time; runtime
     /// time-of-day and event effects belong in simulation state.
     let trafficDelayIndex: UInt16
     let isStarterCity: Bool
@@ -186,6 +186,58 @@ struct Firm: Identifiable, Hashable, Sendable {
     let name: String
 }
 
+/// A persistent firm→firm freight relationship — the world's standing demand.
+/// Derived deterministically from city markets (never authored, never saved);
+/// shipments are produced by lanes, contracts only commit a lane's share.
+struct FreightLane: Identifiable, Hashable, Sendable {
+    let id: LaneID
+    let originCityID: CityID
+    let destinationCityID: CityID
+    let productID: ProductID
+    /// Supplier firm whose address is the pickup point.
+    let originFirmID: FirmID
+    /// Receiver firm whose address is the delivery point.
+    let destinationFirmID: FirmID
+    /// Long-run average daily volume. Use `ratePerDayKg(week:worldSeed:swingPercent:)`
+    /// for the fluctuated in-game value.
+    let baseRatePerDayKg: Int
+
+    /// Deterministic weekly fluctuation around the base rate. Pure function of
+    /// (world seed, lane, week): no state, nothing written back to the catalog.
+    func ratePerDayKg(week: Int, worldSeed: UInt64, swingPercent: Int) -> Int {
+        guard swingPercent > 0 else { return baseRatePerDayKg }
+        var rng = SeededRNG(seed: SeedDerivation.seed(
+            // Frozen token: the string only seeds the RNG, so renaming it would
+            // reshuffle every weekly swing in the world for no gain.
+            worldSeed, "flow_week", .string(id.rawValue), .int(week)
+        ))
+        let swing = Double.random(in: -1...1, using: &rng) * Double(swingPercent) / 100
+        return max(1, Int((Double(baseRatePerDayKg) * (1 + swing)).rounded()))
+    }
+}
+
+/// Freight-lane balance values (content, not rules — rules live in
+/// `GameCatalog.deriveLanes`).
+struct LaneConfig: Codable, Sendable {
+    /// Cadence of the engine's accrual tick. A rule, not balance: fine enough
+    /// that docks feel continuously fed, coarse enough for the event loop.
+    static let tickMinutes = 240
+
+    /// Daily outbound freight per 100k residents (kg); sets a city's total
+    /// supply throughput before concentration and floors.
+    let cityOutboundKgPerDayPer100k: Int
+    /// Candidate lanes below this base rate are dropped — small local traffic
+    /// stays with local carriers, keeping per-city lane lists readable.
+    let minimumRatePerDayKg: Int
+    /// ± amplitude of the deterministic weekly rate swing, percent of base.
+    let weeklySwingPercent: Int
+    /// Distance falloff: destination attractiveness = demand / (1 + km/this).
+    let distanceHalfWeightKm: Int
+    /// How much recent production an origin dock retains, expressed as time.
+    /// Caps how much can pile up: at most this window's production.
+    let parcelPatienceMinutes: Int
+}
+
 /// Static market tendency. Runtime demand is derived by the simulation and is
 /// never written back into the catalog.
 struct CityProductWeight: Codable, Hashable, Sendable {
@@ -203,14 +255,6 @@ struct CityMarketProfile: Codable, Identifiable, Sendable {
     var id: CityID { cityID }
 }
 
-/// Spot urgency band: payout multiplier, offer lifetime and selection weight.
-struct UrgencyTier: Codable, Hashable, Sendable {
-    let id: String
-    let multiplier: Double
-    let lifetimeMinutes: Int
-    let weight: Int
-}
-
 /// Authored base values for one facility level. Every money and duration value
 /// here is a *base*: `FacilityEconomics` scales it by the target city's own
 /// catalog data, so no two cities charge the same price.
@@ -219,35 +263,45 @@ struct FacilityLevelSpec: Codable, Sendable {
     let buildCost: Money
     let buildDays: Int
     let upkeepPerDay: Money
-    /// Warehouse storage. Zero for branches — a branch stores no cargo.
+    /// Storage granted by this level. Zero outside the warehouse module.
     let storageMassKg: Int
     let storageVolumeM3: Double
     /// Vehicles that can be serviced simultaneously. Zero disables the limit.
     let docks: Int
     /// Load/unload duration multiplier in percent (100 = catalog baseline).
     let handlingPercent: Int
-    /// Contract offer slot multiplier in percent (branch only).
+    /// Contract offer slot multiplier in percent (office only).
     let contractSlotPercent: Int
-    /// Extra payout percent on lanes touching this city (branch only).
+    /// Extra payout percent on lanes touching this city (office only).
     let lanePremiumPercent: Int
 }
 
+/// Authored ladder per module. A site is the sum of the modules installed on
+/// it, so this is the whole facility content model.
 struct FacilityConfig: Codable, Sendable {
-    let branch: [FacilityLevelSpec]
+    let office: [FacilityLevelSpec]
     let warehouse: [FacilityLevelSpec]
+    let dock: [FacilityLevelSpec]
+    /// Warehouse shelving: more tonnage in the same building.
+    let racking: [FacilityLevelSpec]
+    /// Dock equipment: the same trucks turned around faster.
+    let forklift: [FacilityLevelSpec]
 
-    func levels(for kind: FacilityKind) -> [FacilityLevelSpec] {
+    func levels(for kind: FacilityModuleKind) -> [FacilityLevelSpec] {
         switch kind {
-        case .branch: branch
+        case .office: office
         case .warehouse: warehouse
+        case .dock: dock
+        case .racking: racking
+        case .forklift: forklift
         }
     }
 
-    func spec(kind: FacilityKind, level: Int) -> FacilityLevelSpec? {
+    func spec(kind: FacilityModuleKind, level: Int) -> FacilityLevelSpec? {
         levels(for: kind).first { $0.level == level }
     }
 
-    func maxLevel(for kind: FacilityKind) -> Int {
+    func maxLevel(for kind: FacilityModuleKind) -> Int {
         levels(for: kind).map(\.level).max() ?? 1
     }
 }
@@ -256,33 +310,26 @@ struct EconomyConfig: Codable, Sendable {
     let startingCash: Money
     let loadingMinutes: Int
     let unloadingMinutes: Int
-    /// A new batch of spot job offers is generated every interval.
-    let offerGenerationIntervalMinutes: Int
-    /// Fallback lifetime when a tier is unavailable (normally unused).
-    let offerLifetimeMinutes: Int
-    /// Percent chance (0-100) for each additional slot after the guaranteed local offer.
-    let offerChancePercent: Int
-    /// Hard cap on simultaneous open spot offers per origin city.
-    let maxOpenOffersPerCity: Int
-    /// Residents per additional offer slot: a city gets
-    /// min(maxOpenOffersPerCity, 1 + population / offerSlotPopulation) slots.
-    let offerSlotPopulation: Int
-    /// Lower bound of the fill factor: fillFloor + (1 - fillFloor) * util.
+    /// Minimum share of a lane a parcel is billed for, however small it is.
+    /// Below this, freight would buy a whole truck for pocket change.
     let fillFloor: Double
-    /// Base profit margin over a haul's true cost (0-100). Urgency, regional
-    /// price level, trailer fill and local presence scale this margin — never
+    /// How much of the empty return leg the market prices into a one-way haul
+    /// (0-100). Below 100 on purpose: carriers are assumed to find *some*
+    /// backhaul, so a player who actually finds one profits from the gap.
+    let emptyReturnSharePercent: Int
+    /// Base profit margin over a haul's true cost (0-100). This is the spot
+    /// rate every lane parcel earns without a contract. Regional price level,
+    /// trailer fill, local presence and competition scale this margin — never
     /// the cost recovery underneath it.
     let spotMarginPercent: Int
-    /// Spot urgency bands (economy / normal / urgent). Weights need not sum to 100.
-    let urgencyTiers: [UrgencyTier]
     /// How often new open contract offers are generated.
     let contractOfferIntervalMinutes: Int
     let maxOpenContractOffers: Int
     /// Signed contract length in game days.
     let contractDurationDays: Int
-    /// Profit margin over the reference round-trip cost priced into each
-    /// contract shipment (0-100). Contract lanes include the empty return leg.
-    let contractMarginPercent: Int
+    /// Premium a committed parcel pays over the same parcel's spot rate
+    /// (0-100). Signing trades flexibility for a better price and an SLA.
+    let contractPremiumPercent: Int
     /// Compensation charged when a shipment misses its deadline, as a percent
     /// of that shipment's payout (0-100).
     let contractPenaltyPercent: Int
@@ -292,7 +339,7 @@ struct EconomyConfig: Codable, Sendable {
     /// Extra payout percent on lanes that start or end in the HQ city. Small on
     /// purpose: the home-field advantage must not decide the whole network.
     let hqLanePremiumPercent: Int
-    /// Authored base values per facility kind and level.
+    /// Authored base values per module kind and level.
     let facilities: FacilityConfig
 
     // MARK: Contract shaping
@@ -309,4 +356,9 @@ struct EconomyConfig: Codable, Sendable {
     /// Deliveries the company must complete before shippers offer recurring
     /// lanes. The opening hours are spot work; contracts are earned.
     let contractsUnlockAfterDeliveries: Int
+
+    // MARK: Freight lanes
+
+    /// Persistent freight-lane derivation and fluctuation tuning.
+    let lanes: LaneConfig
 }

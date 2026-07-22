@@ -3,6 +3,119 @@
 Bu belge kod tabanının katman sözleşmesini tanımlar. Tasarım kararlarının kaynağı
 `Game Design Documents/` kasasıdır; çelişkide GDD önceliklidir.
 
+> **Not (2026-07-20):** Akış ve hat revizyonu (Faz 0–5) uygulandı; bu belge
+> kodun güncel halini anlatır. Revizyonun gerekçesi ve faz kayıtları kökteki
+> `AKIS_VE_HAT_REVIZYONU_PLAN.md` içindedir.
+
+## Kod düzeni kuralları
+
+Bu bölüm, bir kez ödenmiş bedellerin tekrar ödenmemesi içindir. Her madde
+gerçekten yaşanmış bir sorunun karşılığıdır.
+
+### 1. Dosya boyutu
+
+**~400 satırda bölünür, 700 üst sınırdır.** Sınır estetik değil bakım
+kaynaklı: 1000 satırlık dosyada bir değişiklik, dosyanın tamamını okumayı
+gerektirir ve gözden kaçan bağlantı üretir. Klasör açmak bölmek değildir —
+`Presentation/Fleet/` altında 1000 satırlık tek `FleetView.swift` bulunmak,
+bölünmemiş demektir.
+
+**Ne zaman yeni dosya:** yeni bir `struct`/`class`/`enum` yazıyorsan ve
+yalnızca tek bir ekranın iç detayı değilse, kendi dosyasına gider. Bir ekranın
+alt bileşeni (satır, kart, sheet) ikinci kez kullanıldığı anda kendi dosyasına
+taşınır.
+
+### 2. Aynı şeyi iki kere yazma
+
+Bir hesap ya da görsel bileşen ikinci kez yazıldığında, ikisi zamanla ayrışır.
+Bu kod tabanında dört kez oldu:
+
+- `RouteCancellationSheet` iki dosyada ayrı ayrı yazılmış, farklı metin ve
+  farklı mantıkla ayrışmıştı. İkisi de `private` olduğu için derleyici uyarmadı.
+- `accent` 13 dosyada, `cityName` 9 dosyada aynı gövdeyle tekrarlanıyordu.
+- Rota görevinin ikonu/rengi/fiili 4 ayrı `switch`teydi; `pickupLane` eklerken
+  dördünü de bulmak gerekti (biri unutulsaydı sessizce yanlış ikon çizerdi).
+- `firmAddressLine`, `SessionDisplay.addressLine`'ın kopyasıydı.
+
+**Kural:** aynı hesabı ikinci kez yazmak üzereyken dur ve ortak yere taşı.
+Ortak yerler: `Domain` (kural/hesap), `Format` (biçimlendirme),
+`SessionDisplay` (katalog aramaları), `DesignSystem` (görsel bileşen),
+`RouteTaskDisplay` (bir domain tipinin sunum bilgisi).
+
+### 3. Hesap Domain'de, görüntü Presentation'da
+
+Bir sayı birden fazla ekranda gösteriliyorsa onu hesaplayan yer motordur, view
+değil. `bottleneck`, `brief`, `coverage`, `estimate`, `RouteStats` bu yüzden
+`SimulationEngine+Analysis` içindedir: view'lar okur, hesaplamaz. Bir view'da
+`reduce`/`filter` ile iş mantığı yazılıyorsa, yanlış katmandadır.
+
+### 4. Bölerken dikkat edilecek iki şey
+
+**`private` dosya kapsamlıdır.** Bir tip dosyalara bölündüğünde paylaşılan
+üyeleri `internal` olur; erişim yine modül içiyle sınırlı, bilinçli bir takas.
+Bölünmüş bir tipin üyesini `private` yapmadan önce gerçekten tek dosyada mı
+kullanıldığına bak. Aynı şekilde, kendi dosyasına taşınan bir tip artık
+`private` olamaz — onu kullanan ekran başka dosyadadır.
+
+**`extension` blokları da taşınır.** `struct`/`enum` sayarak bölerken serbest
+`extension View { … }` blokları gözden kaçar; bir kez böyle bir modifier
+(`plainListRow`) sessizce kayboldu.
+
+**Durum ana tipte kalır.** Swift'te `extension` stored property içeremez. Bir
+tipi bölerken `var x: T` / `var x = …` satırları ana `class`/`struct`'ta kalmalı;
+yalnız fonksiyonlar ve computed property'ler extension'a gider. Onları anlatan
+küçük yardımcı tipler de durumla birlikte kalsın (`SemanticZoomKey` gibi).
+
+**Bölme sonrası üç kontrol:** her dosyanın süslü parantez dengesi sıfır mı;
+kullanılan her sembol hâlâ tanımlı mı; extension'lara stored property düşmüş mü.
+
+Bölme sorumluluk eksenindedir, satır sayısını eşitlemek için değil. `SimulationEngine`
+tek bir `struct`tır ama sorumluluklarına göre dosyalara ayrılmıştır:
+
+| Dosya | Sorumluluk |
+|---|---|
+| `SimulationEngine` | Komut dağıtımı, iş/sözleşme komutları |
+| `+Pricing` | Zaman ilerletme, iş fazları, maliyet ve fiyat |
+| `+Standing` | Duran maliyetler, süre dolumu, ceza |
+| `+Lanes` | Dok birikimi, parti talebi, sevk |
+| `+Contracts` | Teklif üretimi, parti takvimi, taahhüt defteri, yaşam döngüsü |
+| `+Facilities` | Site ve modüller, fiyat teklifi, inşaat |
+| `+Routes` | Rota düzenleme komutları |
+| `+RouteRunner` | Rotanın yürütülmesi (yol, servis, bekleme) |
+| `+Cargo` | Duraktaki yük: elleçleme, depo, teslim mutabakatı |
+| `+Analysis` | Salt okunur UI görünümleri (brief, darboğaz, kapsam, tahmin) |
+| `+DebugFormat` | Denge kaydı formatlayıcıları |
+
+Aynı bölme `GameCatalog`, `GameState`, `GameMapScene` ve büyük ekranlar için de
+uygulandı. Sunum katmanında ölçüt **tip**tir: her ekran kendi dosyasında, her
+yeniden kullanılabilir satır/kart kendi dosyasında.
+
+| Alan | Dosyalar |
+|---|---|
+| `GameCatalog` | `+Routing`, `+Loading`, `+Derivation`, `+Validation` |
+| `GameState` | `Contracts`, `Routes`, `CampaignLog`, `Facility`, `DebugLedger` |
+| `GameMapScene` | `+Camera`, `+Terrain`, `+Snapshot`, `MapNodes`, `MapPalette` |
+| Operasyon | `JobsView`, `LaneRow`, `ActiveWorkRows`, `ContractMarketList`, `ActiveContractRow`, `ParcelDetailView` |
+| Harita | `MapTabView`, `MapChrome`, `MapCityPopup`, `MapVehiclePopup`, `GameNotificationStack` |
+| Filo | `FleetView`, `RouteRow`, `VehicleRows`, `VehicleDetailView`, `VehicleShopView` |
+| Hat kurucu | `RouteBuilderView`, `+Visits`, `+Planning`, `RouteTaskPicker`, `RouteVehiclePicker`, `RouteCancellationSheet` |
+
+**Not:** Bir tip dosyalara bölündüğünde yardımcı üyeleri `internal` olur —
+Swift'te `private` dosya kapsamlıdır. Erişim yine modül içiyle sınırlıdır.
+
+## Ortak sunum yardımcıları (mükerrer kod yasağı)
+
+Aynı hesabı iki yerde yazmak, ikisinin zamanla ayrışması demektir — bu kod
+tabanında bir kez oldu: `RouteCancellationSheet` iki dosyada ayrı ayrı yazılmış,
+farklı metin ve farklı mantıkla ayrışmıştı. Ortak olan şeyler tek tanımda:
+
+- `SessionDisplay` — `session.accentColor`, `cityName`, `productName`,
+  `vehicleCode`, `addressLine`. (Önceden 13 ayrı `accent`, 9 ayrı `cityName`.)
+- `RouteTaskDisplay` — bir görevin ikonu, rengi ve fiili. Görevin kendisine ait
+  sunum bilgisi; `RouteTask`'a extension olarak durur. (Önceden 4 ayrı switch.)
+- `Format` — para, mesafe, kütle, süre, modül adları.
+- `DesignSystem` — tema, kart/çip bileşenleri, `ScreenHeader`.
+
 ## Katmanlar ve bağımlılık yönü
 
 ```
@@ -81,9 +194,9 @@ Persistence (SaveRepository)   Resources (JSON kataloglar)
   hesabı içindir; haritada araç/rota çizimi şehir–şehir yaylarla yapılır, yol
   polylines runtime’da yoktur. Yol adı runtime verisi değildir; kaynak adlar
   yalnız çevrimdışı üretimde hatları birleştirmek için kullanılır.
-- Harita verisi çevrimdışı ve sürümlü paketlenir. İlk ABD dilimi ülke namespace'li
-  ve coğrafi kapsama göre dengelenmiş 22 şehir, stratejik Interstate koridorları
-  ve bunların gerçek kavşaklarından
+- Harita verisi çevrimdışı ve sürümlü paketlenir. Mevcut dilim ülke namespace'li
+  71 şehirdir (ABD + Avrupa + Asya; kıtalar ayrı yol ağlarıdır) ve stratejik
+  koridorlar ile bunların gerçek kavşaklarından
   oluşur. Görsel silüetler `map_geography.json` (kara, göl, ülke sınırı)
   üzerinden gelir. Bölgeye özel üretim adımları `scripts/` altında kalır;
   çalışma zamanı veri sözleşmesi yeni ülke ve kıtalar eklenirken değişmez.
@@ -117,21 +230,35 @@ Persistence (SaveRepository)   Resources (JSON kataloglar)
 Ana menü → şirket kuruluşu (kimlik, başlangıç şehri, ilk araç) → oynanış
 (harita / filo / işler / tesisler / şirket sekmeleri).
 
-**Spot işler:** seed'li üretim, boş sürüş (deadhead) → yükleme → yol → boşaltma
-fazları, teslimatta atomik settlement, araç varış şehrinde kalır. Teklif
-üretimi origin şehrinin `supply` ağırlıklarından ürün seçer; varış, aynı ürünü
-talep eden şehirlerin `demand` × mesafe ağırlığıyla seçilir (kısa rota tercih
-edilir; market eşleşmesi yoksa mesafe ağırlıklı fallback). Araç yokken HQ'daki
-en ucuz alınabilir araca; sonrasında boş araçların bulunduğu şehirlere göre iş
-üretir. Yük seçilen referans aracın kütle ve hacmine sığar. Ödeme yalnız dolu
-gidişin araç+şoför maliyetine minimum/yüzdesel kâr ekler; deadhead ve dönüş
-oyuncunun konumlandırma riskidir.
+**Akış servisi (Faz 1 — spot pano kaldırıldı):** Talep kalıcıdır: her akışın
+çıkış dokunda `GameState.laneAccrualKg` birikir (`LaneConfig.tickMinutes`
+olay tiki; debi haftalık salınımlı). Birikim sabır penceresiyle sınırlıdır
+(`parcelPatienceMinutes`); böylece servis edilmeyen doklar sınırsız büyümez.
+Taşan üretim ayrıca sayılmaz veya loglanmaz. Süresi dolan teklif panosu yoktur; `JobOffer`
+yalnız kontrat partisi olarak panoya düşer veya dok talebinde akıştan basılır.
+`dispatchVehicleToLane` komutu iki duraklı mekik rota kurar
+(`pickupLane` → `deliverAll`): araç dokta bekleyen yükü **kendi sınıfına
+göre fiyatlanmış** partiler halinde yükler (maliyet+marj; rekabet marjı
+`CityInsight.competitionPercent` üzerinden tek noktadan kırpar), teslim eder,
+boş döner ve dok doluncaya dek bekler. Ödeme yalnız dolu gidişi fiyatlar;
+boş dönüş oyuncunun optimize edeceği görünür maliyettir.
 
-**Tesisler:** `Facility` (şube / depo), her ikisi de seviyeli ve inşa süreli.
-Şube o şehirde sözleşme hakkı ve teklif yuvası sayısı verir; depo yük saklar ve
-konsolidasyon sağlar. Maliyet/süre/gider sabit değil: `FacilityEconomics`
-şehir `costIndex`, nüfus ve erişim bayraklarından `siteFactor` türetir. HQ şubesi
-kuruluşta ücretsiz gelir ve `hqLanePremiumPercent` kadar hat primi verir.
+**Tesisler (Faz 4 — tek site + modüller):** Şehirde tek `Facility` vardır;
+yetenekleri `[FacilityModule]` belirler — `office` (sözleşme hakkı + teklif
+yuvası + hat primi), `warehouse` (depolama/konsolidasyon), `dock` (elleçleme
+hızı). Her modül kendi seviyesi, inşa ve yükseltme saatiyle yaşar. Elleçleme
+süresi warehouse × dock çarpanıdır: aynı bütçeyle derin depo ya da hızlı
+cross-dock kurulabilir — tesis stratejisi buradan doğar. Komutlar
+`installModule` / `upgradeModule` / `removeModule`; HQ ofisi ve dolu depo
+sökülemez, son modül gidince site kapanır. Maliyet/süre/gider sabit değil:
+`FacilityEconomics` şehir `costIndex`, nüfus ve erişim bayraklarından
+`siteFactor` türetir. HQ ofisi kuruluşta ücretsiz gelir ve
+`hqLanePremiumPercent` kadar hat primi verir.
+
+**Debug ledger (denge aracı):** `GameState.debug` her nakit hareketini birim
+ekonomisiyle (dolu/boş km, $/km, doluluk) tek satırda tutar; Şirket → Balance
+Log ekranı özet kırılımı ve panoya kopyalama verir. Yalnız gözlem yapar:
+`issueID()` tüketmez, motor kararlarına girmez, determinizmi etkilemez.
 
 **Yük konumu:** `Shipment.location` (`address` / `vehicle` / `warehouse`) yükü
 rotadan bağımsızlaştırır; bir parti bir rotayla toplanıp depoda bekleyip başka bir
@@ -140,12 +267,27 @@ rotayla teslim edilebilir. `StorageLot` yalnızca sunum katmanı gruplamasıdır
 son tarih ve ceza muhasebesi bozulmaz. Depo görevleri: `dropToWarehouse`,
 `loadFromWarehouse(lot)`, `deliverAll`.
 
-**Rotalar / sözleşmeler:** Tek motor. Fleet → Rota Kurucu
-(`RouteBuilderView`) ile şehir döngüsü, araç atama, kontrat görevleri,
-başlat/durdur. Açık sözleşmeler periyodik sevkiyat üretir; atanmış araçlar
-`RouteRun` ile tur atar (bekleme → yükleme → taşıma). Spot işi rotaya ekleme
-komutu (`addJobToRoute`) hazır; Jobs/CityDetail'den “rotaya ekle” UI girişi
-henüz yok. Detaylı durum: kökteki `ROTA_SISTEMI_PLAN.md`.
+**Rotalar / hatlar (Faz 2):** Tek motor; rota hiçbir sözleşmeye ait değildir.
+Kapsam durak görevlerinden türer (`Route.coveredContractIDs` /
+`coveredLaneIDs`). Tek-hedefli kontrata araç atamak
+`[pickupContract + aynı-hat pickupLane'ları + deliverAll]` kurar: SLA yükü
+önce yüklenir, kalan kapasite dokta bekleyen akış yüküyle dolar (spot
+top-off). Kontrat bitince rota kapanmaz — `routeNeedsReview` bilgisi düşer,
+hat taban akışla çalışmaya devam eder. `RouteStats` her rotada dolu/boş km,
+gelir/gider ve ilk çalışma zamanını biriktirir (koşucu bacak/servis/teslimat
+noktalarında yazar); Fleet rota kartı doluluk %, boş km ve $/gün okur.
+Fleet → Rota Kurucu ile şehir döngüsü, araç atama, görevler, başlat/durdur;
+atanmış araçlar `RouteRun` ile tur atar (bekleme → yükleme → taşıma).
+
+**Sözleşmeler (Faz 3 — akış payı taahhüdü):** Sözleşme talep üretmez.
+`ContractDestination` bir `laneID` + `committedShareBps` taşır; teklif şehrin
+mevcut akışlarından debiye göre ağırlıklı seçilir ve dönem hacmi
+`akış debisi × pay × dönem`dir. İmzalı payın tonajı `accrueLanes` içinde dok
+birikiminden düşülür (çift sayım yok) ve kontrat partisi olarak postalanır.
+Fiyat akışın spot ücretinden türer: `spot × (1 + contractPremiumPercent)` —
+taahhüt primi SLA ve ceza riskinin karşılığıdır. Pay tavanı `companyTier` ile
+açılır; bir akışın toplam taahhüdü (imzalı + açık teklif) %100'ü aşamaz.
+`multiDrop` aynı şehrin farklı akışlarıdır.
 
 Sözleşmeler dört arketiptir (`laneRecurring`, `bulkPeriodic`, `evergreen`,
 `multiDrop`) ve yalnız şubeli şehirlerden üretilir. Teklif sayısı ve marjı şehrin
@@ -156,9 +298,26 @@ sevkiyat aralığı değil ayrı `deliveryWindowMinutes`'tır ve imza ile ilk pa
 arasında `leadTimeMinutes` hazırlık payı vardır. `ContractCoverage` sözleşmenin
 gerçekten taşınıp taşınmadığını yapıdan değil akıştan ölçer.
 
-İlk harita dilimi 22 ABD metro merkezi ve ana Interstate ağını kapsar;
-kara/eyalet sınırları ile yollar çevrimdışı üretilmiş gerçek koordinat
+Mevcut harita dilimi 71 şehri (ABD + Avrupa + Asya) ve ana koridor ağlarını
+kapsar; kara/eyalet sınırları ile yollar çevrimdışı üretilmiş gerçek koordinat
 geometrileridir.
+
+**Yük akışları (akış revizyonu Faz 0):** `GameCatalog.deriveLanes`,
+`city_markets.json` + nüfus + yol mesafelerinden kalıcı firma→firma
+`FreightLane` setini deterministik türetir (aynı katalog → aynı akışlar; kayıt
+verisi yok). Şehir arz ağırlıkları `scripts/generate_city_markets.py` içindeki
+küratörlü `CITY_INDUSTRIES` tablosuyla gerçek ekonomik kimliği taşır (Detroit →
+otomotiv, Dhaka → tekstil); K-009 gereği runtime'a şehir rolü/tag yazılmaz.
+Debi bütçesi nüfusla ölçeklenir, ürün payları kare-ağırlıkla yoğunlaşır, hedef
+seçimi talep × mesafe sönümü iledir; denge değerleri `economy.json > lanes`.
+Haftalık debi dalgalanması `FreightLane.ratePerDayKg(week:worldSeed:swingPercent:)`
+saf fonksiyonudur. Danışma raporları: `scripts/report_city_markets.py`,
+`scripts/report_freight_flows.py` (Swift kanoniktir, Python ayna sadece
+kalibrasyon gözü içindir). Faz 1 ile motor akışları tüketir (sınırlı birikim,
+`pickupLane`); UI'da Operasyon → hat listesi ve şehir ekranı
+akışları gösterir. Haritada standing-demand koridor overlay'i yok — talep
+liste/şehir detayında okunur; harita yalnız oyuncunun kendi rotalarını çizer.
+Kayıt sürümü 10.
 
 ## Bilinçli ertelemeler (GDD'de tanımlı, henüz yok)
 

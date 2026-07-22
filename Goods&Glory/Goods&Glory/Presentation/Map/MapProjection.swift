@@ -32,9 +32,3 @@ struct MapProjection: Sendable {
         point(latitude: city.latitude, longitude: city.longitude)
     }
 }
-
-private extension Comparable {
-    func clamped(to range: ClosedRange<Self>) -> Self {
-        min(max(self, range.lowerBound), range.upperBound)
-    }
-}
