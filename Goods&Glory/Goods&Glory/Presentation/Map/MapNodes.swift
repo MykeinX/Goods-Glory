@@ -124,9 +124,9 @@ final class MapCityNode: SKNode {
     private let fleetCount = SKLabelNode(fontNamed: "AvenirNext-Bold")
     /// Owned buildings, drawn as filled discs under the pin.
     private let facilityRow = SKNode()
-    private let branchDisc = SKShapeNode(circleOfRadius: 7)
+    private let officeDisc = SKShapeNode(circleOfRadius: 7)
     private let warehouseDisc = SKShapeNode(circleOfRadius: 7)
-    private let branchIcon = SKSpriteNode()
+    private let officeIcon = SKSpriteNode()
     private let warehouseIcon = SKSpriteNode()
     /// Freight needing attention. Colour carries the urgency; the number
     /// carries the volume. Everything else lives in the city screen.
@@ -173,7 +173,7 @@ final class MapCityNode: SKNode {
 
         label.text = city.name
         label.fontSize = 11
-        label.fontColor = MapPalette.label
+        label.fontColor = MapPalette.cityLabel
         label.verticalAlignmentMode = .center
         label.horizontalAlignmentMode = .left
         labelRow.addChild(label)
@@ -213,7 +213,7 @@ final class MapCityNode: SKNode {
         facilityRow.isHidden = true
         addChild(facilityRow)
         for (disc, icon, symbol) in [
-            (branchDisc, branchIcon, "building.2.fill"),
+            (officeDisc, officeIcon, "building.2.fill"),
             (warehouseDisc, warehouseIcon, "shippingbox.fill")
         ] {
             disc.lineWidth = 1.4
@@ -317,25 +317,25 @@ final class MapCityNode: SKNode {
     }
 
     private func configureFacilityStrip(_ facilities: MapCityFacilities?, accent: UIColor) {
-        guard let facilities, facilities.hasBranch || facilities.hasWarehouse else {
+        guard let facilities, facilities.hasOffice || facilities.hasWarehouse else {
             facilityRow.isHidden = true
             return
         }
         facilityRow.isHidden = false
-        branchDisc.isHidden = !facilities.hasBranch
+        officeDisc.isHidden = !facilities.hasOffice
         warehouseDisc.isHidden = !facilities.hasWarehouse
         // Under construction reads as a dimmed marker: present, not yet yours.
         let alpha: CGFloat = facilities.isBuilding ? 0.5 : 1
-        branchDisc.fillColor = accent
-        branchDisc.alpha = alpha
+        officeDisc.fillColor = accent
+        officeDisc.alpha = alpha
         warehouseDisc.fillColor = MapPalette.mint
         warehouseDisc.alpha = alpha
 
-        let visible = [branchDisc, warehouseDisc].filter { !$0.isHidden }
+        let visible = [officeDisc, warehouseDisc].filter { !$0.isHidden }
         if visible.count == 1 {
             visible[0].position = .zero
         } else {
-            branchDisc.position = CGPoint(x: -8, y: 0)
+            officeDisc.position = CGPoint(x: -8, y: 0)
             warehouseDisc.position = CGPoint(x: 8, y: 0)
         }
     }
@@ -502,7 +502,7 @@ final class MapVehicleNode: SKNode {
         chassis.addChild(fillCrop)
 
         outline.fillColor = .clear
-        outline.strokeColor = MapPalette.water
+        outline.strokeColor = MapPalette.vehicleOutline
         outline.lineWidth = 1
         outline.zPosition = 2
         chassis.addChild(outline)
@@ -613,7 +613,7 @@ final class MapVehicleNode: SKNode {
             fillCrop.isHidden = true
             body.fillColor = accent
             body.alpha = marker.isMoving ? 1 : 0.85
-            outline.strokeColor = MapPalette.water
+            outline.strokeColor = MapPalette.vehicleOutline
         }
 
         label.text = marker.displayCode
@@ -644,22 +644,6 @@ final class MapVehicleNode: SKNode {
         while value <= -.pi { value += 2 * .pi }
         while value > .pi { value -= 2 * .pi }
         return value
-    }
-}
-
-// Shared by GameMapScene extensions (Camera / Snapshot / Terrain) across files.
-extension CGMutablePath {
-    func addClosedPolyline(_ points: [CGPoint]) {
-        guard let first = points.first else { return }
-        move(to: first)
-        for point in points.dropFirst() { addLine(to: point) }
-        closeSubpath()
-    }
-
-    func addOpenPolyline(_ points: [CGPoint]) {
-        guard let first = points.first else { return }
-        move(to: first)
-        for point in points.dropFirst() { addLine(to: point) }
     }
 }
 

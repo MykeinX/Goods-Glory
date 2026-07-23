@@ -2,8 +2,8 @@
 //  SimulationEngine+Pricing.swift
 //  Goods&Glory
 //
-//  The clock and the money: advancing time, job phases, travel and
-//  handling durations, cost of a haul and the price it earns.
+//  The clock and the money: advancing time, travel and handling durations,
+//  cost of a haul and the price it earns.
 //
 
 import Foundation
@@ -19,25 +19,11 @@ extension SimulationEngine {
 
         while true {
             var nextEventAt = target
-            for job in state.activeJobs where job.phaseEndsAt < nextEventAt {
-                nextEventAt = job.phaseEndsAt
-            }
             if state.nextLaneTickAt < nextEventAt {
                 nextEventAt = state.nextLaneTickAt
             }
-            if state.nextContractBatchAt < nextEventAt {
-                nextEventAt = state.nextContractBatchAt
-            }
-            for contract in state.activeContracts {
-                if contract.nextShipmentAt < nextEventAt, !contract.isClosing(at: state.clock) {
-                    nextEventAt = contract.nextShipmentAt
-                }
-                if let endsAt = contract.endsAt, endsAt < nextEventAt {
-                    nextEventAt = endsAt
-                }
-            }
-            // Construction landings are events too: a branch that finishes
-            // mid-chunk must start granting contracts at that exact minute.
+            // Construction landings are events too: a module that finishes
+            // mid-chunk must become available at that exact minute.
             for facility in state.facilities {
                 for module in facility.modules {
                     if module.operationalAt < nextEventAt, !module.hasAnnouncedCompletion {
@@ -48,11 +34,6 @@ extension SimulationEngine {
                     }
                 }
             }
-            // Contract shipment deadlines are penalty events and must be
-            // processed at their exact time for deterministic settlement.
-            for offer in state.offers where offer.source == .contract && offer.expiresAt < nextEventAt {
-                nextEventAt = offer.expiresAt
-            }
             for run in state.routeRuns where run.phaseEndsAt < nextEventAt {
                 nextEventAt = run.phaseEndsAt
             }
@@ -60,28 +41,9 @@ extension SimulationEngine {
 
             completeFinishedConstruction(state: &state)
             chargeFixedCostsIfNeeded(state: &state)
-            removeExpiredOffers(state: &state)
-            removeExpiredContractOffers(state: &state)
 
             while state.nextLaneTickAt <= state.clock {
                 accrueLanes(state: &state)
-            }
-            if state.nextContractBatchAt <= state.clock {
-                generateContractOfferBatch(state: &state)
-            } else {
-                // Self-heal: a branch board that emptied mid-interval (a signed
-                // lane, staggered expiries) refills now rather than tomorrow.
-                replenishContractOffers(state: &state)
-            }
-            postDueContractShipments(state: &state)
-            expireFinishedContracts(state: &state)
-
-            let dueJobIDs = state.activeJobs
-                .filter { $0.phaseEndsAt <= state.clock }
-                .map(\.id)
-                .sorted { $0.rawValue < $1.rawValue }
-            for jobID in dueJobIDs {
-                advancePhase(of: jobID, state: &state)
             }
             // Waiting-for-cargo runs use a distant sentinel end and are woken
             // by syncRouteRuns instead; timed waits (lap guard) come due here.
@@ -105,96 +67,7 @@ extension SimulationEngine {
 
         state.clock = max(state.clock, target)
         chargeFixedCostsIfNeeded(state: &state)
-        removeExpiredOffers(state: &state)
-        removeExpiredContractOffers(state: &state)
-        expireFinishedContracts(state: &state)
         rollRouteDayStats(state: &state)
-    }
-
-    func advancePhase(of jobID: JobID, state: inout GameState) {
-        guard let jobIndex = state.activeJobs.firstIndex(where: { $0.id == jobID }),
-              let vehicleIndex = state.vehicles.firstIndex(where: { $0.id == state.activeJobs[jobIndex].vehicleID }),
-              let vehicleType = catalog.vehicleType(state.vehicles[vehicleIndex].typeID) else {
-            assertionFailure("active job with dangling references")
-            return
-        }
-        var job = state.activeJobs[jobIndex]
-        let phaseEnd = job.phaseEndsAt
-
-        switch job.phase {
-        case .deadheading:
-            state.vehicles[vehicleIndex].cityID = job.offer.origin
-            state.vehicles[vehicleIndex].odometerKm += job.deadheadKm
-            job.phase = .loading
-            job.phaseStartedAt = phaseEnd
-            job.phaseEndsAt = phaseEnd + variedDurationMinutes(
-                base: loadingMinutes(at: job.offer.origin),
-                worldSeed: state.config.seed,
-                kind: "job_load",
-                vehicleID: job.vehicleID,
-                eventID: job.id.rawValue,
-                at: phaseEnd
-            )
-            state.activeJobs[jobIndex] = job
-
-        case .loading:
-            job.phase = .enRoute
-            job.phaseStartedAt = phaseEnd
-            job.phaseEndsAt = phaseEnd + variedDurationMinutes(
-                base: travelMinutes(distanceKm: job.offer.distanceKm, speedKmh: vehicleType.speedKmh),
-                worldSeed: state.config.seed,
-                kind: "job_leg",
-                vehicleID: job.vehicleID,
-                eventID: job.id.rawValue,
-                at: phaseEnd
-            )
-            state.activeJobs[jobIndex] = job
-            state.appendLog(.jobPickedUp(
-                jobID: job.id,
-                origin: job.offer.origin,
-                destination: job.offer.destination
-            ))
-
-        case .enRoute:
-            state.vehicles[vehicleIndex].cityID = job.offer.destination
-            state.vehicles[vehicleIndex].odometerKm += job.offer.distanceKm
-            job.phase = .unloading
-            job.phaseStartedAt = phaseEnd
-            job.phaseEndsAt = phaseEnd + variedDurationMinutes(
-                base: unloadingMinutes(at: job.offer.destination),
-                worldSeed: state.config.seed,
-                kind: "job_unload",
-                vehicleID: job.vehicleID,
-                eventID: job.id.rawValue,
-                at: phaseEnd
-            )
-            state.activeJobs[jobIndex] = job
-
-        case .unloading:
-            let totalKm = job.deadheadKm + job.offer.distanceKm
-            let taskMinutes = job.startedAt.minutes(until: phaseEnd)
-            let cost = taskCost(
-                totalKm: totalKm,
-                taskMinutes: taskMinutes,
-                vehicleType: vehicleType
-            )
-            state.cash += job.offer.payout - cost
-            state.stats.deliveredJobs += 1
-            state.stats.totalRevenue += job.offer.payout
-            state.stats.totalCost += cost
-            if let contractID = job.offer.contractID,
-               let contractIndex = state.activeContracts.firstIndex(where: { $0.id == contractID }) {
-                state.activeContracts[contractIndex].shipmentsCompleted += 1
-            }
-            state.appendLog(.jobDelivered(
-                jobID: job.id,
-                destination: job.offer.destination,
-                revenue: job.offer.payout,
-                cost: cost
-            ))
-            state.vehicles[vehicleIndex].assignedJobID = nil
-            state.activeJobs.remove(at: jobIndex)
-        }
     }
 
     func travelMinutes(distanceKm: Double, speedKmh: Double) -> Int {
@@ -360,8 +233,7 @@ extension SimulationEngine {
         // away before, which is why HQ lanes never felt any different.
         let localPresence = lanePremiumFactor(origin: origin, destination: destination, state: state)
 
-        // Competition squeezes the margin at the same single point contracts
-        // use — no second competition parameter anywhere.
+        // Competition squeezes the margin at one central pricing point.
         let competition: Double = {
             guard let city = catalog.city(origin) else { return 1 }
             return 1 - 0.30 * CityInsight.make(city: city, catalog: catalog).competitionPercent

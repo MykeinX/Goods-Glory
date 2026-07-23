@@ -25,10 +25,9 @@ struct CampaignConfig: Codable, Sendable {
 struct Vehicle: Codable, Identifiable, Sendable {
     let id: VehicleID
     let typeID: VehicleTypeID
-    /// Last known city. While a job is running this remains the departure city
-    /// until arrival; map interpolation uses the active job's phase instead.
+    /// Last known city. While a route leg is running this remains the departure
+    /// city until arrival; map interpolation uses the route run instead.
     var cityID: CityID
-    var assignedJobID: JobID?
     var odometerKm: Double
     /// How full this truck has been running over its recent working days. The
     /// fleet list shows this rather than the live load: a live percentage is
@@ -36,24 +35,10 @@ struct Vehicle: Codable, Identifiable, Sendable {
     /// speed it reads like a ticker instead of a fleet.
     var load = RollingLoadFactor()
 
-    var isAvailable: Bool { assignedJobID == nil }
 }
 
-enum JobUrgency: String, Codable, Sendable {
-    case economy
-    case normal
-    case urgent
-}
-
-enum JobSource: String, Codable, Sendable {
-    /// Claimed from a persistent freight lane at the spot rate.
-    case lane
-    case contract
-}
-
-/// The commercial terms of one parcel. Contract cycles post these onto the
-/// board as obligations; lane parcels mint one at claim time (lanes never
-/// post offers — waiting freight lives in `GameState.laneAccrualKg`).
+/// The commercial terms of one parcel, minted when a route claims freight
+/// from a persistent lane.
 struct JobOffer: Codable, Identifiable, Sendable {
     let id: JobID
     let origin: CityID
@@ -63,12 +48,6 @@ struct JobOffer: Codable, Identifiable, Sendable {
     let payout: Money
     /// Shortest road distance origin -> destination at offer creation.
     let distanceKm: Double
-    /// Lane and contract parcels post at `.normal`; other bands return with
-    /// timed opportunity events (see AKIS_VE_HAT_REVIZYONU_PLAN.md).
-    let urgency: JobUrgency
-    let source: JobSource
-    /// Set when this parcel was spawned by a signed contract.
-    let contractID: ContractID?
     /// Set when this parcel was claimed from a persistent freight lane.
     let laneID: LaneID?
     /// Pickup address: the supplying firm in the origin city (nil = city depot).
@@ -85,29 +64,6 @@ struct JobOffer: Codable, Identifiable, Sendable {
     }
 }
 
-enum JobPhase: String, Codable, Sendable {
-    /// Driving empty to the pickup city.
-    case deadheading
-    case loading
-    case enRoute
-    case unloading
-}
-
-struct ActiveJob: Codable, Identifiable, Sendable {
-    let id: JobID
-    /// Snapshot of the accepted offer; offers are removed from the open list.
-    let offer: JobOffer
-    let vehicleID: VehicleID
-    /// Empty-running distance to reach the pickup. Charged to the odometer.
-    let deadheadKm: Double
-    /// When the vehicle started working on this job (accept time).
-    let startedAt: GameTime
-
-    var phase: JobPhase
-    var phaseStartedAt: GameTime
-    var phaseEndsAt: GameTime
-}
-
 /// Everything one campaign is. Serialized wholesale by `SaveRepository`, and
 /// the only thing `SimulationEngine` ever mutates.
 struct GameState: Codable, Sendable {
@@ -115,10 +71,6 @@ struct GameState: Codable, Sendable {
     var clock: GameTime
     var cash: Money
     var vehicles: [Vehicle]
-    var offers: [JobOffer]
-    var activeJobs: [ActiveJob]
-    var contractOffers: [ContractOffer]
-    var activeContracts: [ActiveContract]
     var facilities: [Facility]
     var routes: [Route]
     /// Every accepted parcel in the network, wherever it currently sits.
@@ -133,8 +85,6 @@ struct GameState: Codable, Sendable {
     var laneAccrualKg: [LaneID: Int]
     /// Next lane accrual tick is processed when the clock reaches this time.
     var nextLaneTickAt: GameTime
-    /// Next open-contract batch is generated when the clock reaches this time.
-    var nextContractBatchAt: GameTime
     /// Last game-day index for which vehicle fixed costs were charged.
     var lastFixedCostDay: Int
     /// Monotonic counter backing deterministic runtime IDs.
@@ -175,10 +125,6 @@ struct GameState: Codable, Sendable {
             clock: .start,
             cash: cash,
             vehicles: [],
-            offers: [],
-            activeJobs: [],
-            contractOffers: [],
-            activeContracts: [],
             facilities: [],
             routes: [],
             shipments: [],
@@ -187,12 +133,11 @@ struct GameState: Codable, Sendable {
             stats: CampaignStats(),
             laneAccrualKg: [:],
             nextLaneTickAt: .start,
-            nextContractBatchAt: .start,
             lastFixedCostDay: 0,
             nextRuntimeID: 1
         )
-        // The founding city gets its branch for free: the company has to have a
-        // commercial home somewhere, and it is what unlocks the first contracts.
+        // The founding city gets its office for free: the company needs a
+        // commercial home and every physical site module builds from it.
         state.facilities.append(Facility(
             id: FacilityID(rawValue: state.issueID()),
             cityID: config.hqCity,
@@ -217,30 +162,13 @@ struct GameState: Codable, Sendable {
         vehicles.first { $0.id == id }
     }
 
-    func activeJob(for vehicleID: VehicleID) -> ActiveJob? {
-        activeJobs.first { $0.vehicleID == vehicleID }
-    }
-
     /// The route this vehicle serves, if any. A vehicle serves at most one route.
     func route(of vehicleID: VehicleID) -> Route? {
         routes.first { $0.vehicleIDs.contains(vehicleID) }
     }
 
-    /// The first live route whose stops pick up for this contract. Routes do
-    /// not belong to contracts; this is a coverage lookup, not ownership.
-    func route(serving contractID: ContractID) -> Route? {
-        routes.first {
-            $0.cancellationRequestedAt == nil
-                && $0.stops.contains { stop in stop.task == .pickupContract(contractID) }
-        }
-    }
-
     func route(_ id: RouteID) -> Route? {
         routes.first { $0.id == id }
-    }
-
-    func activeContract(_ id: ContractID) -> ActiveContract? {
-        activeContracts.first { $0.id == id }
     }
 
     func routeRun(for vehicleID: VehicleID) -> RouteRun? {
@@ -294,8 +222,8 @@ struct GameState: Codable, Sendable {
         return LoadSize(massKg: massKg, volumeM3: volumeM3)
     }
 
-    /// Warehouse contents grouped the way the player picks them: by product,
-    /// final destination and contract. Ordered by urgency, then stable key.
+    /// Warehouse contents grouped the way the player picks them: by product
+    /// and final destination. Ordered by urgency, then stable key.
     func storageLots(in facilityID: FacilityID) -> [StorageLot] {
         let stored = shipments(storedIn: facilityID)
         guard !stored.isEmpty else { return [] }
@@ -339,19 +267,12 @@ struct GameState: Codable, Sendable {
             case .servicing, .waiting: return vehicle.cityID
             }
         }
-        if let job = activeJob(for: vehicle.id) {
-            switch job.phase {
-            case .deadheading, .enRoute: return nil
-            case .loading: return job.offer.origin
-            case .unloading: return job.offer.destination
-            }
-        }
         return vehicle.cityID
     }
 
-    /// Idle = no direct job and no route run. Only idle vehicles can take new work.
+    /// Idle = no route run. Only idle vehicles can take new work.
     func isVehicleIdle(_ vehicleID: VehicleID) -> Bool {
-        activeJob(for: vehicleID) == nil && routeRun(for: vehicleID) == nil
+        routeRun(for: vehicleID) == nil
     }
 
     /// Every vehicle assigned to any route, in one pass.
@@ -365,15 +286,9 @@ struct GameState: Codable, Sendable {
         return ids
     }
 
-    /// Every vehicle currently on a job or a route run, in one pass.
-    ///
-    /// Prefer this over calling `isVehicleIdle` inside a loop over the fleet:
-    /// that pattern rescans `activeJobs` and `routeRuns` per vehicle, which is
-    /// O(vehicles × (jobs + runs)) and quietly becomes the dominant cost as the
-    /// fleet grows.
+    /// Every vehicle currently on a route run, in one pass.
     func busyVehicleIDs() -> Set<VehicleID> {
-        var ids = Set<VehicleID>(minimumCapacity: activeJobs.count + routeRuns.count)
-        for job in activeJobs { ids.insert(job.vehicleID) }
+        var ids = Set<VehicleID>(minimumCapacity: routeRuns.count)
         for run in routeRuns { ids.insert(run.vehicleID) }
         return ids
     }

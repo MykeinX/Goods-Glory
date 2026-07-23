@@ -2,8 +2,8 @@
 //  RouteTaskPicker.swift
 //  Goods&Glory
 //
-//  What a vehicle does in one city: contract work, standing lanes out of
-//  it, and the network actions that turn a lane into a hub.
+//  What a vehicle does in one city: standing lanes out of it and the network
+//  actions that turn a lane into a hub.
 //
 
 import SwiftUI
@@ -18,12 +18,6 @@ struct RouteTaskPicker: View {
     let accent: Color
 
     @State private var commandError: CommandError?
-
-    private struct TaskOption: Identifiable {
-        let contract: ActiveContract
-        let action: ContractRouteAction
-        var id: String { "\(contract.id.rawValue)-\(action == .pickup ? "pickup" : "deliver")" }
-    }
 
     /// Standing freight leaving this city, offered as route work.
     private struct LaneOption: Identifiable {
@@ -58,45 +52,10 @@ struct RouteTaskPicker: View {
             }
     }
 
-    private var options: [TaskOption] {
-        guard let state = session.state else { return [] }
-        return state.activeContracts
-            .flatMap { contract -> [TaskOption] in
-                var result: [TaskOption] = []
-                if contract.origin == cityID { result.append(TaskOption(contract: contract, action: .pickup)) }
-                // Multi-drop lanes deliver in several cities.
-                if contract.destinations.contains(where: { $0.cityID == cityID }) {
-                    result.append(TaskOption(contract: contract, action: .deliver))
-                }
-                return result
-            }
-            .sorted { lhs, rhs in
-                if lhs.contract.id == rhs.contract.id { return lhs.action == .pickup }
-                return lhs.contract.id.rawValue < rhs.contract.id.rawValue
-            }
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Recurring work in \(cityName)")
-                        .font(.gg(12, .bold))
-                        .foregroundStyle(Theme.textSecondary)
-
-                    if options.isEmpty {
-                        Text("No contract work here yet. Sign a contract connected to this city, or pick up standing freight below.")
-                            .font(.gg(11.5, .bold))
-                            .foregroundStyle(Theme.textTertiary)
-                            .padding(14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .surfacePanel(cornerRadius: 16)
-                    } else {
-                        ForEach(options) { option in
-                            taskOptionRow(option)
-                        }
-                    }
-
                     laneSection
                     carriedFreightSection
                     networkSection
@@ -372,76 +331,7 @@ struct RouteTaskPicker: View {
         .buttonStyle(.plain)
     }
 
-    private func taskOptionRow(_ option: TaskOption) -> some View {
-        let selectedStop = matchingStop(option)
-        let pickup = option.action == .pickup
-        let firmID = pickup ? option.contract.originFirmID : option.contract.destinationFirmID
-        let firm = firmID.flatMap(session.catalog.firm)?.name ?? cityName
-        let product = session.catalog.product(option.contract.productID)?.name ?? "Freight"
-        let pending = session.state?.offers.count {
-            $0.source == .contract && $0.contractID == option.contract.id
-        } ?? 0
-
-        return Button {
-            let command: GameCommand
-            if let selectedStop {
-                command = .removeRouteStop(routeID: routeID, stopID: selectedStop.id)
-            } else {
-                command = .addContractTaskToRoute(
-                    routeID: routeID,
-                    visitStopID: visitID,
-                    contractID: option.contract.id,
-                    action: option.action
-                )
-            }
-            commandError = session.perform(command)
-        } label: {
-            HStack(spacing: 11) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill((pickup ? accent : Theme.mint).opacity(0.12))
-                        .frame(width: 42, height: 42)
-                    Image(systemName: pickup ? "tray.and.arrow.up.fill" : "tray.and.arrow.down.fill")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(pickup ? accent : Theme.mint)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(pickup ? "Pick up contract freight" : "Deliver contract freight")
-                        .font(.gg(13, .heavy))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text("\(firm) · \(product) · \(Format.mass(kg: option.contract.parcelMassKg))")
-                        .font(.gg(10.5, .bold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                    Text("\(pending) waiting · every \(Format.duration(minutes: option.contract.shipmentIntervalMinutes))")
-                        .font(.gg(9.5, .bold))
-                        .foregroundStyle(Theme.textTertiary)
-                }
-
-                Spacer(minLength: 4)
-                Image(systemName: selectedStop == nil ? "plus.circle" : "checkmark.circle.fill")
-                    .font(.system(size: 19, weight: .bold))
-                    .foregroundStyle(selectedStop == nil ? accent : Theme.mint)
-            }
-            .padding(12)
-            .surfacePanel(cornerRadius: 16)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func matchingStop(_ option: TaskOption) -> RouteStop? {
-        session.state?.route(routeID)?.stops.first { stop in
-            switch (option.action, stop.task) {
-            case (.pickup, .pickupContract(let id)): return id == option.contract.id
-            case (.deliver, .deliverContract(let id)): return id == option.contract.id
-            default: return false
-            }
-        }
-    }
-
     private var cityName: String {
         session.catalog.city(cityID)?.name ?? cityID.rawValue
     }
 }
-

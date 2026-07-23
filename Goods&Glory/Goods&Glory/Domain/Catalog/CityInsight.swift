@@ -2,7 +2,7 @@
 //  CityInsight.swift
 //  Goods&Glory
 //
-//  Presentation-facing city metrics derived from CityDefinition (K-009):
+//  Presentation-facing city metrics derived from CityDefinition:
 //  no authored role tags — market, competition, founding cost and perks
 //  come from population, cost index and access flags.
 //

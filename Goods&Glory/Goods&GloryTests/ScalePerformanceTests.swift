@@ -87,8 +87,7 @@ enum ScaleFixture {
                 cityID: cityID(index)
             ))
             // Every city both supplies and demands, so lane derivation has
-            // work to do everywhere — the realistic late-game shape (200 lanes
-            // accruing on the tick, contract lanes on top).
+            // work to do everywhere — the realistic late-game shape.
             markets.append(CityMarketProfile(
                 cityID: cityID(index),
                 supply: [CityProductWeight(productID: product, weight: 10)],
@@ -138,23 +137,13 @@ enum ScaleFixture {
     /// Built with real commands rather than hand-assembled structs, so the
     /// engine walks the same code paths it would in a real save. A hand-built
     /// state can be quietly invalid and make a benchmark measure nothing.
-    /// - Parameter contracts: how many signed contract lanes to crew. Contract
-    ///   routes carry cargo, which is what drives `beginService` down its
-    ///   expensive branches (claim checks, warehouse lookups, offer sorting).
-    ///   A fleet on plain travel stops never touches any of that, so a
-    ///   travel-only benchmark measures the cheap half of the engine.
-    /// - Parameter crewRatio: fraction of signed lanes that actually get a
-    ///   truck. Below 1 the rest keep posting parcels nobody collects, which is
-    ///   both a real player mistake (signing more than the fleet can serve) and
-    ///   the engine's worst case: many runs waiting while the offer board grows.
-    ///   A fully crewed network never builds a backlog — steady-state freight is
-    ///   roughly one parcel per lane — so it cannot stress the cargo path.
+    /// - Parameter activeLanes: how many standing freight lanes to crew. These
+    ///   routes exercise dock claims, shipment movement and delivery settlement;
+    ///   plain travel routes exercise only the cheaper movement path.
     static func campaign(
         vehicles vehicleCount: Int = 1_000,
         routes routeCount: Int = 100,
-        contracts contractCount: Int = 0,
-        crewRatio: Double = 1.0,
-        vehiclesPerLane: Int = 1,
+        activeLanes laneCount: Int = 0,
         warmUpDays: Int = 4
     ) throws -> (engine: SimulationEngine, state: GameState) {
         let catalog = try catalog()
@@ -172,9 +161,7 @@ enum ScaleFixture {
         for index in stride(from: 0, to: cityCount, by: 4) {
             try engine.apply(.installModule(kind: .warehouse, cityID: cityID(index)), to: &state)
         }
-        // Contract boards only open once the company has proven it delivers.
-        state.stats.deliveredJobs = catalog.economy.contractsUnlockAfterDeliveries + 1
-        // Let construction land so branches actually post contract work.
+        // Let construction land and standing lanes accrue freight.
         engine.advance(&state, by: 3 * GameState.minutesPerDay)
 
         for _ in 0..<vehicleCount {
@@ -183,36 +170,17 @@ enum ScaleFixture {
 
         var freeVehicles = state.vehicles.map(\.id)[...]
 
-        // Crew contract lanes first: these are the routes that move freight.
-        // Signing and crewing are best-effort — a generated lane can exceed the
-        // reference truck's capacity — so the count is asserted afterwards
-        // rather than assumed.
-        if contractCount > 0 {
-            for offer in state.contractOffers.prefix(contractCount) {
-                try? engine.apply(.signContract(offer.id), to: &state)
-            }
-            let signed = state.activeContracts.map(\.id)
-            precondition(!signed.isEmpty, "scale fixture signed no contracts")
-            // Uncrewed lanes are deliberately left uncovered so their
-            // obligations accumulate on the board. Crewed lanes get
-            // `vehiclesPerLane` trucks: above one, the surplus arrives at the
-            // dock before the next parcel is due and parks in `waiting`, which
-            // is the state that makes `syncRouteRuns` re-attempt `beginService`
-            // for every one of them on every pass.
-            let crewed = Int((Double(signed.count) * crewRatio).rounded())
-            for contractID in signed.prefix(crewed) {
-                for _ in 0..<max(1, vehiclesPerLane) {
-                    guard let vehicleID = freeVehicles.first else { break }
-                    freeVehicles = freeVehicles.dropFirst()
-                    try? engine.apply(
-                        .assignVehicleToContract(contractID: contractID, vehicleID: vehicleID),
-                        to: &state
-                    )
-                }
-            }
+        // Crew standing freight lanes first: these are the routes that move cargo.
+        for lane in catalog.lanes.prefix(laneCount) {
+            guard let vehicleID = freeVehicles.first else { break }
+            freeVehicles = freeVehicles.dropFirst()
+            try engine.apply(
+                .dispatchVehicleToLane(laneID: lane.id, vehicleID: vehicleID),
+                to: &state
+            )
         }
 
-        // Ring routes for whatever fleet the contract lanes did not consume.
+        // Ring routes for whatever fleet the freight lanes did not consume.
         // Never more routes than there are trucks left to crew them: an empty
         // route cannot be started (`noVehicleAssigned`), and heavy crewing
         // ratios can legitimately leave almost nothing spare.
@@ -228,8 +196,7 @@ enum ScaleFixture {
             }
         }
 
-        // Only vehicles not already crewing a contract lane — assigning a
-        // vehicle twice throws `vehicleAlreadyAssigned`.
+        // Only vehicles not already crewing a freight lane.
         if !routeIDs.isEmpty {
             for (offset, vehicleID) in freeVehicles.enumerated() {
                 let routeID = routeIDs[offset % routeIDs.count]
@@ -245,17 +212,16 @@ enum ScaleFixture {
             "scale fixture produced no running routes"
         )
 
-        // Warm up so offers, shipments and runs reach a steady state. A tick
+        // Warm up so shipments and runs reach a steady state. A tick
         // measured on an empty world measures nothing.
         engine.advance(&state, by: warmUpDays * GameState.minutesPerDay)
         return (engine, state)
     }
 
     /// Everything the engine has to reason about per parcel: cargo in flight or
-    /// stored, plus obligations still sitting on the board. This — not the
-    /// vehicle count — is the dimension the remaining linear scans multiply by.
+    /// storage.
     static func parcelsInNetwork(_ state: GameState) -> Int {
-        state.shipments.count + state.offers.count
+        state.shipments.count
     }
 
     private static let identity = CompanyIdentity(
@@ -330,30 +296,25 @@ struct ScalePerformanceTests {
     // MARK: Cargo path
     //
     // The tests above run a fleet on plain travel stops, which never enters the
-    // parts of `beginService` that claim parcels, check warehouses and sort
-    // contract offers. Those are the paths with the remaining linear scans, so
+    // parts of `beginService` that claim parcels and check warehouses. Those
+    // paths have their own linear scans, so
     // they get their own fixture — otherwise the suite would report a healthy
     // engine while the expensive half went unmeasured.
 
     /// Freight a fully crewed network sustains — measured, not wished for.
     ///
-    /// A crewed lane delivers about as fast as it posts, so steady-state
-    /// parcels track the lane count and do not grow with simulated time: 124
-    /// lanes settle at roughly 100 parcels no matter how long you wait. The
-    /// catalog's per-city contract slots cap the lane count, so this number is
-    /// a property of the content, not of the engine.
+    /// Crewed lanes claim freight continuously, so steady-state parcels track
+    /// the active lane count rather than simulated time.
     static let sustainedParcelFloor = 60
 
     @Test("A cargo-carrying fleet stays inside the tick budget")
     func cargoTickAtScale() throws {
-        var (engine, state) = try ScaleFixture.campaign(contracts: 200, warmUpDays: 21)
-
-        #expect(!state.activeContracts.isEmpty, "expected signed contract lanes")
+        var (engine, state) = try ScaleFixture.campaign(activeLanes: 200, warmUpDays: 21)
 
         let parcels = ScaleFixture.parcelsInNetwork(state)
         #expect(
             parcels >= Self.sustainedParcelFloor,
-            "only \(parcels) parcels across \(state.activeContracts.count) lanes (shipments \(state.shipments.count), offers \(state.offers.count)) — the cargo path is not being exercised"
+            "only \(parcels) parcels across \(state.routes.count) routes — the cargo path is not being exercised"
         )
 
         let median = medianMilliseconds(iterations: 20) {
@@ -365,76 +326,15 @@ struct ScalePerformanceTests {
         )
     }
 
-    /// The adversarial case, and the only way to build a real backlog: a player
-    /// signs far more than the fleet can serve. Uncollected obligations pile up
-    /// on the board while runs sit waiting, which is exactly where
-    /// `beginService`'s remaining per-run scans over `offers`, `shipments` and
-    /// `routeRuns` multiply out.
-    @Test("An under-crewed network with a freight backlog stays inside the budget")
-    func backloggedTickAtScale() throws {
-        var (engine, state) = try ScaleFixture.campaign(
-            contracts: 200,
-            crewRatio: 0.15,
-            warmUpDays: 21
-        )
 
-        let parcels = ScaleFixture.parcelsInNetwork(state)
-        let waiting = state.routeRuns.count { $0.phase == .waiting }
-        #expect(
-            parcels > Self.sustainedParcelFloor,
-            "under-crewing built no backlog: \(parcels) parcels across \(state.activeContracts.count) lanes"
-        )
-
-        let median = medianMilliseconds(iterations: 20) {
-            engine.advance(&state, by: 5)
-        }
-        #expect(
-            median < Self.tickBudgetMilliseconds,
-            "backlogged tick took \(median) ms with \(parcels) parcels and \(waiting) waiting runs (budget \(Self.tickBudgetMilliseconds) ms)"
-        )
-    }
-
-    /// The loop this whole exercise was started over.
-    ///
-    /// `syncRouteRuns` calls `beginService` for *every* run parked in `waiting`
-    /// on *every* pass of the advance loop, and each of those calls scans
-    /// `routeRuns`, `shipments` and `offers`. Nothing else in the engine has
-    /// that shape. Waiting runs come from over-crewing — surplus trucks reach
-    /// the dock before the next parcel is due — so that is what this builds.
-    @Test("A fleet parked waiting for cargo stays inside the budget")
-    func waitingRunsTickAtScale() throws {
-        var (engine, state) = try ScaleFixture.campaign(
-            contracts: 200,
-            vehiclesPerLane: 8,
-            warmUpDays: 21
-        )
-
-        let waiting = state.routeRuns.count { $0.phase == .waiting }
-        let parcels = ScaleFixture.parcelsInNetwork(state)
-        // Guards the premise: without a real pile of waiting runs this test
-        // measures the same thing as the others and proves nothing.
-        #expect(
-            waiting > 100,
-            "only \(waiting) waiting runs across \(state.routeRuns.count) runs — over-crewing did not park the fleet, so the sentinel-waiter loop is untested"
-        )
-
-        let median = medianMilliseconds(iterations: 20) {
-            engine.advance(&state, by: 5)
-        }
-        #expect(
-            median < Self.tickBudgetMilliseconds,
-            "waiting-heavy tick took \(median) ms with \(waiting) waiting runs and \(parcels) parcels (budget \(Self.tickBudgetMilliseconds) ms)"
-        )
-    }
-
-    /// Scales the freight itself, not the fleet. `beginService` re-scans
-    /// `shipments`, `offers` and `routeRuns` for every waiting run on every
-    /// pass, so cost there is (runs × parcels). Growing parcels is the only way
-    /// to see that product move.
+    /// Scales the freight itself, not the fleet.
     @Test("Cargo tick cost grows linearly with freight volume")
     func cargoScalesLinearly() throws {
-        func sample(contracts: Int) throws -> (milliseconds: Double, parcels: Int) {
-            var (engine, state) = try ScaleFixture.campaign(contracts: contracts, warmUpDays: 21)
+        func sample(activeLanes: Int) throws -> (milliseconds: Double, parcels: Int) {
+            var (engine, state) = try ScaleFixture.campaign(
+                activeLanes: activeLanes,
+                warmUpDays: 21
+            )
             let parcels = ScaleFixture.parcelsInNetwork(state)
             let median = medianMilliseconds(iterations: 15) {
                 engine.advance(&state, by: 5)
@@ -442,8 +342,8 @@ struct ScalePerformanceTests {
             return (median, parcels)
         }
 
-        let few = try sample(contracts: 50)
-        let many = try sample(contracts: 200)
+        let few = try sample(activeLanes: 50)
+        let many = try sample(activeLanes: 200)
 
         // Compare against the freight volume actually achieved, not the lanes
         // requested — the economy decides how much cargo a lane count produces.

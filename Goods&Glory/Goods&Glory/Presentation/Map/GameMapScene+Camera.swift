@@ -62,7 +62,7 @@ extension GameMapScene {
     }
 
     func zoom(by magnification: CGFloat, anchoredAt viewPoint: CGPoint) {
-        guard magnification.isFinite, magnification > 0, let view else { return }
+        guard magnification.isFinite, magnification > 0, view != nil else { return }
         noteActivity()
         userMovedCamera = true
         let worldBefore = convertPoint(fromView: viewPoint)
@@ -116,12 +116,10 @@ extension GameMapScene {
         }
     }
 
-    /// Closest zoom relative to fit. Smaller = closer (camera scale shrinks
-    /// when pinching in). 15% tighter than the prior 0.0476 / 0.102 pair.
-    private static let minZoomInRelativeToFit: CGFloat = 0.04046
-    /// Zoom-out cap relative to full-content fit. Below 1 so the whole world
-    /// is never on screen at once (less clutter as the network grows).
-    private static let maxZoomOutRelativeToFit: CGFloat = 0.32
+    /// Close enough to inspect operations, but never to street-map scale.
+    private static let minZoomInRelativeToFit: CGFloat = 0.055
+    /// The strategic surface is a game board; the whole board can be seen.
+    private static let maxZoomOutRelativeToFit: CGFloat = 1.05
 
     var maxZoomOutScale: CGFloat {
         switch cameraFocus {
@@ -167,14 +165,14 @@ extension GameMapScene {
         case .free:
             return
         case .world:
-            let center: CGPoint
-            if let hqCityID, let hq = catalog.city(hqCityID) {
-                center = projection.point(for: hq)
-            } else {
-                center = CGPoint(x: worldBounds.midX, y: worldBounds.midY)
-            }
-            // Strategic map opens at the closest allowed zoom, centered on HQ.
-            target = (center, minZoomInScale)
+            let center = hqCityID
+                .flatMap(catalog.city)
+                .map(projection.point(for:))
+                ?? CGPoint(x: worldBounds.midX, y: worldBounds.midY)
+            target = (
+                center,
+                (fitScale * 0.28).clamped(to: cameraScaleRange)
+            )
         case .city(let cityID):
             if let city = catalog.city(cityID) {
                 // Closest allowed zoom, city locked to viewport center.
@@ -242,11 +240,11 @@ extension GameMapScene {
 
     func setCameraScale(_ scale: CGFloat) {
         cameraNode.setScale(scale)
-        // The preview contains only a handful of legs, so keeping it at a
-        // stable screen-space weight is inexpensive and remains readable when
-        // a continent-spanning route is fitted.
+        activeRouteHaloNode.lineWidth = StrokeWidth.activeRouteHalo * scale
+        activeRouteNode.lineWidth = StrokeWidth.activeRoute * scale
         plannedRouteNode.lineWidth = StrokeWidth.plannedRoute * scale
-        previewRouteNode.lineWidth = StrokeWidth.previewRoute * scale
+        landNode.lineWidth = StrokeWidth.landCoast * scale
+        boundaryNode.lineWidth = StrokeWidth.boundary * scale
 
         for node in cityNodes.values { node.setScale(scale) }
         for node in plannedVisitNodes.values { node.setScale(scale) }

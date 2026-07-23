@@ -2,162 +2,143 @@
 //  MapCorridor.swift
 //  Goods&Glory
 //
-//  The line a shipment is drawn along, and the line its truck rides.
-//
-//  The map used to join two cities with a single quadratic arc. The simulation
-//  meanwhile moved the vehicle over the road graph and charged road distance,
-//  so the picture and the rules disagreed — and the arc's bow regularly put a
-//  truck out at sea. Measured over all 231 US city pairs, 50 of them had an arc
-//  crossing water; Boston→Miami spent 93% of its line in the Atlantic.
-//
-//  A corridor is derived from the same shortest path the simulation uses, so it
-//  cannot disagree with it, and it is smoothed in a way that provably cannot
-//  leave the road's footprint:
-//
-//    1. Take the Dijkstra node path (21–45 nodes for a US leg).
-//    2. Chaikin corner-cutting ×3. Every generated point is a convex
-//       combination of two neighbours, so the curve stays inside the polyline's
-//       hull — if the road is on land, the smoothed line is on land.
-//    3. Douglas–Peucker at 10 km to thin it back down.
-//    4. Round every remaining corner into a quadratic arc.
-//    5. Two more Chaikin passes to erase the joints between those arcs.
-//    6. A slight perpendicular bow for shape.
-//
-//  That lands at ~190 points per corridor, no joint turning more than 19°, a
-//  median turn of 1.1°, and under 2% of the line over water. Simplifying
-//  *before* smoothing — the obvious order — is what caused water crossings: it
-//  cut the corner the road took to go around a lake, and the spline then
-//  sailed straight over it.
+//  Shared schematic land-road geometry. Domain routing remains on the precise
+//  data-driven road graph; SpriteKit consumes a stable, low-bend atlas derived
+//  from that graph once per catalog.
 //
 
 import CoreGraphics
 import Foundation
 
-/// A drawn leg: ordered points plus the arc-length table needed to place a
-/// vehicle at a fraction of the journey.
+/// Ordered points plus an arc-length table used to place a vehicle at a
+/// fraction of its journey.
 struct MapCorridor: Equatable {
-    /// Ordered, already projected and smoothed.
     let points: [CGPoint]
-    /// Cumulative distance at each point; `lengths.last` is the total.
     private let lengths: [CGFloat]
 
     init(points: [CGPoint]) {
-        // Always at least two points. `position` and `heading` index forward
-        // from a segment, so a one-point or empty corridor would trap at
-        // runtime — and an empty one is reachable from a catalog whose city
-        // lookup fails.
         let cleaned: [CGPoint]
         switch points.count {
         case 0: cleaned = [.zero, .zero]
         case 1: cleaned = [points[0], points[0]]
-        default: cleaned = points
+        default: cleaned = Self.removingRedundantPoints(points)
         }
 
         var lengths: [CGFloat] = [0]
         lengths.reserveCapacity(cleaned.count)
         var total: CGFloat = 0
         for index in 1..<cleaned.count {
-            total += hypot(
-                cleaned[index].x - cleaned[index - 1].x,
-                cleaned[index].y - cleaned[index - 1].y
-            )
+            total += cleaned[index].distance(to: cleaned[index - 1])
             lengths.append(total)
         }
         self.points = cleaned
         self.lengths = lengths
     }
 
-    /// Straight two-point corridor. Used when no road path exists — a future
-    /// sea or air leg, or a graph that does not connect the pair.
     static func direct(from start: CGPoint, to end: CGPoint) -> MapCorridor {
         MapCorridor(points: [start, end])
     }
 
     var totalLength: CGFloat { lengths.last ?? 0 }
 
-    /// Position at `t` (0…1) measured along the corridor, not along its point
-    /// indices — so a truck crossing a long straight does not appear to speed
-    /// up when the polyline happens to have dense points elsewhere.
-    func position(at t: CGFloat) -> CGPoint {
-        let (index, fraction) = locate(t)
+    func position(at progress: CGFloat) -> CGPoint {
+        let (index, fraction) = locate(progress)
         guard index + 1 < points.count else { return points[index] }
-        let a = points[index]
-        let b = points[index + 1]
-        return CGPoint(x: a.x + (b.x - a.x) * fraction, y: a.y + (b.y - a.y) * fraction)
+        return points[index].interpolated(to: points[index + 1], fraction: fraction)
     }
 
-    /// Direction of travel at `t`, for the vehicle sprite's heading.
-    func heading(at t: CGFloat) -> CGFloat {
-        let (index, _) = locate(t)
-        let a = points[max(0, min(index, points.count - 2))]
-        let b = points[max(1, min(index + 1, points.count - 1))]
-        return atan2(b.y - a.y, b.x - a.x)
+    func heading(at progress: CGFloat) -> CGFloat {
+        let (index, _) = locate(progress)
+        let start = points[max(0, min(index, points.count - 2))]
+        let end = points[max(1, min(index + 1, points.count - 1))]
+        return atan2(end.y - start.y, end.x - start.x)
     }
 
-    /// Segment index and the fraction within it for a normalized progress.
-    private func locate(_ t: CGFloat) -> (index: Int, fraction: CGFloat) {
+    private func locate(_ progress: CGFloat) -> (index: Int, fraction: CGFloat) {
         guard points.count > 1, totalLength > 0 else { return (0, 0) }
-        let clamped = min(max(t, 0), 1)
-        let target = clamped * totalLength
-        // Binary search: corridors are short, but this runs per vehicle per tick.
+        let target = progress.clamped(to: 0...1) * totalLength
         var low = 0
         var high = lengths.count - 1
         while low + 1 < high {
-            let mid = (low + high) / 2
-            if lengths[mid] <= target { low = mid } else { high = mid }
+            let middle = (low + high) / 2
+            if lengths[middle] <= target {
+                low = middle
+            } else {
+                high = middle
+            }
         }
         let span = lengths[low + 1] - lengths[low]
-        guard span > 0 else { return (low, 0) }
-        return (low, (target - lengths[low]) / span)
+        return span > 0 ? (low, (target - lengths[low]) / span) : (low, 0)
+    }
+
+    private static func removingRedundantPoints(_ points: [CGPoint]) -> [CGPoint] {
+        var result: [CGPoint] = []
+        result.reserveCapacity(points.count)
+        for point in points {
+            if let last = result.last, point.distance(to: last) < 0.01 { continue }
+            while result.count >= 2 {
+                let a = result[result.count - 2]
+                let b = result[result.count - 1]
+                let cross = abs((b.x - a.x) * (point.y - b.y) - (b.y - a.y) * (point.x - b.x))
+                let scale = max(a.distance(to: b) + b.distance(to: point), 1)
+                guard cross / scale < 0.01 else { break }
+                result.removeLast()
+            }
+            result.append(point)
+        }
+        return result.count >= 2 ? result : [points[0], points[0]]
     }
 }
 
-// MARK: - Building and caching
-
-/// Builds corridors from the road graph and remembers them.
+/// Session atlas for the land network.
 ///
-/// A corridor is a pure function of the catalog, so it is computed once per
-/// city pair and reused for the rest of the session. Only pairs actually in
-/// play are ever built, which is what keeps this affordable when the catalog
-/// grows from one country to the world: the cost tracks the player's network,
-/// not the square of the city count.
+/// Degree-two junction chains are simplified and converted to clean
+/// horizontal, vertical and diagonal runs. Every `RoadID` receives one shared
+/// piece of that geometry, so overlapping routes and all vehicles use exactly
+/// the same line instead of generating a curve per vehicle.
 @MainActor
 final class MapCorridorCache {
     static let shared = MapCorridorCache()
 
-    /// Rounds the road's corners without ever leaving its footprint.
-    private static let smoothingPasses = 3
-    /// Thinning tolerance in world units (≈ km).
-    private static let thinningToleranceKm: CGFloat = 10
-    /// Samples emitted per rounded corner.
-    private static let cornerSamples = 8
-    /// Chaikin passes applied after corner rounding. Rounding leaves a joint
-    /// where two arcs meet; these erase it. Measured over nine long legs, the
-    /// sharpest joint falls from 26.5° to 9.4° and the median to 0.7°.
-    private static let polishPasses = 2
+    private static let guideToleranceKm: CGFloat = 125
+    private static let directAngleTolerance: CGFloat = 7 * .pi / 180
 
-    /// Perpendicular bow, as a fraction of the straight-line distance between
-    /// the endpoints — about 10 km of lift on a 1,000 km leg.
-    ///
-    /// Kept small on purpose. A bow is a displacement away from the road, so it
-    /// trades geographic truth for shape, and it buys nothing structural: it
-    /// leaves the turn angles untouched, and at 0.03 it nearly quadrupled the
-    /// share of a corridor sitting over water (1.8% → 6.7%).
-    ///
-    /// The arc character it used to provide now comes from the route itself.
-    /// Road junctions snap to the cities they pass through, so Paris→Tehran
-    /// bends through Milan, Munich, Vienna, Budapest, Istanbul and Ankara —
-    /// a shape the geography earns rather than one imposed on top of it.
-    private static let bowFraction: CGFloat = 0.01
+    private struct Signature: Equatable {
+        let nodeCount: Int
+        let roadCount: Int
+        let firstNode: RoadNodeID?
+        let lastNode: RoadNodeID?
+        let firstRoad: RoadID?
+        let lastRoad: RoadID?
+
+        init(catalog: GameCatalog) {
+            nodeCount = catalog.networkNodes.count
+            roadCount = catalog.roads.count
+            firstNode = catalog.networkNodes.first?.id
+            lastNode = catalog.networkNodes.last?.id
+            firstRoad = catalog.roads.first?.id
+            lastRoad = catalog.roads.last?.id
+        }
+    }
 
     private struct Key: Hashable {
         let origin: CityID
         let destination: CityID
     }
 
-    /// Instances are per-catalog: the app uses `shared`, tests make their own
-    /// so a fixture world can never inherit corridors from another.
-    private var cache: [Key: MapCorridor] = [:]
+    private struct Edge {
+        let road: RoadDefinition
+        let neighbor: RoadNodeID
+    }
+
+    private struct Layout {
+        let roadPoints: [RoadID: [CGPoint]]
+    }
+
+    private var signature: Signature?
+    private var layout: Layout?
+    private var corridorCache: [Key: MapCorridor] = [:]
+    private var roadIDCache: [Key: [RoadID]] = [:]
 
     func corridor(
         from origin: CityID,
@@ -165,144 +146,352 @@ final class MapCorridorCache {
         catalog: GameCatalog,
         projection: MapProjection
     ) -> MapCorridor {
+        prepare(catalog: catalog, projection: projection)
         let key = Key(origin: origin, destination: destination)
-        if let cached = cache[key] { return cached }
-        let built = Self.build(
-            from: origin,
-            to: destination,
-            catalog: catalog,
-            projection: projection
-        )
-        cache[key] = built
-        return built
+        if let cached = corridorCache[key] { return cached }
+
+        let start = catalog.city(origin).map(projection.point(for:)) ?? .zero
+        let end = catalog.city(destination).map(projection.point(for:)) ?? .zero
+        guard origin != destination,
+              let route = catalog.shortestRoute(from: origin, to: destination) else {
+            let direct = MapCorridor.direct(from: start, to: end)
+            corridorCache[key] = direct
+            return direct
+        }
+
+        var points: [CGPoint] = []
+        for traversal in route.traversals {
+            guard var road = layout?.roadPoints[traversal.roadID] else { continue }
+            if traversal.direction == .reverse { road.reverse() }
+            Self.append(road, to: &points)
+        }
+        let corridor = points.count >= 2
+            ? MapCorridor(points: points)
+            : MapCorridor.direct(from: start, to: end)
+        corridorCache[key] = corridor
+        return corridor
     }
 
-    private static func build(
+    func points(
+        for roadID: RoadID,
+        catalog: GameCatalog,
+        projection: MapProjection
+    ) -> [CGPoint]? {
+        prepare(catalog: catalog, projection: projection)
+        return layout?.roadPoints[roadID]
+    }
+
+    func roadIDs(
         from origin: CityID,
         to destination: CityID,
         catalog: GameCatalog,
         projection: MapProjection
-    ) -> MapCorridor {
-        let originPoint = catalog.city(origin).map(projection.point(for:)) ?? .zero
-        let destinationPoint = catalog.city(destination).map(projection.point(for:)) ?? .zero
-        guard origin != destination else {
-            return .direct(from: originPoint, to: destinationPoint)
-        }
-        guard let route = catalog.shortestRoute(from: origin, to: destination),
-              route.nodes.count >= 2 else {
-            return .direct(from: originPoint, to: destinationPoint)
-        }
-
-        let projected = route.nodes.compactMap { nodeID in
-            catalog.networkNode(nodeID).map { projection.point(for: $0.coordinate) }
-        }
-        guard projected.count >= 2 else {
-            return .direct(from: originPoint, to: destinationPoint)
-        }
-
-        var smoothed = projected
-        for _ in 0..<smoothingPasses {
-            smoothed = chaikin(smoothed)
-        }
-        let thinned = MapPathSimplifier.simplify(smoothed, tolerance: thinningToleranceKm)
-        guard thinned.count >= 2 else { return MapCorridor(points: projected) }
-
-        var polished = roundCorners(thinned)
-        for _ in 0..<polishPasses {
-            polished = chaikin(polished)
-        }
-        // Bow last: applied earlier, the smoothing passes would flatten it out.
-        return MapCorridor(points: bowed(polished))
+    ) -> [RoadID] {
+        prepare(catalog: catalog, projection: projection)
+        let key = Key(origin: origin, destination: destination)
+        if let cached = roadIDCache[key] { return cached }
+        let value = catalog.shortestRoute(from: origin, to: destination)?
+            .traversals.map(\.roadID) ?? []
+        roadIDCache[key] = value
+        return value
     }
 
-    /// Lifts the middle of a corridor perpendicular to its endpoints.
-    ///
-    /// The displacement follows `sin(π · t)` over normalized arc length, so it
-    /// is exactly zero at both ends — the leg still starts and finishes on its
-    /// cities — and greatest halfway along. Applying it after smoothing keeps
-    /// the curve's shape; applying it before would let Chaikin average it away.
-    private static func bowed(_ points: [CGPoint]) -> [CGPoint] {
-        guard points.count >= 3, bowFraction > 0,
-              let start = points.first, let end = points.last else { return points }
-        let dx = end.x - start.x
-        let dy = end.y - start.y
-        let chord = hypot(dx, dy)
-        guard chord > 0.0001 else { return points }
-        let normalX = -dy / chord
-        let normalY = dx / chord
+    private func prepare(catalog: GameCatalog, projection: MapProjection) {
+        let nextSignature = Signature(catalog: catalog)
+        guard signature != nextSignature || layout == nil else { return }
+        signature = nextSignature
+        corridorCache.removeAll(keepingCapacity: true)
+        roadIDCache.removeAll(keepingCapacity: true)
+        layout = Self.buildLayout(catalog: catalog, projection: projection)
+    }
 
-        var travelled: CGFloat = 0
-        var distances: [CGFloat] = [0]
-        distances.reserveCapacity(points.count)
-        for index in 1..<points.count {
-            travelled += hypot(
-                points[index].x - points[index - 1].x,
-                points[index].y - points[index - 1].y
+    private static func buildLayout(
+        catalog: GameCatalog,
+        projection: MapProjection
+    ) -> Layout {
+        var adjacency: [RoadNodeID: [Edge]] = [:]
+        adjacency.reserveCapacity(catalog.networkNodes.count)
+        for road in catalog.roads {
+            adjacency[road.from, default: []].append(Edge(road: road, neighbor: road.to))
+            adjacency[road.to, default: []].append(Edge(road: road, neighbor: road.from))
+        }
+        for nodeID in adjacency.keys {
+            adjacency[nodeID]?.sort { $0.road.id.rawValue < $1.road.id.rawValue }
+        }
+
+        let anchors = Set(catalog.networkNodes.compactMap { node -> RoadNodeID? in
+            let degree = adjacency[node.id]?.count ?? 0
+            return node.kind == .city || degree != 2 ? node.id : nil
+        })
+        var visited = Set<RoadID>()
+        var result: [RoadID: [CGPoint]] = [:]
+        result.reserveCapacity(catalog.roads.count)
+
+        let sortedAnchors = anchors.sorted { $0.rawValue < $1.rawValue }
+        for anchor in sortedAnchors {
+            for edge in adjacency[anchor] ?? [] where !visited.contains(edge.road.id) {
+                let chain = walk(
+                    from: anchor,
+                    firstEdge: edge,
+                    anchors: anchors,
+                    adjacency: adjacency,
+                    visited: &visited
+                )
+                assign(chain: chain, catalog: catalog, projection: projection, into: &result)
+            }
+        }
+
+        // A disconnected ring can contain only degree-two junctions and
+        // therefore no natural anchor. It is still deterministic and shared.
+        for road in catalog.roads.sorted(by: { $0.id.rawValue < $1.id.rawValue })
+        where !visited.contains(road.id) {
+            let edge = Edge(road: road, neighbor: road.to)
+            let chain = walk(
+                from: road.from,
+                firstEdge: edge,
+                anchors: [road.from],
+                adjacency: adjacency,
+                visited: &visited
             )
-            distances.append(travelled)
+            assign(chain: chain, catalog: catalog, projection: projection, into: &result)
         }
-        guard travelled > 0 else { return points }
 
-        let lift = bowFraction * chord
-        return points.enumerated().map { index, point in
-            let offset = lift * sin(.pi * distances[index] / travelled)
-            return CGPoint(x: point.x + normalX * offset, y: point.y + normalY * offset)
+        return Layout(roadPoints: result)
+    }
+
+    private static func walk(
+        from start: RoadNodeID,
+        firstEdge: Edge,
+        anchors: Set<RoadNodeID>,
+        adjacency: [RoadNodeID: [Edge]],
+        visited: inout Set<RoadID>
+    ) -> (nodes: [RoadNodeID], roads: [RoadDefinition]) {
+        var nodes = [start]
+        var roads: [RoadDefinition] = []
+        var edge = firstEdge
+
+        while !visited.contains(edge.road.id) {
+            visited.insert(edge.road.id)
+            roads.append(edge.road)
+            let next = edge.neighbor
+            nodes.append(next)
+            if anchors.contains(next) { break }
+            guard let following = adjacency[next]?.first(where: {
+                !visited.contains($0.road.id)
+            }) else { break }
+            edge = following
+        }
+        return (nodes, roads)
+    }
+
+    private static func assign(
+        chain: (nodes: [RoadNodeID], roads: [RoadDefinition]),
+        catalog: GameCatalog,
+        projection: MapProjection,
+        into output: inout [RoadID: [CGPoint]]
+    ) {
+        guard chain.nodes.count == chain.roads.count + 1,
+              chain.nodes.count >= 2 else { return }
+        let raw = chain.nodes.compactMap {
+            catalog.networkNode($0).map { projection.point(for: $0.coordinate) }
+        }
+        guard raw.count == chain.nodes.count else { return }
+
+        let schematic = schematicPolyline(raw)
+        let schematicLengths = cumulativeLengths(schematic)
+        let schematicTotal = schematicLengths.last ?? 0
+        let physicalTotal = chain.roads.reduce(0) { $0 + max(0, $1.distanceKm) }
+        guard schematicTotal > 0, physicalTotal > 0 else { return }
+
+        var physicalStart = 0.0
+        for (index, road) in chain.roads.enumerated() {
+            let physicalEnd = physicalStart + max(0, road.distanceKm)
+            let startFraction = CGFloat(physicalStart / physicalTotal)
+            let endFraction = CGFloat(physicalEnd / physicalTotal)
+            var section = slice(
+                schematic,
+                lengths: schematicLengths,
+                from: startFraction,
+                to: endFraction
+            )
+            let walkedForward = road.from == chain.nodes[index]
+                && road.to == chain.nodes[index + 1]
+            if !walkedForward { section.reverse() }
+            output[road.id] = section
+            physicalStart = physicalEnd
         }
     }
 
-    /// Replaces every interior corner with a quadratic arc.
-    ///
-    /// Thinning is what puts the kinks back: Chaikin rounds a corner into many
-    /// small steps and Douglas–Peucker then draws one straight line across
-    /// them, so the corridor arrived on screen as a run of hard elbows — an M
-    /// where the route should read as an S. Measured over eight long legs, one
-    /// joint in five turned more than 45°.
-    ///
-    /// Each corner becomes a quadratic Bézier whose control point is the corner
-    /// itself and whose ends are the neighbouring segment midpoints. Because
-    /// every sample is a convex combination of three consecutive points, the
-    /// curve stays inside the polyline's hull — the same property that keeps
-    /// the corridor on land survives the smoothing. After this no joint exceeds
-    /// 27°, and the median turn drops from 32° to under 4°.
-    private static func roundCorners(_ points: [CGPoint]) -> [CGPoint] {
-        guard points.count >= 3 else { return points }
-        func midpoint(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
-            CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
+    private static func schematicPolyline(_ points: [CGPoint]) -> [CGPoint] {
+        let guides = MapPathSimplifier.simplify(points, tolerance: guideToleranceKm)
+        guard guides.count >= 2 else { return points }
+        var result = [guides[0]]
+        for index in 1..<guides.count {
+            append(octilinearLeg(from: guides[index - 1], to: guides[index]), to: &result)
         }
+        return roundedPolyline(MapCorridor(points: result).points)
+    }
 
-        var result: [CGPoint] = [points[0], midpoint(points[0], points[1])]
-        result.reserveCapacity(points.count * cornerSamples)
+    /// Rounds the shared metro geometry itself, so vehicles and route strokes
+    /// follow the same soft bends instead of only painting rounded line joins.
+    private static func roundedPolyline(
+        _ points: [CGPoint],
+        radius: CGFloat = 90,
+        samplesPerCorner: Int = 5
+    ) -> [CGPoint] {
+        guard points.count >= 3 else { return points }
+
+        var result = [points[0]]
+        result.reserveCapacity(points.count * (samplesPerCorner + 1))
+
         for index in 1..<(points.count - 1) {
-            let start = midpoint(points[index - 1], points[index])
-            let control = points[index]
-            let end = midpoint(points[index], points[index + 1])
-            for sample in 1...cornerSamples {
-                let t = CGFloat(sample) / CGFloat(cornerSamples)
+            let previous = points[index - 1]
+            let corner = points[index]
+            let next = points[index + 1]
+            let incomingLength = corner.distance(to: previous)
+            let outgoingLength = corner.distance(to: next)
+            guard incomingLength > 0.01, outgoingLength > 0.01 else { continue }
+
+            let offset = min(radius, incomingLength * 0.22, outgoingLength * 0.22)
+            let inlet = corner.interpolated(
+                to: previous,
+                fraction: offset / incomingLength
+            )
+            let outlet = corner.interpolated(
+                to: next,
+                fraction: offset / outgoingLength
+            )
+            result.append(inlet)
+
+            for sample in 1...samplesPerCorner {
+                let t = CGFloat(sample) / CGFloat(samplesPerCorner)
                 let inverse = 1 - t
                 result.append(CGPoint(
-                    x: inverse * inverse * start.x + 2 * inverse * t * control.x + t * t * end.x,
-                    y: inverse * inverse * start.y + 2 * inverse * t * control.y + t * t * end.y
+                    x: inverse * inverse * inlet.x
+                        + 2 * inverse * t * corner.x
+                        + t * t * outlet.x,
+                    y: inverse * inverse * inlet.y
+                        + 2 * inverse * t * corner.y
+                        + t * t * outlet.y
                 ))
             }
         }
+
         result.append(points[points.count - 1])
+        return MapCorridor(points: result).points
+    }
+
+    /// One clean bend chosen from the eight metro-map directions.
+    private static func octilinearLeg(from start: CGPoint, to end: CGPoint) -> [CGPoint] {
+        let delta = CGPoint(x: end.x - start.x, y: end.y - start.y)
+        let distance = hypot(delta.x, delta.y)
+        guard distance > 0.01 else { return [start, end] }
+
+        let angle = atan2(delta.y, delta.x)
+        let snappedAngle = (angle / (.pi / 4)).rounded() * (.pi / 4)
+        if abs(Self.angleDifference(angle, snappedAngle)) <= directAngleTolerance {
+            return [start, end]
+        }
+
+        let diagonal = CGFloat(1 / sqrt(2.0))
+        let directions = [
+            CGPoint(x: 1, y: 0), CGPoint(x: diagonal, y: diagonal),
+            CGPoint(x: 0, y: 1), CGPoint(x: -diagonal, y: diagonal),
+            CGPoint(x: -1, y: 0), CGPoint(x: -diagonal, y: -diagonal),
+            CGPoint(x: 0, y: -1), CGPoint(x: diagonal, y: -diagonal)
+        ]
+
+        var best: (point: CGPoint, score: CGFloat)?
+        for incoming in directions {
+            for outgoing in directions {
+                let determinant = incoming.x * outgoing.y - incoming.y * outgoing.x
+                guard abs(determinant) > 0.001 else { continue }
+                let firstLength = (delta.x * outgoing.y - delta.y * outgoing.x) / determinant
+                let secondLength = (incoming.x * delta.y - incoming.y * delta.x) / determinant
+                guard firstLength > 0, secondLength > 0 else { continue }
+                let pathLength = firstLength + secondLength
+                guard pathLength <= distance * 1.55 else { continue }
+                let bend = CGPoint(
+                    x: start.x + incoming.x * firstLength,
+                    y: start.y + incoming.y * firstLength
+                )
+                let balancePenalty = abs(firstLength - secondLength) * 0.035
+                let score = pathLength + balancePenalty
+                if best == nil || score < best!.score {
+                    best = (bend, score)
+                }
+            }
+        }
+        return best.map { [start, $0.point, end] } ?? [start, end]
+    }
+
+    private static func cumulativeLengths(_ points: [CGPoint]) -> [CGFloat] {
+        guard !points.isEmpty else { return [] }
+        var result: [CGFloat] = [0]
+        result.reserveCapacity(points.count)
+        for index in 1..<points.count {
+            result.append(result[index - 1] + points[index].distance(to: points[index - 1]))
+        }
         return result
     }
 
-    /// One Chaikin corner-cutting pass. Endpoints are preserved; every new
-    /// point sits a quarter and three quarters of the way along an existing
-    /// segment, so the result is strictly inside the original polyline's hull.
-    private static func chaikin(_ points: [CGPoint]) -> [CGPoint] {
-        guard points.count > 2 else { return points }
-        var result: [CGPoint] = [points[0]]
-        result.reserveCapacity(points.count * 2)
-        for index in 0..<(points.count - 1) {
-            let a = points[index]
-            let b = points[index + 1]
-            result.append(CGPoint(x: 0.75 * a.x + 0.25 * b.x, y: 0.75 * a.y + 0.25 * b.y))
-            result.append(CGPoint(x: 0.25 * a.x + 0.75 * b.x, y: 0.25 * a.y + 0.75 * b.y))
+    private static func slice(
+        _ points: [CGPoint],
+        lengths: [CGFloat],
+        from startFraction: CGFloat,
+        to endFraction: CGFloat
+    ) -> [CGPoint] {
+        guard let total = lengths.last, total > 0 else {
+            return Array(points.prefix(2))
         }
-        result.append(points[points.count - 1])
+        let startDistance = startFraction.clamped(to: 0...1) * total
+        let endDistance = endFraction.clamped(to: 0...1) * total
+        var result = [point(on: points, lengths: lengths, distance: startDistance)]
+        for index in points.indices where lengths[index] > startDistance && lengths[index] < endDistance {
+            result.append(points[index])
+        }
+        result.append(point(on: points, lengths: lengths, distance: endDistance))
         return result
+    }
+
+    private static func point(
+        on points: [CGPoint],
+        lengths: [CGFloat],
+        distance: CGFloat
+    ) -> CGPoint {
+        guard points.count > 1 else { return points.first ?? .zero }
+        let target = distance.clamped(to: 0...(lengths.last ?? 0))
+        var index = 0
+        while index + 1 < lengths.count, lengths[index + 1] < target { index += 1 }
+        guard index + 1 < points.count else { return points.last ?? .zero }
+        let span = lengths[index + 1] - lengths[index]
+        let fraction = span > 0 ? (target - lengths[index]) / span : 0
+        return points[index].interpolated(to: points[index + 1], fraction: fraction)
+    }
+
+    private static func append(_ points: [CGPoint], to result: inout [CGPoint]) {
+        guard !points.isEmpty else { return }
+        if let last = result.last, last.distance(to: points[0]) < 0.01 {
+            result.append(contentsOf: points.dropFirst())
+        } else {
+            result.append(contentsOf: points)
+        }
+    }
+
+    private static func angleDifference(_ lhs: CGFloat, _ rhs: CGFloat) -> CGFloat {
+        atan2(sin(lhs - rhs), cos(lhs - rhs))
+    }
+}
+
+private extension CGPoint {
+    func distance(to other: CGPoint) -> CGFloat {
+        hypot(x - other.x, y - other.y)
+    }
+
+    func interpolated(to other: CGPoint, fraction: CGFloat) -> CGPoint {
+        CGPoint(
+            x: x + (other.x - x) * fraction,
+            y: y + (other.y - y) * fraction
+        )
     }
 }

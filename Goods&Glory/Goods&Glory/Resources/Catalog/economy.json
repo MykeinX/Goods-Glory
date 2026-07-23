@@ -4,15 +4,7 @@
  "unloadingMinutes": 45,
  "fillFloor": 0.5,
  "spotMarginPercent": 55,
- "contractOfferIntervalMinutes": 1440,
- "maxOpenContractOffers": 3,
- "contractDurationDays": 14,
- "contractPenaltyPercent": 40,
  "hqLanePremiumPercent": 5,
- "contractDeliveryWindowPercent": 175,
- "contractDeliveryWindowFloorPercent": 70,
- "contractLeadTimePercent": 120,
- "contractsUnlockAfterDeliveries": 2,
  "facilities": {
   "warehouse": [
    {
@@ -24,7 +16,6 @@
     "storageVolumeM3": 1600,
     "docks": 2,
     "handlingPercent": 100,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    },
    {
@@ -36,7 +27,6 @@
     "storageVolumeM3": 4800,
     "docks": 4,
     "handlingPercent": 90,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    },
    {
@@ -48,7 +38,6 @@
     "storageVolumeM3": 14000,
     "docks": 8,
     "handlingPercent": 75,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    }
   ],
@@ -62,7 +51,6 @@
     "storageVolumeM3": 0,
     "docks": 0,
     "handlingPercent": 100,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    },
    {
@@ -74,7 +62,6 @@
     "storageVolumeM3": 0,
     "docks": 0,
     "handlingPercent": 100,
-    "contractSlotPercent": 150,
     "lanePremiumPercent": 0
    },
    {
@@ -86,7 +73,6 @@
     "storageVolumeM3": 0,
     "docks": 0,
     "handlingPercent": 100,
-    "contractSlotPercent": 200,
     "lanePremiumPercent": 3
    }
   ],
@@ -100,7 +86,6 @@
     "storageVolumeM3": 0,
     "docks": 2,
     "handlingPercent": 80,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    },
    {
@@ -112,7 +97,6 @@
     "storageVolumeM3": 0,
     "docks": 4,
     "handlingPercent": 65,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    },
    {
@@ -124,7 +108,6 @@
     "storageVolumeM3": 0,
     "docks": 8,
     "handlingPercent": 50,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    }
   ],
@@ -138,7 +121,6 @@
     "storageVolumeM3": 600,
     "docks": 0,
     "handlingPercent": 100,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    },
    {
@@ -150,7 +132,6 @@
     "storageVolumeM3": 1700,
     "docks": 0,
     "handlingPercent": 100,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    }
   ],
@@ -164,7 +145,6 @@
     "storageVolumeM3": 0.0,
     "docks": 0,
     "handlingPercent": 85,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    },
    {
@@ -176,7 +156,6 @@
     "storageVolumeM3": 0.0,
     "docks": 0,
     "handlingPercent": 72,
-    "contractSlotPercent": 100,
     "lanePremiumPercent": 0
    }
   ]
@@ -188,6 +167,5 @@
   "distanceHalfWeightKm": 900,
   "parcelPatienceMinutes": 2160
  },
- "contractPremiumPercent": 25,
  "emptyReturnSharePercent": 85
 }

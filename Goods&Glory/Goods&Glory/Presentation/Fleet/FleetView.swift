@@ -105,7 +105,7 @@ struct FleetView: View {
 
     @ViewBuilder private var routesContent: some View {
         if routes.isEmpty {
-            Text("No routes yet. Build a custom route or assign a vehicle to a signed contract.")
+            Text("No routes yet. Build a route to start serving freight lanes.")
                 .font(.gg(12, .bold))
                 .foregroundStyle(Theme.textSecondary)
                 .padding(14)
@@ -189,4 +189,3 @@ struct FleetView: View {
 }
 
 // MARK: - Shared screen header
-

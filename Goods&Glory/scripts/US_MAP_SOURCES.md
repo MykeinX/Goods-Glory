@@ -3,18 +3,13 @@
 The bundled US slice is generated offline by `generate_us_map.py`. It is a
 strategic game map, not a navigation database: divided carriageways and
 sub-kilometre bends are collapsed at build time into a routing graph
-(`road_nodes` + `roads` with `distanceKm`). Runtime does not store or draw road
-polylines; the map shows city–city arcs for vehicles and separate world
-geography silhouettes.
+(`road_nodes` + `roads` with `distanceKm`). Runtime does not store TIGER road
+polylines; the map derives its shared schematic corridors from this graph.
 
 Pinned inputs:
 
 - US Census TIGER/Line 2025 Primary Roads:
   `https://www2.census.gov/geo/tiger/TIGER2025/PRIMARYROADS/tl_2025_us_primaryroads.zip`
-- US Census 2025 1:5m nation and state cartographic boundaries:
-  `https://www2.census.gov/geo/tiger/GENZ2025/kml/cb_2025_us_nation_5m.zip`
-  and
-  `https://www2.census.gov/geo/tiger/GENZ2025/kml/cb_2025_us_state_5m.zip`
 - US Census 2025 Places Gazetteer:
   `https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2025_Gazetteer/2025_Gaz_place_national.zip`
 - US Census 2025 metropolitan population estimates:

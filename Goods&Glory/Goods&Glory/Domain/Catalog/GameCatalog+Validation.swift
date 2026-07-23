@@ -108,12 +108,7 @@ extension GameCatalog {
         try validateCityMarkets()
         guard economy.startingCash > 0,
               economy.loadingMinutes >= 0, economy.unloadingMinutes >= 0,
-              (0...1).contains(economy.fillFloor),
-              economy.contractOfferIntervalMinutes > 0,
-              economy.maxOpenContractOffers > 0,
-              economy.contractDurationDays > 0,
-              (0...100).contains(economy.contractPremiumPercent),
-              (0...100).contains(economy.contractPenaltyPercent) else {
+              (0...1).contains(economy.fillFloor) else {
             throw CatalogError.validationFailure("economy config has invalid values")
         }
         guard economy.lanes.cityOutboundKgPerDayPer100k > 0,

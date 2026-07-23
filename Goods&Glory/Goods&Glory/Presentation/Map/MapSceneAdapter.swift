@@ -3,9 +3,9 @@
 //  Goods&Glory
 //
 //  Converts deterministic domain state into a read-only SpriteKit snapshot.
-//  Following the design language, routes are drawn as smooth city-to-city arcs
-//  (not road-following polylines), and vehicles ride those same arcs. SpriteKit
-//  never reads or mutates GameState and the simulation never sees scene nodes.
+//  Every active route and vehicle reads the same schematic road atlas.
+//  SpriteKit never reads or mutates GameState and the simulation never sees
+//  scene nodes.
 //
 
 import CoreGraphics
@@ -78,6 +78,8 @@ struct MapVehicleMarker: Identifiable, Equatable {
     let position: CGPoint
     let headingRadians: CGFloat
     let isMoving: Bool
+    /// Cargo state belongs on the vehicle, not on a duplicate route stroke.
+    let isLoaded: Bool
     /// Visual capsule fill 0…1 while loading/unloading (`nil` when traveling).
     /// Loading rises 0→1; unloading falls 1→0.
     let serviceProgress: CGFloat?
@@ -87,19 +89,16 @@ struct MapVehicleMarker: Identifiable, Equatable {
 }
 
 enum MapRouteKind: Hashable {
-    case loaded
-    case deadhead
+    /// Union of the canonical roads used by all currently running routes.
+    case active
     /// Player-authored route preview, independent from live vehicle movement.
     case planned
-    /// Ephemeral spot-job preview on the live map (thin dashed arc).
-    case preview
 }
 
 struct MapRouteOverlay: Identifiable, Equatable {
     let id: String
-    /// The corridor polyline, already projected and smoothed. Drawn as-is: the
-    /// shape is decided here so the scene cannot draw a different curve from
-    /// the one the vehicles ride.
+    /// One shared road section (or the continuous planned lap), already
+    /// projected by the schematic atlas.
     let anchors: [CGPoint]
     let kind: MapRouteKind
 }
@@ -116,7 +115,7 @@ struct MapPlannedVisitMarker: Identifiable, Equatable {
 
 /// What the player owns in a city, drawn as a small icon strip under the pin.
 struct MapCityFacilities: Equatable {
-    let hasBranch: Bool
+    let hasOffice: Bool
     let hasWarehouse: Bool
     /// True while anything there is still under construction.
     let isBuilding: Bool
@@ -126,15 +125,13 @@ struct MapCityFacilities: Equatable {
 /// badge so the map stays readable. Only the count and urgency are shown; the
 /// detail lives in the city screen.
 struct MapCityAttention: Equatable {
-    /// Contract parcels posted from this city and not yet claimed.
-    let waitingParcels: Int
     /// Parcels stored in this city's warehouse awaiting an onward leg.
     let storedParcels: Int
     /// Fraction of the tightest delivery window already spent, 0...1.
     /// Drives the badge colour: calm, then warning, then late.
     let urgency: Double
 
-    var total: Int { waitingParcels + storedParcels }
+    var total: Int { storedParcels }
 }
 
 struct MapRenderSnapshot: Equatable {
@@ -162,25 +159,18 @@ enum MapSceneAdapter {
     /// of rescanning the same arrays for every vehicle.
     private struct Index {
         let runByVehicle: [VehicleID: RouteRun]
-        let jobByVehicle: [VehicleID: ActiveJob]
         let routesByID: [RouteID: Route]
         /// Vehicles currently carrying at least one shipment.
         let loadedVehicleIDs: Set<VehicleID>
 
         init(state: GameState) {
             // First-wins, matching the `first { }` lookups these replace. A
-            // vehicle should never have two runs or two jobs, but the index must
-            // not quietly change behaviour if the invariant is ever broken.
+            // vehicle should never have two runs, but the index must not quietly
+            // change behaviour if the invariant is ever broken.
             var runByVehicle: [VehicleID: RouteRun] = [:]
             runByVehicle.reserveCapacity(state.routeRuns.count)
             for run in state.routeRuns where runByVehicle[run.vehicleID] == nil {
                 runByVehicle[run.vehicleID] = run
-            }
-
-            var jobByVehicle: [VehicleID: ActiveJob] = [:]
-            jobByVehicle.reserveCapacity(state.activeJobs.count)
-            for job in state.activeJobs where jobByVehicle[job.vehicleID] == nil {
-                jobByVehicle[job.vehicleID] = job
             }
 
             var routesByID: [RouteID: Route] = [:]
@@ -195,7 +185,6 @@ enum MapSceneAdapter {
             }
 
             self.runByVehicle = runByVehicle
-            self.jobByVehicle = jobByVehicle
             self.routesByID = routesByID
             self.loadedVehicleIDs = loaded
         }
@@ -207,17 +196,23 @@ enum MapSceneAdapter {
         catalog: GameCatalog,
         projection: MapProjection,
         previewRoute: Route? = nil,
-        corridors: MapCorridorCache = .shared
+        corridors providedCorridors: MapCorridorCache? = nil
     ) -> MapRenderSnapshot {
+        let corridors = providedCorridors ?? .shared
         var markers: [MapVehicleMarker] = []
         var routes: [MapRouteOverlay] = []
         var idleCountPerCity: [CityID: Int] = [:]
 
         // This runs once per simulation tick for the whole fleet. Looking each
-        // vehicle's job / run / route up with `first { }` made the snapshot cost
-        // O(vehicles × jobs) and O(vehicles × shipments); indexing once makes it
-        // linear, which is what lets the fleet grow without the map paying for it.
+        // vehicle's run / route up with `first { }` made the snapshot cost grow
+        // with the fleet; indexing once keeps it linear.
         let index = Index(state: state)
+        routes = activeNetworkOverlays(
+            state: state,
+            catalog: catalog,
+            projection: projection,
+            corridors: corridors
+        )
 
         // City projections are pure trigonometry on immutable catalog data and
         // the same handful of cities recur across every vehicle and leg.
@@ -247,8 +242,7 @@ enum MapSceneAdapter {
                     state: state,
                     index: index,
                     point: point,
-                    leg: leg,
-                    overlays: &routes
+                    leg: leg
                 ) {
                     markers.append(marker)
                 } else {
@@ -256,55 +250,8 @@ enum MapSceneAdapter {
                 }
                 continue
             }
-            guard let job = index.jobByVehicle[vehicle.id] else {
-                // Idle fleet is summarized on the city label — no per-vehicle sprite.
-                idleCountPerCity[vehicle.cityID, default: 0] += 1
-                continue
-            }
-
-            let originPt = point(job.offer.origin)
-            let destPt = point(job.offer.destination)
-            let vehiclePt = point(vehicle.cityID)
-
-            // Deadhead corridor (dashed): from the vehicle's city to the pickup.
-            if job.phase == .deadheading, vehiclePt != originPt {
-                routes.append(MapRouteOverlay(
-                    id: "\(job.id.rawValue)-deadhead",
-                    anchors: leg(vehicle.cityID, job.offer.origin).points,
-                    kind: .deadhead
-                ))
-            }
-            // Loaded corridor (solid, brand): pickup to delivery.
-            routes.append(MapRouteOverlay(
-                id: "\(job.id.rawValue)-loaded",
-                anchors: leg(job.offer.origin, job.offer.destination).points,
-                kind: .loaded
-            ))
-
-            let progress = fraction(of: job, clock: state.clock)
-            let placement = placement(
-                for: job,
-                vehicleCityID: vehicle.cityID,
-                originPt: originPt,
-                destPt: destPt,
-                progress: progress,
-                leg: leg
-            )
-            let isServicing = job.phase == .loading || job.phase == .unloading
-            // Loading: 0→1 fill. Unloading: 1→0 drain.
-            let serviceProgress: CGFloat? = {
-                guard isServicing else { return nil }
-                return job.phase == .unloading ? 1 - progress : progress
-            }()
-            markers.append(MapVehicleMarker(
-                id: vehicle.id,
-                displayCode: code,
-                position: placement.position,
-                headingRadians: placement.heading,
-                isMoving: job.phase == .deadheading || job.phase == .enRoute,
-                serviceProgress: serviceProgress,
-                labelStackIndex: 0
-            ))
+            // Idle fleet is summarized on the city label — no per-vehicle sprite.
+            idleCountPerCity[vehicle.cityID, default: 0] += 1
         }
 
         let plannedVisits: [MapPlannedVisitMarker]
@@ -341,7 +288,7 @@ enum MapSceneAdapter {
                 !$0.isOperational(at: state.clock) || $0.isUpgrading
             }
             result[facility.cityID] = MapCityFacilities(
-                hasBranch: (existing?.hasBranch ?? false) || facility.module(.office) != nil,
+                hasOffice: (existing?.hasOffice ?? false) || facility.module(.office) != nil,
                 hasWarehouse: (existing?.hasWarehouse ?? false) || facility.module(.warehouse) != nil,
                 isBuilding: (existing?.isBuilding ?? false) || building
             )
@@ -349,11 +296,9 @@ enum MapSceneAdapter {
         return result
     }
 
-    /// Cargo the player still has to act on, per city. Deliberately narrow:
-    /// only unclaimed contract parcels and warehouse stock. Anything already
-    /// on a truck is handled and would just be noise on the map.
+    /// Cargo the player still has to act on, per city. Anything already on a
+    /// truck is handled and would just be noise on the map.
     private static func attention(in state: GameState) -> [CityID: MapCityAttention] {
-        var waiting: [CityID: Int] = [:]
         var stored: [CityID: Int] = [:]
         // Smallest remaining fraction of the delivery window, per city.
         var tightest: [CityID: Double] = [:]
@@ -364,10 +309,6 @@ enum MapSceneAdapter {
             tightest[city] = max(tightest[city] ?? 0, min(1, max(0, spent)))
         }
 
-        for offer in state.offers where offer.source == .contract {
-            waiting[offer.origin, default: 0] += 1
-            noteUrgency(city: offer.origin, createdAt: offer.createdAt, expiresAt: offer.expiresAt)
-        }
         // Indexed rather than `state.facility(id)` per shipment, which would be
         // O(shipments × facilities) on every tick.
         var cityByFacility: [FacilityID: CityID] = [:]
@@ -386,9 +327,8 @@ enum MapSceneAdapter {
         }
 
         var result: [CityID: MapCityAttention] = [:]
-        for cityID in Set(waiting.keys).union(stored.keys) {
+        for cityID in stored.keys {
             result[cityID] = MapCityAttention(
-                waitingParcels: waiting[cityID] ?? 0,
                 storedParcels: stored[cityID] ?? 0,
                 urgency: tightest[cityID] ?? 0
             )
@@ -396,109 +336,8 @@ enum MapSceneAdapter {
         return result
     }
 
-    /// Consecutive task stops in the same city form one visit. The route path
-    /// closes back to its first visit, while markers group non-consecutive
-    /// visits to the same physical city (`A → B → A` becomes `1·3` at A).
-    private static func routePreview(
-        route: Route,
-        catalog: GameCatalog,
-        projection: MapProjection,
-        leg: (CityID, CityID) -> MapCorridor
-    ) -> (overlay: MapRouteOverlay?, markers: [MapPlannedVisitMarker]) {
-        struct Visit {
-            let cityID: CityID
-            var hasPickup: Bool
-            var hasDelivery: Bool
-        }
-
-        var visits: [Visit] = []
-        for stop in route.stops {
-            let flags: (pickup: Bool, delivery: Bool)
-            switch stop.task {
-            case .pickupShipment, .pickupContract, .pickupLane, .loadFromWarehouse:
-                flags = (true, false)
-            case .deliverShipment, .deliverContract, .deliverAll, .dropToWarehouse, .deliverLane:
-                flags = (false, true)
-            case .travel:
-                flags = (false, false)
-            }
-
-            if let lastIndex = visits.indices.last,
-               visits[lastIndex].cityID == stop.cityID {
-                visits[lastIndex].hasPickup = visits[lastIndex].hasPickup || flags.pickup
-                visits[lastIndex].hasDelivery = visits[lastIndex].hasDelivery || flags.delivery
-            } else {
-                visits.append(Visit(
-                    cityID: stop.cityID,
-                    hasPickup: flags.pickup,
-                    hasDelivery: flags.delivery
-                ))
-            }
-        }
-
-        var markerOrder: [CityID] = []
-        var markerValues: [CityID: (steps: [Int], pickup: Bool, delivery: Bool)] = [:]
-        for (index, visit) in visits.enumerated() {
-            var value = markerValues[visit.cityID]
-                ?? (steps: [], pickup: false, delivery: false)
-            if markerValues[visit.cityID] == nil {
-                markerOrder.append(visit.cityID)
-            }
-            value.steps.append(index + 1)
-            value.pickup = value.pickup || visit.hasPickup
-            value.delivery = value.delivery || visit.hasDelivery
-            markerValues[visit.cityID] = value
-        }
-
-        let plannedMarkers = markerOrder.compactMap { cityID -> MapPlannedVisitMarker? in
-            guard let city = catalog.city(cityID), let value = markerValues[cityID] else { return nil }
-            return MapPlannedVisitMarker(
-                id: cityID,
-                position: projection.point(for: city),
-                stepNumbers: value.steps,
-                hasPickup: value.pickup,
-                hasDelivery: value.delivery
-            )
-        }
-
-        var anchorCityIDs = visits.map(\.cityID)
-        if anchorCityIDs.count > 1,
-           let first = anchorCityIDs.first,
-           anchorCityIDs.last != first {
-            anchorCityIDs.append(first)
-        }
-
-        // The planned lap follows the same land corridors the vehicles will,
-        // so what the player sees while building a route is what they get.
-        // Consecutive corridors share a city point; the duplicate is dropped
-        // so the polyline stays continuous and `first == last` still holds for
-        // a closed lap.
-        var anchors: [CGPoint] = []
-        for index in 0..<max(0, anchorCityIDs.count - 1) {
-            let points = leg(anchorCityIDs[index], anchorCityIDs[index + 1]).points
-            if index == 0 {
-                anchors.append(contentsOf: points)
-            } else {
-                anchors.append(contentsOf: points.dropFirst())
-            }
-        }
-        if anchors.isEmpty, let only = anchorCityIDs.first,
-           let point = catalog.city(only).map(projection.point(for:)) {
-            anchors = [point]
-        }
-
-        let overlay: MapRouteOverlay? = anchors.count > 1
-            ? MapRouteOverlay(
-                id: "preview-\(route.id.rawValue)",
-                anchors: anchors,
-                kind: .planned
-            )
-            : nil
-        return (overlay, plannedMarkers)
-    }
-
-    /// Marker + overlay for a vehicle executing a route. Returns nil when the
-    /// vehicle is parked (waiting), so it folds into the idle city summary.
+    /// Marker for a vehicle executing a route. Returns nil when it is parked
+    /// (waiting), so it folds into the idle city summary.
     private static func routeRunMarker(
         run: RouteRun,
         vehicle: Vehicle,
@@ -506,8 +345,7 @@ enum MapSceneAdapter {
         state: GameState,
         index: Index,
         point: (CityID) -> CGPoint,
-        leg: (CityID, CityID) -> MapCorridor,
-        overlays: inout [MapRouteOverlay]
+        leg: (CityID, CityID) -> MapCorridor
     ) -> MapVehicleMarker? {
         guard let route = index.routesByID[run.routeID],
               route.stops.indices.contains(run.stopIndex) else { return nil }
@@ -523,11 +361,6 @@ enum MapSceneAdapter {
             guard originPt != stopPt else { return nil }
             let loaded = index.loadedVehicleIDs.contains(vehicle.id)
             let corridor = leg(run.legOriginCityID, stopCity)
-            overlays.append(MapRouteOverlay(
-                id: "run-\(run.id)-leg",
-                anchors: corridor.points,
-                kind: loaded ? .loaded : .deadhead
-            ))
             let progress = fraction(started: run.phaseStartedAt, ends: run.phaseEndsAt, clock: state.clock)
             return MapVehicleMarker(
                 id: vehicle.id,
@@ -535,6 +368,7 @@ enum MapSceneAdapter {
                 position: corridor.position(at: progress),
                 headingRadians: corridor.heading(at: progress),
                 isMoving: true,
+                isLoaded: loaded,
                 serviceProgress: nil,
                 labelStackIndex: 0
             )
@@ -543,7 +377,7 @@ enum MapSceneAdapter {
             let progress = fraction(started: run.phaseStartedAt, ends: run.phaseEndsAt, clock: state.clock)
             let isPickup: Bool
             switch route.stops[run.stopIndex].task {
-            case .pickupShipment, .pickupContract, .pickupLane, .loadFromWarehouse: isPickup = true
+            case .pickupLane, .loadFromWarehouse: isPickup = true
             default: isPickup = false
             }
             return MapVehicleMarker(
@@ -552,6 +386,7 @@ enum MapSceneAdapter {
                 position: stopPt,
                 headingRadians: 0,
                 isMoving: false,
+                isLoaded: index.loadedVehicleIDs.contains(vehicle.id),
                 serviceProgress: isPickup ? progress : 1 - progress,
                 labelStackIndex: 0
             )
@@ -629,31 +464,4 @@ enum MapSceneAdapter {
         return CGFloat(min(1, max(0, Double(elapsed) / Double(total))))
     }
 
-    private static func placement(
-        for job: ActiveJob,
-        vehicleCityID: CityID,
-        originPt: CGPoint,
-        destPt: CGPoint,
-        progress: CGFloat,
-        leg: (CityID, CityID) -> MapCorridor
-    ) -> (position: CGPoint, heading: CGFloat) {
-        switch job.phase {
-        case .loading:
-            return (originPt, 0)
-        case .unloading:
-            return (destPt, 0)
-        case .deadheading:
-            let corridor = leg(vehicleCityID, job.offer.origin)
-            return (corridor.position(at: progress), corridor.heading(at: progress))
-        case .enRoute:
-            let corridor = leg(job.offer.origin, job.offer.destination)
-            return (corridor.position(at: progress), corridor.heading(at: progress))
-        }
-    }
-
-    private static func fraction(of job: ActiveJob, clock: GameTime) -> CGFloat {
-        let phaseMinutes = max(1, job.phaseStartedAt.minutes(until: job.phaseEndsAt))
-        let elapsed = job.phaseStartedAt.minutes(until: clock)
-        return CGFloat(min(1, max(0, Double(elapsed) / Double(phaseMinutes))))
-    }
 }

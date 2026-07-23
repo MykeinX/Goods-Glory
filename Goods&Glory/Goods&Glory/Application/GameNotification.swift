@@ -44,8 +44,6 @@ struct GameNotification: Identifiable, Equatable, Sendable {
         switch event {
         case .jobPickedUp(_, let origin, _):
             return origin
-        case .jobDelivered(_, let destination, _, _):
-            return destination
         case .routeShipmentDelivered(_, _, let destination, _):
             return destination
         // Facility and warehouse events are inherently about one place.
@@ -55,11 +53,9 @@ struct GameNotification: Identifiable, Equatable, Sendable {
             return city
         case .warehouseFull(let city, _):
             return city
-        case .companyFounded, .vehiclePurchased, .jobAccepted, .contractSigned,
+        case .companyFounded, .vehiclePurchased,
              .vehicleAssignedToRoute, .vehicleUnassignedFromRoute, .routeStarted,
-             .routeStopped, .routeShipmentSkipped, .contractShipmentMissed, .contractEnded,
-             .facilityDemolished, .cargoStored, .cargoLoadedFromWarehouse,
-             .contractCancellationRequested, .routeNeedsReview:
+             .routeStopped, .facilityDemolished, .cargoStored, .cargoLoadedFromWarehouse:
             return nil
         }
     }
@@ -106,34 +102,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 logAt: entry.at,
                 mapFocusCityID: focus
             )
-        case .jobDelivered(_, let destination, let revenue, let cost):
-            let profit = revenue - cost
-            return GameNotification(
-                id: entry.id,
-                kind: .operations,
-                chrome: .success,
-                title: String(localized: "Delivered"),
-                detail: "\(cityName(destination)) · \(Format.money(profit))",
-                systemImage: "checkmark.circle.fill",
-                logAt: entry.at,
-                mapFocusCityID: focus
-            )
-        case .jobAccepted:
-            // Acceptance is visible in Jobs; toast reserved for physical milestones.
-            return nil
-        case .contractSigned(_, let origin, let destination):
-            return GameNotification(
-                id: entry.id,
-                kind: .milestone,
-                chrome: .brand,
-                title: String(localized: "Contract signed"),
-                detail: "\(cityName(origin)) → \(cityName(destination))",
-                systemImage: "doc.text.fill",
-                logAt: entry.at,
-                mapFocusCityID: focus
-            )
         case .vehicleAssignedToRoute, .vehicleUnassignedFromRoute, .routeStarted, .routeStopped:
-            // Visible immediately in the route/contract cards; no toast needed.
+            // Visible immediately in the route cards; no toast needed.
             return nil
         case .routeShipmentDelivered(_, _, let destination, let revenue):
             return GameNotification(
@@ -143,39 +113,6 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 title: String(localized: "Delivered"),
                 detail: "\(cityName(destination)) · \(Format.money(revenue))",
                 systemImage: "checkmark.circle.fill",
-                logAt: entry.at,
-                mapFocusCityID: focus
-            )
-        case .routeShipmentSkipped:
-            return GameNotification(
-                id: entry.id,
-                kind: .operations,
-                chrome: .warning,
-                title: String(localized: "Route pickup skipped"),
-                detail: String(localized: "Cargo missing or vehicle full"),
-                systemImage: "exclamationmark.triangle.fill",
-                logAt: entry.at,
-                mapFocusCityID: focus
-            )
-        case .contractShipmentMissed(_, let penalty):
-            return GameNotification(
-                id: entry.id,
-                kind: .operations,
-                chrome: .warning,
-                title: String(localized: "Contract shipment missed"),
-                detail: String(localized: "Compensation paid: \(Format.money(penalty))"),
-                systemImage: "exclamationmark.triangle.fill",
-                logAt: entry.at,
-                mapFocusCityID: focus
-            )
-        case .contractEnded(_, let completed, let missed):
-            return GameNotification(
-                id: entry.id,
-                kind: .milestone,
-                chrome: missed > 0 ? .warning : .success,
-                title: String(localized: "Contract ended"),
-                detail: String(localized: "\(completed) delivered · \(missed) missed"),
-                systemImage: "doc.text.magnifyingglass",
                 logAt: entry.at,
                 mapFocusCityID: focus
             )
@@ -203,21 +140,8 @@ struct GameNotification: Identifiable, Equatable, Sendable {
                 logAt: entry.at,
                 mapFocusCityID: focus
             )
-        case .routeNeedsReview:
-            // The one case the player must not miss: a route quietly running
-            // laps below its potential.
-            return GameNotification(
-                id: entry.id,
-                kind: .operations,
-                chrome: .warning,
-                title: String(localized: "Route needs editing"),
-                detail: String(localized: "A contract ended — the lane runs on spot freight now"),
-                systemImage: "pencil.and.list.clipboard",
-                logAt: entry.at,
-                mapFocusCityID: focus
-            )
         case .facilityConstructionStarted, .facilityDemolished,
-             .cargoStored, .cargoLoadedFromWarehouse, .contractCancellationRequested:
+             .cargoStored, .cargoLoadedFromWarehouse:
             // Routine bookkeeping — visible on the facility and city screens.
             return nil
         }

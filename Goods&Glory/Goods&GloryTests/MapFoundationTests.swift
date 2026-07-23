@@ -2,7 +2,7 @@
 //  MapFoundationTests.swift
 //  Goods&GloryTests
 //
-//  Verifies map geography decoding and city-to-city arc rendering.
+//  Verifies map atlas decoding and city-to-city arc rendering.
 //
 
 import CoreGraphics
@@ -11,11 +11,11 @@ import Testing
 @testable import Goods_Glory
 
 struct MapFoundationTests {
-    @MainActor @Test func geographyDecodesLandMasses() throws {
+    @Test func boardSilhouetteDecodesLandMasses() throws {
         let data = Data(
             """
             {
-              "version": 1,
+              "version": 2,
               "source": "test",
               "landMasses": [
                 {
@@ -26,29 +26,28 @@ struct MapFoundationTests {
                     { "latitude": 5, "longitude": 6 }
                   ]
                 }
-              ],
-              "waterBodies": [],
-              "boundaries": []
+              ]
             }
             """.utf8
         )
 
-        let geography = try JSONDecoder().decode(MapGeographyDefinition.self, from: data)
+        let board = try JSONDecoder().decode(MapBoardSilhouette.self, from: data)
 
-        #expect(geography.landMasses.map(\.id) == ["mainland"])
-        #expect(geography.allCoordinates.count == 3)
+        #expect(board.landMasses.map(\.id) == ["mainland"])
+        #expect(board.landMasses.flatMap(\.points).count == 3)
     }
 
-    @Test func bundledGeographyLoads() throws {
-        let geography = try MapGeographyDefinition.load(from: .main)
-        #expect(geography.version > 0)
-        #expect(!geography.landMasses.isEmpty)
-        #expect(!geography.waterBodies.isEmpty)
-        #expect(!geography.boundaries.isEmpty)
-        #expect(geography.boundaries.allSatisfy { $0.points.count >= 2 })
+    @Test func bundledMapAtlasesLoad() throws {
+        let board = try MapBoardSilhouette.load(from: .main)
+        let boundaries = try MapBoundaryAtlas.load(from: .main)
+        #expect(board.version > 0)
+        #expect(boundaries.version > 0)
+        #expect(!board.landMasses.isEmpty)
+        #expect(!boundaries.lines.isEmpty)
+        #expect(boundaries.lines.allSatisfy { $0.count >= 2 })
 
-        let latitudes = geography.landMasses.flatMap(\.points).map(\.latitude)
-        let longitudes = geography.landMasses.flatMap(\.points).map(\.longitude)
+        let latitudes = board.landMasses.flatMap(\.points).map(\.latitude)
+        let longitudes = board.landMasses.flatMap(\.points).map(\.longitude)
         #expect((latitudes.min() ?? 0) < -30)
         #expect((latitudes.max() ?? 0) > 60)
         #expect((longitudes.min() ?? 0) < -100)
@@ -62,7 +61,7 @@ struct MapFoundationTests {
         let nodeB = RoadNodeID("node_beta")
         let roadID = RoadID("alpha_beta")
         let vehicleID = VehicleID(rawValue: 1)
-        let jobID = JobID(rawValue: 2)
+        let routeID = RouteID(rawValue: 2)
         let vehicleTypeID = VehicleTypeID("van")
         let productID = ProductID("cargo")
         let economy = TestEconomy.make(
@@ -132,33 +131,6 @@ struct MapFoundationTests {
             economy: economy
         )
 
-        let offer = JobOffer(
-            id: jobID,
-            origin: cityA,
-            destination: cityB,
-            productID: productID,
-            load: LoadSize(massKg: 1, volumeM3: 1),
-            payout: 1,
-            distanceKm: 200,
-            urgency: .normal,
-            source: .lane,
-            contractID: nil,
-            laneID: nil,
-            originFirmID: nil,
-            destinationFirmID: nil,
-            createdAt: .start,
-            expiresAt: .start + 500
-        )
-        let job = ActiveJob(
-            id: jobID,
-            offer: offer,
-            vehicleID: vehicleID,
-            deadheadKm: 0,
-            startedAt: .start,
-            phase: .enRoute,
-            phaseStartedAt: .start,
-            phaseEndsAt: .start + 100
-        )
         var state = GameState.newCampaign(
             config: CampaignConfig(
                 seed: 1,
@@ -173,11 +145,34 @@ struct MapFoundationTests {
                 id: vehicleID,
                 typeID: vehicleTypeID,
                 cityID: cityA,
-                assignedJobID: jobID,
                 odometerKm: 0
             )
         ]
-        state.activeJobs = [job]
+        state.routes = [
+            Route(
+                id: routeID,
+                name: "Alpha → Beta",
+                stops: [RouteStop(id: 1, cityID: cityB, task: .travel)],
+                vehicleIDs: [vehicleID],
+                isRunning: true
+            )
+        ]
+        state.routeRuns = [
+            RouteRun(
+                id: 1,
+                routeID: routeID,
+                vehicleID: vehicleID,
+                stopIndex: 0,
+                phase: .traveling,
+                phaseStartedAt: .start,
+                phaseEndsAt: .start + 100,
+                legOriginCityID: cityA,
+                legDistanceKm: 200,
+                lapStartedAt: .start,
+                claimedShipmentIDs: [],
+                isWindingDown: false
+            )
+        ]
 
         let projection = MapProjection()
         let corridors = MapCorridorCache()
@@ -284,36 +279,6 @@ struct MapFoundationTests {
             economy: economy
         )
 
-        func makeJob(id: Int, vehicleID: Int) -> ActiveJob {
-            let offer = JobOffer(
-                id: JobID(rawValue: id),
-                origin: cityA,
-                destination: cityB,
-                productID: productID,
-                load: LoadSize(massKg: 1, volumeM3: 1),
-                payout: 1,
-                distanceKm: 200,
-                urgency: .normal,
-                source: .lane,
-                contractID: nil,
-                laneID: nil,
-                originFirmID: nil,
-                destinationFirmID: nil,
-                createdAt: .start,
-                expiresAt: .start + 500
-            )
-            return ActiveJob(
-                id: JobID(rawValue: id),
-                offer: offer,
-                vehicleID: VehicleID(rawValue: vehicleID),
-                deadheadKm: 0,
-                startedAt: .start,
-                phase: .enRoute,
-                phaseStartedAt: .start,
-                phaseEndsAt: .start + 100
-            )
-        }
-
         var state = GameState.newCampaign(
             config: CampaignConfig(
                 seed: 1,
@@ -329,18 +294,41 @@ struct MapFoundationTests {
                 id: VehicleID(rawValue: 1),
                 typeID: vehicleTypeID,
                 cityID: cityA,
-                assignedJobID: JobID(rawValue: 10),
                 odometerKm: 0
             ),
             Vehicle(
                 id: VehicleID(rawValue: 2),
                 typeID: vehicleTypeID,
                 cityID: cityA,
-                assignedJobID: JobID(rawValue: 11),
                 odometerKm: 0
             )
         ]
-        state.activeJobs = [makeJob(id: 10, vehicleID: 1), makeJob(id: 11, vehicleID: 2)]
+        let routeID = RouteID(rawValue: 10)
+        state.routes = [
+            Route(
+                id: routeID,
+                name: "Alpha → Beta",
+                stops: [RouteStop(id: 1, cityID: cityB, task: .travel)],
+                vehicleIDs: state.vehicles.map(\.id),
+                isRunning: true
+            )
+        ]
+        state.routeRuns = state.vehicles.enumerated().map { index, vehicle in
+            RouteRun(
+                id: index + 1,
+                routeID: routeID,
+                vehicleID: vehicle.id,
+                stopIndex: 0,
+                phase: .traveling,
+                phaseStartedAt: .start,
+                phaseEndsAt: .start + 100,
+                legOriginCityID: cityA,
+                legDistanceKm: 200,
+                lapStartedAt: .start,
+                claimedShipmentIDs: [],
+                isWindingDown: false
+            )
+        }
 
         let snapshot = MapSceneAdapter.snapshot(
             state: state,
@@ -394,16 +382,16 @@ struct MapFoundationTests {
         let cityA = cities[0].id
         let cityB = cities[1].id
         let cityC = cities[2].id
-        let contractID = ContractID(rawValue: 91)
+        let laneID = LaneID("preview")
         let route = Route(
             id: RouteID(rawValue: 92),
             name: "Preview",
             stops: [
                 RouteStop(id: 1, cityID: cityA, task: .travel),
-                RouteStop(id: 2, cityID: cityB, task: .pickupContract(contractID)),
-                RouteStop(id: 3, cityID: cityB, task: .deliverContract(contractID)),
+                RouteStop(id: 2, cityID: cityB, task: .pickupLane(laneID)),
+                RouteStop(id: 3, cityID: cityB, task: .deliverLane(laneID, .destination)),
                 RouteStop(id: 4, cityID: cityC, task: .travel),
-                RouteStop(id: 5, cityID: cityA, task: .deliverContract(contractID))
+                RouteStop(id: 5, cityID: cityA, task: .deliverLane(laneID, .destination))
             ],
             vehicleIDs: [],
             isRunning: false

@@ -8,31 +8,14 @@
 
 import Foundation
 
-enum ContractRouteAction: Equatable, Sendable {
-    case pickup
-    case deliver
-}
-
 enum GameCommand: Sendable {
     /// Buy a vehicle; it is delivered at the company HQ city.
     case buyVehicle(VehicleTypeID)
-    /// Accept an open spot offer and assign an idle vehicle to it.
-    /// If the vehicle is in another city it first drives there empty.
-    case acceptJob(offerID: JobID, vehicleID: VehicleID)
 
     /// Sends an idle vehicle onto a persistent freight lane: creates and starts
-    /// a two-stop shuttle route (claim at the origin dock, deliver all at the
-    /// destination) that keeps serving the lane until stopped.
+    /// a two-stop shuttle route (claim at the origin dock, deliver that lane at
+    /// the destination) that keeps serving the lane until stopped.
     case dispatchVehicleToLane(laneID: LaneID, vehicleID: VehicleID)
-    /// Sign an open long-term contract; shipments post periodically as job offers.
-    case signContract(ContractID)
-    /// Dedicate a vehicle to a signed contract. Auto-creates and starts the
-    /// contract's two-stop route on first assignment.
-    case assignVehicleToContract(contractID: ContractID, vehicleID: VehicleID)
-    /// Release a vehicle from a contract route (delegates to route unassign).
-    /// Safe close: stop posting new cycles, let committed parcels finish.
-    /// The contract clears itself once nothing of it is left in the network.
-    case cancelContract(ContractID)
 
     // MARK: Facilities
 
@@ -52,32 +35,17 @@ enum GameCommand: Sendable {
     case renameRoute(routeID: RouteID, name: String)
     /// Append a plain travel stop. Allowed while running (appending is safe).
     case addTravelStop(routeID: RouteID, cityID: CityID)
-    /// Remove a stop. Route must be stopped; shipment stops are removed via
-    /// removeJobFromRoute so cargo bookkeeping stays consistent.
+    /// Remove a stop. Route must be stopped.
     case removeRouteStop(routeID: RouteID, stopID: Int)
     /// Move a stop one position up (-1) or down (+1). Route must be stopped.
     case moveRouteStop(routeID: RouteID, stopID: Int, offset: Int)
-    /// Add one recurring contract action to an existing city visit. The visit
-    /// id is the first stop id in its consecutive same-city block.
-    case addContractTaskToRoute(
-        routeID: RouteID,
-        visitStopID: Int,
-        contractID: ContractID,
-        action: ContractRouteAction
-    )
-    /// Add a warehouse or bulk-delivery action to an existing city visit:
-    /// `dropToWarehouse`, `loadFromWarehouse` or `deliverAll`.
+    /// Add a lane, warehouse or bulk-delivery action to an existing city visit.
     case addNetworkTaskToRoute(routeID: RouteID, visitStopID: Int, task: RouteTask)
     /// Replace the city-visit order atomically. Every current visit id must
     /// appear exactly once.
     case reorderRouteVisits(routeID: RouteID, orderedVisitIDs: [Int])
     /// Remove one whole city visit and all of its local tasks.
     case removeRouteVisit(routeID: RouteID, visitStopID: Int)
-    /// Accept a market offer into a route: appends pickup + deliver stops.
-    case addJobToRoute(offerID: JobID, routeID: RouteID)
-    /// Detach an accepted, not-yet-loaded shipment; contract shipments return
-    /// to the market with their original deadline.
-    case removeJobFromRoute(jobID: JobID, routeID: RouteID)
     case assignVehicleToRoute(routeID: RouteID, vehicleID: VehicleID)
     /// Wind down the vehicle's run: no new pickups, deliver carried cargo, release.
     case unassignVehicleFromRoute(routeID: RouteID, vehicleID: VehicleID)
@@ -93,13 +61,10 @@ enum GameCommand: Sendable {
 enum CommandError: Error, Equatable, Sendable {
     case unknownReference
     case insufficientFunds(required: Money)
-    case vehicleBusy
-    case offerExpired
-    case loadExceedsCapacity
     case noRoute
     /// A route needs at least one assigned vehicle before it can run.
     case noVehicleAssigned
-    /// Direct contract cargo must have both pickup and delivery actions.
+    /// A lane pickup must have a delivery or warehouse hand-off.
     case incompleteRouteTasks
     /// The vehicle already serves another route.
     case vehicleAlreadyAssigned
@@ -109,8 +74,8 @@ enum CommandError: Error, Equatable, Sendable {
     case facilityAlreadyExists
     /// The facility is still under construction, or already at max level.
     case facilityNotAvailable
-    /// Contract business in this city needs a finished branch first.
-    case branchRequired
+    /// A module that depends on an office cannot be built before the office.
+    case officeRequired
     /// This city has no warehouse to store or collect cargo.
     case warehouseRequired
     /// A warehouse must be emptied before it can be demolished.

@@ -11,18 +11,10 @@ import Foundation
 enum RouteTask: Codable, Hashable, Sendable {
     /// Drive here, nothing else. Allows free repositioning legs.
     case travel
-    /// Load one specific accepted shipment waiting at this city.
-    case pickupShipment(JobID)
-    /// Unload that shipment here and collect its payout.
-    case deliverShipment(JobID)
-    /// Load the oldest pending shipment of this contract; waits if none is due yet.
-    case pickupContract(ContractID)
     /// Claim waiting freight of this lane from the origin dock: parcels are
     /// minted from the lane's accrual, priced for the loading vehicle at the
     /// spot rate, until the vehicle is full. Waits when the dock is empty.
     case pickupLane(LaneID)
-    /// Unload all carried shipments of this contract here.
-    case deliverContract(ContractID)
     /// Store every carried parcel that is not already at its final city into
     /// this city's warehouse. The backbone of consolidation.
     case dropToWarehouse
@@ -51,14 +43,12 @@ enum LaneDropTarget: Codable, Hashable, Sendable {
     case warehouse
 }
 
-/// Groups warehouse cargo the way a dispatcher thinks about it: same product,
-/// same final destination, same contract. Shipments keep their own identity in
-/// the engine; the lot is how the player selects and moves them in bulk.
+/// Groups warehouse cargo the way a dispatcher thinks about it: same product
+/// and final destination. Shipments keep their own identity in the engine; the
+/// lot is how the player selects and moves them in bulk.
 struct StorageLotKey: Codable, Hashable, Sendable {
     let productID: ProductID
     let destinationCityID: CityID
-    /// Nil for spot cargo with no contract behind it.
-    let contractID: ContractID?
 }
 
 /// Where a parcel physically is right now.
@@ -210,10 +200,7 @@ struct RouteStats: Codable, Hashable, Sendable {
     }
 }
 
-/// A player-built vehicle itinerary that loops until stopped. No route belongs
-/// to a contract: a route covers contracts and lanes through its stop tasks,
-/// and outlives any of them (a lane whose contract ends keeps hauling the
-/// underlying lane at the spot rate).
+/// A player-built vehicle itinerary that loops until stopped.
 struct Route: Codable, Identifiable, Sendable {
     let id: RouteID
     var name: String
@@ -227,14 +214,6 @@ struct Route: Codable, Identifiable, Sendable {
     /// winds down, then the engine purges it automatically.
     var cancellationRequestedAt: GameTime? = nil
     var stats: RouteStats = RouteStats()
-
-    /// Contracts this route picks up for — its service commitments.
-    var coveredContractIDs: [ContractID] {
-        stops.compactMap { stop in
-            if case .pickupContract(let id) = stop.task { return id }
-            return nil
-        }
-    }
 
     /// Lanes this route claims from — its baseline demand.
     var coveredLaneIDs: [LaneID] {
@@ -271,8 +250,7 @@ struct Shipment: Codable, Identifiable, Sendable {
     var lotKey: StorageLotKey {
         StorageLotKey(
             productID: offer.productID,
-            destinationCityID: offer.destination,
-            contractID: offer.contractID
+            destinationCityID: offer.destination
         )
     }
 
@@ -303,7 +281,7 @@ enum RouteRunPhase: String, Codable, Sendable {
     case traveling
     /// Loading or unloading at the current stop.
     case servicing
-    /// Parked at the stop (contract shipment not due yet, or idle lap guard).
+    /// Parked at the stop during an idle lap guard.
     case waiting
 }
 
@@ -325,10 +303,6 @@ struct RouteRun: Codable, Identifiable, Sendable {
     /// Parcels claimed at service start, loaded at service end. A list, not a
     /// single id: one dock visit fills the vehicle rather than taking one box.
     var claimedShipmentIDs: [JobID]
-    /// When this run last reported holding capacity back for committed freight.
-    /// Keeps one city visit from writing the same line once per lane stop.
-    var lastHoldNotedAt: GameTime? = nil = []
     /// Wind-down: skip pickups, finish deliveries, then release the vehicle.
     var isWindingDown: Bool
 }
-

@@ -72,13 +72,26 @@ before implementation rather than after mistakes.
 
 iPhone logistics simulation game
 
-## 5. Kod Düzeni — Tekrar ve Şişme Yasağı
+## 5. Proje belgeleri — az oku
 
-**Bu proje bu iki hatayı zaten ödedi; tekrarlanmamalı.**
+Varsayılan bağlam:
+
+1. `VISION.md` — ürün vizyonu
+2. `Goods&Glory/ARCHITECTURE.md` — katmanlar, dosya düzeni, nereye bakılır
+3. İlgili kod / JSON — uygulama gerçeği
+4. `OPEN.md` — yalnız yön belirsizse
+
+Mikro karar, eski GDD, plan taslağı veya karar günlüğü aranmaz / üretilmez.
+Davranış ayrıntısı kodda yaşar.
+
+## 6. Kod Düzeni — Tekrar ve Şişme Yasağı
+
+**Bakımı kolay, modüler, tekrarlamayan, data-driven kod. MVVM ve dosya bölmesi sürer.**
 
 - **Dosya ~400 satırda bölünür, 700 üst sınır.** Klasör açmak bölmek değildir.
   Yeni bir tip yazıyorsan ve tek bir ekranın iç detayı değilse kendi dosyasına
   gider; bir alt bileşen ikinci kez kullanıldığı anda kendi dosyasına taşınır.
+  Motor extension’ları (`SimulationEngine+…`) tek dosyaya sıkıştırılmaz.
 - **Aynı hesabı/bileşeni ikinci kez yazma.** İki kopya zamanla ayrışır ve tek
   bir değişiklik birden çok yeri düzeltmeyi gerektirir. Ortak yerler:
   `Domain` (kural/hesap), `Format` (biçim), `SessionDisplay` (katalog aramaları),
@@ -86,4 +99,4 @@ iPhone logistics simulation game
 - **Hesap Domain'de, görüntü Presentation'da.** Bir sayı birden çok ekranda
   görünüyorsa onu motor hesaplar; view yalnız okur.
 
-Ayrıntı ve gerekçe: `Goods&Glory/ARCHITECTURE.md` → "Kod düzeni kuralları".
+Ayrıntı: `Goods&Glory/ARCHITECTURE.md`.

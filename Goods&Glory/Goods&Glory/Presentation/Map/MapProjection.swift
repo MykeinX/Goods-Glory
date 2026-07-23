@@ -2,9 +2,8 @@
 //  MapProjection.swift
 //  Goods&Glory
 //
-//  Stable geographic coordinates for the strategic world map. Web Mercator
-//  keeps every catalog point in the same world space as regions are added;
-//  approximately one scene unit represents one projected kilometre.
+//  Stable coordinates for the authored strategic game board. Longitude and
+//  latitude stay linear; the vertical art scale matches the board silhouette.
 //
 
 import CoreGraphics
@@ -12,15 +11,15 @@ import Foundation
 
 struct MapProjection: Sendable {
     private static let earthRadiusKm = 6_378.137
-    private static let maximumLatitude = 85.05112878
+    private static let verticalBoardScale = 1.274
 
     func point(latitude: Double, longitude: Double) -> CGPoint {
-        let latitude = latitude.clamped(to: -Self.maximumLatitude...Self.maximumLatitude)
-        let latitudeRadians = latitude * .pi / 180
-        let longitudeRadians = longitude * .pi / 180
         return CGPoint(
-            x: Self.earthRadiusKm * longitudeRadians,
-            y: Self.earthRadiusKm * log(tan(.pi / 4 + latitudeRadians / 2))
+            x: Self.earthRadiusKm * longitude.clamped(to: -180...180) * .pi / 180,
+            y: Self.earthRadiusKm
+                * latitude.clamped(to: -90...90)
+                * .pi / 180
+                * Self.verticalBoardScale
         )
     }
 

@@ -117,8 +117,8 @@ struct MapBottomChrome: View {
     var onFocusCity: (CityID) -> Void
 
     /// Both counts from one pass. Computed together because this runs on every
-    /// simulation tick, and the previous per-vehicle `isVehicleIdle` calls made
-    /// it two full rescans of the job and run lists.
+    /// simulation tick, and the previous per-vehicle `isVehicleIdle` calls
+    /// repeatedly rescanned the route-run list.
     private var fleetSplit: (onRoute: Int, idle: Int) {
         guard let state = session.state else { return (0, 0) }
         let busy = state.busyVehicleIDs()
@@ -211,4 +211,3 @@ struct MapFleetStatChip: View {
 }
 
 // MARK: - Selection popups
-

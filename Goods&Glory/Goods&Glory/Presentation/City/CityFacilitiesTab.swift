@@ -39,7 +39,7 @@ struct CityFacilitiesTab: View {
     // MARK: Warehouse
 
     /// What sits in this city's warehouse, grouped the way a dispatcher thinks:
-    /// same product, same final destination, same contract.
+    /// same product and same final destination.
     @ViewBuilder private var warehouseSection: some View {
         if let state = session.state,
            let warehouse = state.warehouseSite(in: cityID),

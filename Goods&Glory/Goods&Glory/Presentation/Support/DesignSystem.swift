@@ -207,7 +207,7 @@ struct StatChip: View {
     }
 }
 
-/// A tiny uppercase pill tag (e.g. "URGENT", "CONTRACT").
+/// A tiny uppercase pill tag (e.g. "URGENT", "RUNNING").
 struct TagPill: View {
     let text: String
     var color: Color = Theme.brand
@@ -351,7 +351,7 @@ struct ScreenHeader: View {
     }
 }
 
-/// A live route card: contract lane, its stops, serving vehicles and status.
+/// Shared card styling for live route lists.
 
 // MARK: - List rows as cards
 
@@ -368,4 +368,3 @@ extension View {
             .listRowSeparator(.hidden)
     }
 }
-

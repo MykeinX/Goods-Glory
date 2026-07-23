@@ -105,32 +105,6 @@ private enum Fixture {
     /// ~187 kg per 240-minute tick), eight ticks clear 1000 kg.
     static let minutesToFirstParcel = 8 * LaneConfig.tickMinutes
 
-    /// A hand-built lane parcel offer, for tests that exercise the legacy
-    /// accept/route paths without going through the dock claim.
-    static func laneOffer(
-        id: Int,
-        massKg: Int = 1000,
-        payout: Money = 1000,
-        state: GameState
-    ) -> JobOffer {
-        JobOffer(
-            id: JobID(rawValue: id),
-            origin: cityA,
-            destination: cityB,
-            productID: product,
-            load: LoadSize(massKg: massKg, volumeM3: Double(massKg) / 1000 * 2),
-            payout: payout,
-            distanceKm: 100,
-            urgency: .normal,
-            source: .lane,
-            contractID: nil,
-            laneID: laneID,
-            originFirmID: nil,
-            destinationFirmID: nil,
-            createdAt: state.clock,
-            expiresAt: state.clock + 2_160
-        )
-    }
 }
 
 // MARK: - Engine rules
@@ -186,7 +160,7 @@ struct SimulationEngineTests {
         #expect(route.isRunning)
         #expect(route.vehicleIDs == [vehicle.id])
         #expect(route.stops.map(\.task).contains(.pickupLane(Fixture.laneID)))
-        #expect(route.stops.map(\.task).contains(.deliverAll))
+        #expect(route.stops.map(\.task).contains(.deliverLane(Fixture.laneID, .destination)))
 
         let cashBefore = state.cash
         // One lap: load (30), drive (60), unload (30) plus slack.
@@ -228,7 +202,6 @@ struct SimulationEngineTests {
         // exist as shipments claimed by the route.
         engine.advance(&state, by: 1)
         let shipment = try #require(state.shipments.first)
-        #expect(shipment.offer.source == .lane)
         #expect(shipment.offer.laneID == Fixture.laneID)
         let expected = engine.freightPayout(
             origin: Fixture.cityA,
@@ -248,36 +221,6 @@ struct SimulationEngineTests {
         #expect(shipment.offer.payout > haul.cost, "spot price is cost plus margin by construction")
     }
 
-    @Test func oversizedLoadIsRejected() throws {
-        let engine = SimulationEngine(catalog: try Fixture.catalog())
-        var state = Fixture.newState()
-        try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        let vehicle = try #require(state.vehicles.first)
-
-        let oversized = JobOffer(
-            id: JobID(rawValue: 999),
-            origin: Fixture.cityA,
-            destination: Fixture.cityB,
-            productID: Fixture.product,
-            load: LoadSize(massKg: 5000, volumeM3: 5),
-            payout: 1000,
-            distanceKm: 100,
-            urgency: .normal,
-            source: .lane,
-            contractID: nil,
-            laneID: Fixture.laneID,
-            originFirmID: nil,
-            destinationFirmID: nil,
-            createdAt: state.clock,
-            expiresAt: state.clock + 720
-        )
-        state.offers.append(oversized)
-
-        #expect(throws: CommandError.loadExceedsCapacity) {
-            try engine.apply(.acceptJob(offerID: oversized.id, vehicleID: vehicle.id), to: &state)
-        }
-    }
-
     @Test func unaffordableVehicleIsRejected() throws {
         let engine = SimulationEngine(catalog: try Fixture.catalog())
         var state = Fixture.newState()
@@ -290,435 +233,20 @@ struct SimulationEngineTests {
         }
     }
 
-    @Test func signingContractPostsDiscountedShipments() throws {
-        let catalog = try Fixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = Fixture.newState()
-        try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        #expect(!state.contractOffers.isEmpty)
-        let contractOffer = try #require(state.contractOffers.first)
-        let openBefore = state.contractOffers.count
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        #expect(state.activeContracts.contains { $0.id == contractOffer.id })
-        #expect(state.contractOffers.count == openBefore - 1)
-        #expect(state.contractOffers.allSatisfy { $0.id != contractOffer.id })
-
-        // Lead time: signing buys preparation, not an instant obligation.
-        #expect(!state.offers.contains { $0.source == .contract && $0.contractID == contractOffer.id })
-        let signed = try #require(state.activeContract(contractOffer.id))
-        #expect(signed.nextShipmentAt == state.clock + contractOffer.leadTimeMinutes)
-
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        #expect(state.offers.contains { $0.source == .contract && $0.contractID == contractOffer.id })
-
-        let shipment = try #require(state.offers.first { $0.source == .contract })
-        #expect(shipment.payout == contractOffer.payoutPerShipment)
-        // The delivery window is its own term, not the shipment interval: a
-        // daily lane over a long leg must still be physically deliverable.
-        #expect(shipment.expiresAt == shipment.createdAt + contractOffer.deliveryWindowMinutes)
-
-        // Round-trip cost-plus pricing: above the cycle cost, below spot-normal.
-        let vanType = try #require(catalog.vehicleType(Fixture.van))
-        let cycleMinutes = engine.contractCycleMinutes(
-            origin: contractOffer.origin,
-            destination: contractOffer.destination,
-            distanceKm: contractOffer.distanceKm,
-            vehicleType: vanType
-        )
-        let cycleCost = engine.taskCost(
-            totalKm: contractOffer.distanceKm * 2,
-            taskMinutes: cycleMinutes,
-            vehicleType: vanType
-        )
-        #expect(shipment.payout > cycleCost)
-        // Note: a contract parcel prices the *round trip* (the lane commits the
-        // vehicle to come back for the next cycle) while a spot parcel prices
-        // the loaded leg only, so the two are not directly comparable here.
-        // Phase 3 replaces this with the real relation — a contract pays the
-        // lane's spot rate plus a commitment premium — and tests it there.
-    }
-
-    @Test func assignedVehicleRunsContractCycleAndReturns() throws {
-        let catalog = try Fixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = Fixture.newState()
-        try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        let vehicle = try #require(state.vehicles.first)
-        try engine.apply(
-            .assignVehicleToContract(contractID: contractOffer.id, vehicleID: vehicle.id),
-            to: &state
-        )
-
-        // Assignment created a running lane: the contract dock first, then the
-        // same-lane pickup so the truck leaves full, then one catch-all delivery.
-        let route = try #require(state.route(serving: contractOffer.id))
-        #expect(route.vehicleIDs == [vehicle.id])
-        #expect(route.isRunning)
-        #expect(route.stops.first?.task == .pickupContract(contractOffer.id))
-        #expect(route.stops.last?.task == .deliverAll)
-        #expect(route.coveredLaneIDs == [Fixture.laneID])
-        #expect(route.stops.map(\.cityID) == [
-            contractOffer.origin, contractOffer.origin, contractOffer.destination
-        ])
-        #expect(state.routeRun(for: vehicle.id) != nil)
-
-        // A double vehicle assignment to any route is rejected.
-        #expect(throws: CommandError.vehicleAlreadyAssigned) {
-            try engine.apply(
-                .assignVehicleToContract(contractID: contractOffer.id, vehicleID: vehicle.id),
-                to: &state
-            )
-        }
-
-        // After enough time for a full lap the shipment is delivered and the
-        // vehicle loops back to wait at the pickup stop.
-        engine.advance(&state, by: 2_000)
-        let contract = try #require(state.activeContract(contractOffer.id))
-        #expect(contract.shipmentsCompleted >= 1)
-        #expect(contract.shipmentsMissed == 0)
-        let served = try #require(state.vehicles.first)
-        #expect(served.cityID == contractOffer.origin)
-        let run = try #require(state.routeRun(for: vehicle.id))
-        #expect(run.phase == .waiting)
-    }
-
-    @Test func waitingContractRouteWakesAndLoadsTheNextShipment() throws {
-        let catalog = try Fixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = Fixture.newState()
-        try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        let vehicle = try #require(state.vehicles.first)
-        let vehicleType = try #require(catalog.vehicleType(vehicle.typeID))
-        try engine.apply(
-            .assignVehicleToContract(contractID: contractOffer.id, vehicleID: vehicle.id),
-            to: &state
-        )
-
-        let firstLapMinutes = engine.contractCycleMinutes(
-            origin: contractOffer.origin,
-            destination: contractOffer.destination,
-            distanceKm: contractOffer.distanceKm,
-            vehicleType: vehicleType
-        )
-        engine.advance(&state, by: firstLapMinutes)
-
-        let waiting = try #require(state.routeRun(for: vehicle.id))
-        #expect(waiting.phase == .waiting)
-        #expect(waiting.stopIndex == 0)
-        let wakeAt = try #require(state.activeContract(contractOffer.id)).nextShipmentAt
-        #expect(state.clock < wakeAt)
-        #expect(waiting.phaseEndsAt > wakeAt)
-
-        engine.advance(&state, by: state.clock.minutes(until: wakeAt))
-
-        let servicing = try #require(state.routeRun(for: vehicle.id))
-        #expect(servicing.id == waiting.id)
-        #expect(servicing.phase == .servicing)
-        #expect(servicing.stopIndex == 0)
-        #expect(servicing.phaseStartedAt == wakeAt)
-        let claimedID = try #require(servicing.claimedShipmentIDs.first)
-        let claimed = try #require(state.shipment(claimedID))
-        #expect(claimed.loadedVehicleID == nil)
-        #expect(state.offers.allSatisfy { $0.id != claimedID })
-
-        engine.advance(&state, by: engine.loadingMinutes(at: contractOffer.origin))
-
-        let loaded = try #require(state.shipment(claimedID))
-        #expect(loaded.loadedVehicleID == vehicle.id)
-        // The lap moved past the contract dock. Whether it is topping up at
-        // the lane dock or already driving, it must not be parked: a loaded
-        // vehicle never waits.
-        let moving = try #require(state.routeRun(for: vehicle.id))
-        #expect(moving.stopIndex > 0)
-        #expect(moving.phase != .waiting)
-    }
-
-    @Test func customRouteExecutesRecurringContractTasks() throws {
-        let engine = SimulationEngine(catalog: try Fixture.catalog())
-        var state = Fixture.newState()
-        try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        try engine.apply(.createRoute(name: "Recurring lane"), to: &state)
-        let routeID = try #require(state.routes.last?.id)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.origin), to: &state)
-        let originVisitID = try #require(state.route(routeID)?.stops.last?.id)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.destination), to: &state)
-        let destinationVisitID = try #require(state.route(routeID)?.stops.last?.id)
-
-        try engine.apply(
-            .addContractTaskToRoute(
-                routeID: routeID,
-                visitStopID: originVisitID,
-                contractID: contractOffer.id,
-                action: .pickup
-            ),
-            to: &state
-        )
-        // Adding the exact recurring action again is idempotent.
-        try engine.apply(
-            .addContractTaskToRoute(
-                routeID: routeID,
-                visitStopID: originVisitID,
-                contractID: contractOffer.id,
-                action: .pickup
-            ),
-            to: &state
-        )
-        try engine.apply(
-            .addContractTaskToRoute(
-                routeID: routeID,
-                visitStopID: destinationVisitID,
-                contractID: contractOffer.id,
-                action: .deliver
-            ),
-            to: &state
-        )
-
-        let configured = try #require(state.route(routeID))
-        #expect(configured.stops.filter { $0.task == .pickupContract(contractOffer.id) }.count == 1)
-        #expect(configured.stops.map(\.task) == [
-            .travel,
-            .pickupContract(contractOffer.id),
-            .travel,
-            .deliverContract(contractOffer.id)
-        ])
-
-        let vehicle = try #require(state.vehicles.first)
-        try engine.apply(.assignVehicleToRoute(routeID: routeID, vehicleID: vehicle.id), to: &state)
-        try engine.apply(.startRoute(routeID), to: &state)
-        engine.advance(&state, by: 2_000)
-
-        let contract = try #require(state.activeContract(contractOffer.id))
-        #expect(contract.shipmentsCompleted >= 1)
-        #expect(state.routeRun(for: vehicle.id) != nil)
-    }
-
-    @Test func routeCannotStartWithoutAnAssignedVehicleOrWithIncompleteContractTasks() throws {
-        let engine = SimulationEngine(catalog: try Fixture.catalog())
-        var state = Fixture.newState()
-        engine.advance(&state, by: 0)
-
-        try engine.apply(.createRoute(name: "Draft"), to: &state)
-        let routeID = try #require(state.routes.last?.id)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: Fixture.cityA), to: &state)
-        #expect(throws: CommandError.noVehicleAssigned) {
-            try engine.apply(.startRoute(routeID), to: &state)
-        }
-        #expect(state.route(routeID)?.isRunning == false)
-
-        try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        let vehicle = try #require(state.vehicles.first)
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        let visitID = try #require(state.route(routeID)?.stops.first?.id)
-        try engine.apply(
-            .addContractTaskToRoute(
-                routeID: routeID,
-                visitStopID: visitID,
-                contractID: contractOffer.id,
-                action: .pickup
-            ),
-            to: &state
-        )
-        try engine.apply(.assignVehicleToRoute(routeID: routeID, vehicleID: vehicle.id), to: &state)
-        #expect(throws: CommandError.incompleteRouteTasks) {
-            try engine.apply(.startRoute(routeID), to: &state)
-        }
-        #expect(state.route(routeID)?.isRunning == false)
-    }
-
-    @Test func routeVisitReorderMovesEachCityAndItsTasksAtomically() throws {
-        let engine = SimulationEngine(catalog: try Fixture.catalog())
-        var state = Fixture.newState()
-        engine.advance(&state, by: 0)
-
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        try engine.apply(.createRoute(name: "Reorder"), to: &state)
-        let routeID = try #require(state.routes.last?.id)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.origin), to: &state)
-        let originVisitID = try #require(state.route(routeID)?.stops.last?.id)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.destination), to: &state)
-        let destinationVisitID = try #require(state.route(routeID)?.stops.last?.id)
-        try engine.apply(
-            .addContractTaskToRoute(
-                routeID: routeID,
-                visitStopID: originVisitID,
-                contractID: contractOffer.id,
-                action: .pickup
-            ),
-            to: &state
-        )
-        try engine.apply(
-            .addContractTaskToRoute(
-                routeID: routeID,
-                visitStopID: destinationVisitID,
-                contractID: contractOffer.id,
-                action: .deliver
-            ),
-            to: &state
-        )
-
-        try engine.apply(
-            .reorderRouteVisits(
-                routeID: routeID,
-                orderedVisitIDs: [destinationVisitID, originVisitID]
-            ),
-            to: &state
-        )
-
-        let reordered = try #require(state.route(routeID))
-        #expect(reordered.stops.map(\.cityID) == [
-            contractOffer.destination,
-            contractOffer.destination,
-            contractOffer.origin,
-            contractOffer.origin
-        ])
-        #expect(reordered.stops.map(\.task) == [
-            .travel,
-            .deliverContract(contractOffer.id),
-            .travel,
-            .pickupContract(contractOffer.id)
-        ])
-    }
-
-    @Test func removingRouteVisitRemovesItsLocalContractTasks() throws {
-        let engine = SimulationEngine(catalog: try Fixture.catalog())
-        var state = Fixture.newState()
-        engine.advance(&state, by: 0)
-
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        try engine.apply(.createRoute(name: "Trim"), to: &state)
-        let routeID = try #require(state.routes.last?.id)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.origin), to: &state)
-        let originVisitID = try #require(state.route(routeID)?.stops.last?.id)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.destination), to: &state)
-        let destinationVisitID = try #require(state.route(routeID)?.stops.last?.id)
-        try engine.apply(
-            .addContractTaskToRoute(
-                routeID: routeID,
-                visitStopID: originVisitID,
-                contractID: contractOffer.id,
-                action: .pickup
-            ),
-            to: &state
-        )
-        try engine.apply(
-            .addContractTaskToRoute(
-                routeID: routeID,
-                visitStopID: destinationVisitID,
-                contractID: contractOffer.id,
-                action: .deliver
-            ),
-            to: &state
-        )
-
-        try engine.apply(
-            .removeRouteVisit(routeID: routeID, visitStopID: originVisitID),
-            to: &state
-        )
-
-        let trimmed = try #require(state.route(routeID))
-        #expect(trimmed.stops.map(\.cityID) == [contractOffer.destination, contractOffer.destination])
-        #expect(trimmed.stops.map(\.task) == [
-            .travel,
-            .deliverContract(contractOffer.id)
-        ])
-    }
-
-    @Test func removingRouteVisitDetachesLegacyShipmentPairAtomically() throws {
-        let engine = SimulationEngine(catalog: try Fixture.catalog())
-        var state = Fixture.newState()
-        engine.advance(&state, by: 0)
-
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        let shipment = try #require(state.offers.first {
-            $0.source == .contract && $0.contractID == contractOffer.id
-        })
-        try engine.apply(.createRoute(name: "Legacy shipment"), to: &state)
-        let routeID = try #require(state.routes.last?.id)
-        try engine.apply(.addJobToRoute(offerID: shipment.id, routeID: routeID), to: &state)
-        let pickupVisitID = try #require(state.route(routeID)?.stops.first?.id)
-
-        try engine.apply(
-            .removeRouteVisit(routeID: routeID, visitStopID: pickupVisitID),
-            to: &state
-        )
-
-        #expect(state.route(routeID)?.stops.isEmpty == true)
-        #expect(state.shipment(shipment.id) == nil)
-        #expect(state.offers.contains { $0.id == shipment.id })
-    }
-
     @Test func deletingRunningRouteFinishesLoadedCargoThenReleasesAndPurges() throws {
         let engine = SimulationEngine(catalog: try Fixture.catalog())
         var state = Fixture.newState()
         try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        try engine.apply(.createRoute(name: "Cancelable"), to: &state)
-        let routeID = try #require(state.routes.last?.id)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.origin), to: &state)
-        let originVisitID = try #require(state.route(routeID)?.stops.last?.id)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: contractOffer.destination), to: &state)
-        let destinationVisitID = try #require(state.route(routeID)?.stops.last?.id)
-        try engine.apply(
-            .addContractTaskToRoute(
-                routeID: routeID,
-                visitStopID: originVisitID,
-                contractID: contractOffer.id,
-                action: .pickup
-            ),
-            to: &state
-        )
-        try engine.apply(
-            .addContractTaskToRoute(
-                routeID: routeID,
-                visitStopID: destinationVisitID,
-                contractID: contractOffer.id,
-                action: .deliver
-            ),
-            to: &state
-        )
         let vehicle = try #require(state.vehicles.first)
-        try engine.apply(.assignVehicleToRoute(routeID: routeID, vehicleID: vehicle.id), to: &state)
-        try engine.apply(.startRoute(routeID), to: &state)
+        engine.advance(&state, by: Fixture.minutesToFirstParcel)
+        try engine.apply(
+            .dispatchVehicleToLane(laneID: Fixture.laneID, vehicleID: vehicle.id),
+            to: &state
+        )
+        let routeID = try #require(state.routes.first?.id)
 
         engine.advance(&state, by: 0)
-        engine.advance(&state, by: engine.loadingMinutes(at: contractOffer.origin))
+        engine.advance(&state, by: engine.loadingMinutes(at: Fixture.cityA))
         let loaded = try #require(state.shipments.first { $0.assignedRouteID == routeID })
         #expect(loaded.loadedVehicleID == vehicle.id)
 
@@ -733,95 +261,12 @@ struct SimulationEngineTests {
         #expect(state.route(routeID) == nil)
         #expect(state.routeRuns(of: routeID).isEmpty)
         #expect(state.shipments(of: routeID).isEmpty)
-        #expect(state.vehicle(vehicle.id)?.cityID == contractOffer.destination)
+        #expect(state.vehicle(vehicle.id)?.cityID == Fixture.cityB)
         #expect(state.isVehicleIdle(vehicle.id))
-        // A dock visit fills the vehicle rather than taking one box, so the
-        // wind-down may legitimately finish more than a single parcel.
-        #expect((state.activeContract(contractOffer.id)?.shipmentsCompleted ?? 0) >= 1)
+        #expect(state.stats.deliveredJobs >= 1)
     }
 
-    @Test func customRouteCarriesAnAcceptedJobAroundTheLoop() throws {
-        let catalog = try Fixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = Fixture.newState()
-        try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        let vehicle = try #require(state.vehicles.first)
-        let offer = Fixture.laneOffer(id: 999, state: state)
-        state.offers.append(offer)
-
-        try engine.apply(.createRoute(name: "Loop"), to: &state)
-        let route = try #require(state.routes.last)
-        try engine.apply(.addJobToRoute(offerID: offer.id, routeID: route.id), to: &state)
-        try engine.apply(.addTravelStop(routeID: route.id, cityID: Fixture.cityA), to: &state)
-        try engine.apply(.assignVehicleToRoute(routeID: route.id, vehicleID: vehicle.id), to: &state)
-        try engine.apply(.startRoute(route.id), to: &state)
-        #expect(state.shipments.count == 1)
-        #expect(state.routeRun(for: vehicle.id) != nil)
-
-        // Lap: load (30) + drive (60) + unload (30) + empty return (60).
-        engine.advance(&state, by: 200)
-        #expect(state.shipments.isEmpty)
-        #expect(state.stats.deliveredJobs == 1)
-        #expect(state.stats.totalRevenue > 0)
-
-        // Vehicle keeps looping: it returns to the travel stop in city A.
-        let served = try #require(state.vehicles.first)
-        #expect(served.cityID == Fixture.cityA)
-
-        // Stopping releases the vehicle once it is empty.
-        try engine.apply(.stopRoute(route.id), to: &state)
-        engine.advance(&state, by: 300)
-        #expect(state.routeRun(for: vehicle.id) == nil)
-        #expect(state.isVehicleIdle(vehicle.id))
-    }
-
-    @Test func routeLogsAShipmentSkippedForInsufficientCapacity() throws {
-        let engine = SimulationEngine(catalog: try Fixture.catalog())
-        var state = Fixture.newState()
-        try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        let vehicle = try #require(state.vehicles.first)
-        let oversized = JobOffer(
-            id: JobID(rawValue: 999),
-            origin: Fixture.cityA,
-            destination: Fixture.cityB,
-            productID: Fixture.product,
-            load: LoadSize(massKg: 5_000, volumeM3: 5),
-            payout: 1_000,
-            distanceKm: 100,
-            urgency: .normal,
-            source: .lane,
-            contractID: nil,
-            laneID: Fixture.laneID,
-            originFirmID: nil,
-            destinationFirmID: nil,
-            createdAt: state.clock,
-            expiresAt: state.clock + 720
-        )
-        state.offers.append(oversized)
-
-        try engine.apply(.createRoute(name: "Oversized"), to: &state)
-        let route = try #require(state.routes.last)
-        try engine.apply(.addJobToRoute(offerID: oversized.id, routeID: route.id), to: &state)
-        try engine.apply(.assignVehicleToRoute(routeID: route.id, vehicleID: vehicle.id), to: &state)
-        try engine.apply(.startRoute(route.id), to: &state)
-
-        engine.advance(&state, by: 1)
-
-        let shipment = try #require(state.shipment(oversized.id))
-        #expect(shipment.loadedVehicleID == nil)
-        let run = try #require(state.routeRun(for: vehicle.id))
-        #expect(run.phase == .traveling)
-        #expect(run.stopIndex == 1)
-        let skipLogs = state.log.filter { entry in
-            if case let .routeShipmentSkipped(loggedRouteID, loggedJobID) = entry.event {
-                return loggedRouteID == route.id && loggedJobID == oversized.id
-            }
-            return false
-        }
-        #expect(skipLogs.count == 1)
-    }
-
-    @Test func twoRouteVehiclesCannotClaimTheSameLaneShipment() throws {
+    @Test func twoRouteVehiclesClaimDistinctLaneShipments() throws {
         let engine = SimulationEngine(catalog: try Fixture.catalog())
         var state = Fixture.newState()
         try engine.apply(.buyVehicle(Fixture.van), to: &state)
@@ -829,170 +274,27 @@ struct SimulationEngineTests {
 
         let vehicles = state.vehicles
         #expect(vehicles.count == 2)
-        let offer = Fixture.laneOffer(id: 999, state: state)
-        state.offers.append(offer)
-        try engine.apply(.createRoute(name: "Shared"), to: &state)
-        let route = try #require(state.routes.last)
-        try engine.apply(.addJobToRoute(offerID: offer.id, routeID: route.id), to: &state)
-        for vehicle in vehicles {
-            try engine.apply(.assignVehicleToRoute(routeID: route.id, vehicleID: vehicle.id), to: &state)
-        }
-        try engine.apply(.startRoute(route.id), to: &state)
+        try engine.apply(
+            .dispatchVehicleToLane(laneID: Fixture.laneID, vehicleID: vehicles[0].id),
+            to: &state
+        )
+        let route = try #require(state.routes.first)
+        state.laneAccrualKg[Fixture.laneID] = 3_000
+        try engine.apply(
+            .assignVehicleToRoute(routeID: route.id, vehicleID: vehicles[1].id),
+            to: &state
+        )
 
         engine.advance(&state, by: 1)
 
-        let claimers = state.routeRuns.filter { $0.claimedShipmentIDs.contains(offer.id) }
-        #expect(claimers.count == 1)
-        let claimer = try #require(claimers.first)
-        #expect(claimer.phase == .servicing)
-        let other = try #require(state.routeRuns.first { $0.id != claimer.id })
-        #expect(other.phase == .traveling)
-        #expect(other.stopIndex == 1)
-
-        engine.advance(&state, by: engine.loadingMinutes(at: offer.origin))
-
-        let shipment = try #require(state.shipment(offer.id))
-        #expect(shipment.loadedVehicleID == claimer.vehicleID)
-        let pickupLogs = state.log.filter { entry in
-            if case let .jobPickedUp(jobID, _, _) = entry.event {
-                return jobID == offer.id
-            }
-            return false
-        }
-        #expect(pickupLogs.count == 1)
+        let runs = state.routeRuns(of: route.id)
+        #expect(runs.count == 2)
+        #expect(runs.allSatisfy { !$0.claimedShipmentIDs.isEmpty })
+        let claimedIDs = runs.flatMap(\.claimedShipmentIDs)
+        #expect(claimedIDs.count == 3)
+        #expect(Set(claimedIDs).count == claimedIDs.count)
     }
 
-    @Test func removingContractRouteJobBeforeExpiryReturnsItsOriginalDeadline() throws {
-        let engine = SimulationEngine(catalog: try Fixture.catalog())
-        var state = Fixture.newState()
-        engine.advance(&state, by: 0)
-
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        let accepted = try #require(state.offers.first {
-            $0.source == .contract && $0.contractID == contractOffer.id
-        })
-        try engine.apply(.createRoute(name: "Contract overflow"), to: &state)
-        let route = try #require(state.routes.last)
-        try engine.apply(.addJobToRoute(offerID: accepted.id, routeID: route.id), to: &state)
-
-        try engine.apply(.removeJobFromRoute(jobID: accepted.id, routeID: route.id), to: &state)
-
-        #expect(state.shipment(accepted.id) == nil)
-        let editedRoute = try #require(state.route(route.id))
-        #expect(editedRoute.stops.allSatisfy {
-            $0.task != .pickupShipment(accepted.id) && $0.task != .deliverShipment(accepted.id)
-        })
-        let returned = try #require(state.offers.first { $0.id == accepted.id })
-        #expect(returned.source == .contract)
-        #expect(returned.contractID == accepted.contractID)
-        #expect(returned.createdAt == accepted.createdAt)
-        #expect(returned.expiresAt == accepted.expiresAt)
-    }
-
-    @Test func removingExpiredContractRouteJobChargesCompensation() throws {
-        let catalog = try Fixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = Fixture.newState()
-        engine.advance(&state, by: 0)
-
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        let accepted = try #require(state.offers.first {
-            $0.source == .contract && $0.contractID == contractOffer.id
-        })
-        try engine.apply(.createRoute(name: "Late contract"), to: &state)
-        let route = try #require(state.routes.last)
-        try engine.apply(.addJobToRoute(offerID: accepted.id, routeID: route.id), to: &state)
-        engine.advance(&state, by: state.clock.minutes(until: accepted.expiresAt))
-
-        #expect(catalog.economy.contractPenaltyPercent == 40)
-        let penalty = Money((Double(accepted.payout) * 0.40).rounded())
-        let cashBeforeRemoval = state.cash
-        let costBeforeRemoval = state.stats.totalCost
-        let contractBeforeRemoval = try #require(state.activeContract(contractOffer.id))
-        try engine.apply(.removeJobFromRoute(jobID: accepted.id, routeID: route.id), to: &state)
-
-        let contract = try #require(state.activeContract(contractOffer.id))
-        #expect(state.cash == cashBeforeRemoval - penalty)
-        #expect(state.stats.totalCost == costBeforeRemoval + penalty)
-        #expect(contract.shipmentsMissed == contractBeforeRemoval.shipmentsMissed + 1)
-        #expect(contract.penaltiesPaid == contractBeforeRemoval.penaltiesPaid + penalty)
-        #expect(state.offers.allSatisfy { $0.id != accepted.id })
-        #expect(state.log.contains { entry in
-            if case let .contractShipmentMissed(loggedContractID, loggedPenalty) = entry.event {
-                return loggedContractID == contractOffer.id && loggedPenalty == penalty
-            }
-            return false
-        })
-    }
-
-    @Test func deletingStoppedRouteCleansUpItsShipmentsAndReleasesVehicles() throws {
-        let engine = SimulationEngine(catalog: try Fixture.catalog())
-        var state = Fixture.newState()
-        try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        let vehicle = try #require(state.vehicles.first)
-        let spot = Fixture.laneOffer(id: 999, state: state)
-        state.offers.append(spot)
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        let contractShipment = try #require(state.offers.first {
-            $0.source == .contract && $0.contractID == contractOffer.id
-        })
-        try engine.apply(.createRoute(name: "Disposable"), to: &state)
-        let route = try #require(state.routes.last)
-        try engine.apply(.addJobToRoute(offerID: spot.id, routeID: route.id), to: &state)
-        try engine.apply(.addJobToRoute(offerID: contractShipment.id, routeID: route.id), to: &state)
-        try engine.apply(.assignVehicleToRoute(routeID: route.id, vehicleID: vehicle.id), to: &state)
-        #expect(state.routeRuns(of: route.id).isEmpty)
-
-        try engine.apply(.deleteRoute(route.id), to: &state)
-
-        #expect(state.route(route.id) == nil)
-        #expect(state.routeRuns(of: route.id).isEmpty)
-        #expect(state.shipments(of: route.id).isEmpty)
-        #expect(state.shipment(spot.id) == nil)
-        #expect(state.shipment(contractShipment.id) == nil)
-        #expect(state.route(of: vehicle.id) == nil)
-        #expect(state.isVehicleIdle(vehicle.id))
-        #expect(state.offers.allSatisfy { $0.id != spot.id })
-        let returned = try #require(state.offers.first { $0.id == contractShipment.id })
-        #expect(returned.expiresAt == contractShipment.expiresAt)
-    }
-
-    @Test func unattendedContractShipmentChargesCompensation() throws {
-        let catalog = try Fixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = Fixture.newState()
-        engine.advance(&state, by: 0)
-
-        let contractOffer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(contractOffer.id), to: &state)
-        // Signing grants preparation time; skip past it so the first cycle posts.
-        engine.advance(&state, by: contractOffer.leadTimeMinutes)
-        let cashAfterSigning = state.cash
-
-        // No vehicle is ever assigned: the first shipment must miss its
-        // deadline (one interval) and cost compensation.
-        engine.advance(&state, by: contractOffer.shipmentIntervalMinutes + 10)
-
-        let contract = try #require(state.activeContract(contractOffer.id))
-        #expect(contract.shipmentsMissed >= 1)
-        #expect(contract.penaltiesPaid > 0)
-        #expect(state.cash == cashAfterSigning - contract.penaltiesPaid)
-        #expect(state.log.contains {
-            if case .contractShipmentMissed = $0.event { return true }
-            return false
-        })
-    }
 }
 
 // MARK: - Determinism contract
@@ -1002,19 +304,14 @@ struct DeterminismTests {
         let engine = SimulationEngine(catalog: try Fixture.catalog())
         var state = Fixture.newState(seed: 5_678)
         try engine.apply(.buyVehicle(Fixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
+        engine.advance(&state, by: Fixture.minutesToFirstParcel)
         let vehicle = try #require(state.vehicles.first)
         // A lane shuttle in the mix: dispatch claims parcels from the dock on
         // its own; the encoded state must still be chunk-invariant.
-        let offer = Fixture.laneOffer(id: 999_999, state: state)
-        state.offers.append(offer)
-        try engine.apply(.createRoute(name: "Deterministic loop"), to: &state)
-        let route = try #require(state.routes.last)
-        try engine.apply(.addJobToRoute(offerID: offer.id, routeID: route.id), to: &state)
-        try engine.apply(.addTravelStop(routeID: route.id, cityID: Fixture.cityA), to: &state)
-        try engine.apply(.assignVehicleToRoute(routeID: route.id, vehicleID: vehicle.id), to: &state)
-        try engine.apply(.startRoute(route.id), to: &state)
+        try engine.apply(
+            .dispatchVehicleToLane(laneID: Fixture.laneID, vehicleID: vehicle.id),
+            to: &state
+        )
 
         for chunk in chunks {
             engine.advance(&state, by: chunk)

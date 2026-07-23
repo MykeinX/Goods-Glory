@@ -6,7 +6,7 @@
 //  seeds derived from stable identifiers via `SeedDerivation`, never from
 //  SystemRandomNumberGenerator, wall clock, or hash ordering.
 //
-//  Derivation is stateless: seed(campaignSeed, "job_offers", tick) always
+//  Derivation is stateless: seed(campaignSeed, "lane_rate", tick) always
 //  yields the same generator, independent of call order or platform.
 //
 

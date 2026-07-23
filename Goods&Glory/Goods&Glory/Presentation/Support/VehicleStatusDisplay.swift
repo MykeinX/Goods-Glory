@@ -14,14 +14,6 @@ enum VehicleStatusDisplay {
         if let run = state.routeRun(for: vehicle.id) {
             return describeRun(run, state: state)
         }
-        if let job = state.activeJob(for: vehicle.id) {
-            switch job.phase {
-            case .deadheading: return (String(localized: "to pickup"), Theme.mint)
-            case .loading: return (String(localized: "loading"), Theme.mint)
-            case .enRoute: return (String(localized: "en route"), Theme.mint)
-            case .unloading: return (String(localized: "unloading"), Theme.mint)
-            }
-        }
         if state.route(of: vehicle.id) != nil {
             return (String(localized: "standby"), Theme.sky)
         }
@@ -43,9 +35,9 @@ enum VehicleStatusDisplay {
                 return (String(localized: "servicing"), Theme.mint)
             }
             switch route.stops[run.stopIndex].task {
-            case .pickupShipment, .pickupContract, .pickupLane, .loadFromWarehouse:
+            case .pickupLane, .loadFromWarehouse:
                 return (String(localized: "loading"), Theme.mint)
-            case .deliverShipment, .deliverContract, .deliverAll:
+            case .deliverAll:
                 return (String(localized: "unloading"), Theme.mint)
             case .dropToWarehouse:
                 return (String(localized: "storing"), Theme.sky)

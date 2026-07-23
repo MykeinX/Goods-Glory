@@ -199,45 +199,12 @@ final class GameSession {
         return state?.routes.last?.id
     }
 
-    func estimate(offer: JobOffer, vehicle: Vehicle) -> SimulationEngine.JobEstimate? {
-        guard let state else { return nil }
-        return engine.estimate(offer: offer, vehicle: vehicle, state: state)
-    }
-
-    /// Per-shipment cycle economics of an open contract with its reference vehicle class.
-    func estimate(contractOffer: ContractOffer) -> SimulationEngine.ContractEstimate? {
-        guard let vehicleType = catalog.vehicleType(contractOffer.referenceVehicleTypeID) else { return nil }
-        return engine.estimate(
-            origin: contractOffer.origin,
-            destination: contractOffer.destination,
-            distanceKm: contractOffer.distanceKm,
-            shipmentMassKg: contractOffer.shipmentMassKg,
-            productID: contractOffer.productID,
-            payoutPerShipment: contractOffer.payoutPerShipment,
-            vehicleType: vehicleType
-        )
-    }
-
-    /// Per-shipment cycle economics of a signed contract with a concrete vehicle.
-    func estimate(contract: ActiveContract, vehicle: Vehicle) -> SimulationEngine.ContractEstimate? {
-        guard let vehicleType = catalog.vehicleType(vehicle.typeID) else { return nil }
-        return engine.estimate(
-            origin: contract.origin,
-            destination: contract.destination,
-            distanceKm: contract.distanceKm,
-            shipmentMassKg: contract.shipmentMassKg,
-            productID: contract.productID,
-            payoutPerShipment: contract.payoutPerShipment,
-            vehicleType: vehicleType
-        )
-    }
-
     func estimate(route: Route, vehicle: Vehicle) -> SimulationEngine.RouteEstimate? {
         guard let state, let vehicleType = catalog.vehicleType(vehicle.typeID) else { return nil }
         return engine.estimate(route: route, vehicleType: vehicleType, state: state)
     }
 
-    // MARK: - Facilities & contracts (read-only views for the UI)
+    // MARK: - Facilities (read-only views for the UI)
 
     /// Price, build time and capacity of a facility in a specific city.
     func upgradeQuote(for module: FacilityModule, in cityID: CityID) -> FacilityQuote? {
@@ -259,32 +226,6 @@ final class GameSession {
     func storageCapacity(of facility: Facility) -> LoadSize {
         guard let state else { return LoadSize(massKg: 0, volumeM3: 0) }
         return engine.storageCapacity(of: facility, state: state)
-    }
-
-    /// Whether a contract's freight is actually moving. Replaces the old
-    /// structural "is a vehicle assigned to the contract's own route" check.
-    func coverage(of contract: ActiveContract) -> SimulationEngine.ContractCoverage? {
-        guard let state else { return nil }
-        return engine.coverage(of: contract, state: state)
-    }
-
-    /// What signing this offer would do to the fleet's total book: tonnage
-    /// already promised, tonnage after signing, and what the fleet can move on
-    /// a lane that long. Nil until there is a fleet to measure.
-    func commitmentLoad(adding offer: ContractOffer) -> (committed: Int, after: Int, capacity: Int)? {
-        guard let state, !state.vehicles.isEmpty else { return nil }
-        let committed = engine.committedKgPerDay(state: state)
-        let adding = engine.brief(for: offer)?.committedKgPerDay ?? 0
-        let laneKm = offer.destinations.map(\.distanceKm).max() ?? 0
-        let capacity = engine.fleetKgPerDay(state: state, laneDistanceKm: laneKm)
-        guard capacity > 0 else { return nil }
-        return (committed, committed + adding, capacity)
-    }
-
-    /// Vehicles tied up, profit per day, utilisation — the whole contract
-    /// decision in three numbers.
-    func brief(for terms: some ContractTerms) -> SimulationEngine.ContractBrief? {
-        engine.brief(for: terms)
     }
 
     /// Balancing instrument: wipes the recorded window so the next session
@@ -316,11 +257,6 @@ final class GameSession {
     func bottleneck(of route: Route) -> SimulationEngine.RouteBottleneck? {
         guard let state else { return nil }
         return engine.bottleneck(of: route, state: state)
-    }
-
-    func companyTier() -> Int {
-        guard let state else { return 1 }
-        return engine.companyTier(state)
     }
 
     /// Total daily upkeep of every standing facility.

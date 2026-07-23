@@ -8,8 +8,6 @@ before JSON is written.
 
 Expected files below --source-dir:
   primaryroads/tl_2025_us_primaryroads.{shp,dbf}
-  nation_kml/cb_2025_us_nation_5m.kml
-  state_kml/cb_2025_us_state_5m.kml
   gazetteer/2025_Gaz_place_national.txt
 """
 
@@ -24,13 +22,11 @@ import struct
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from pathlib import Path
-from xml.etree import ElementTree
 
 
 KM_PER_LATITUDE_DEGREE = 111.32
 KM_PER_LONGITUDE_DEGREE = 88.2  # Contiguous-US midpoint; topology only.
 CONTIGUOUS_BOUNDS = (-125.0, 24.0, -66.0, 50.0)
-KML_NAMESPACE = {"k": "http://www.opengis.net/kml/2.2"}
 
 # TIGER occasionally stores an urban Interstate segment under its well-known
 # freeway name instead of the route number. Only aliases needed to keep a
@@ -755,111 +751,6 @@ def serialize_catalog(
     return cities, nodes, roads, markets
 
 
-def parse_kml_ring(element) -> list[tuple[float, float]]:
-    text = element.text or ""
-    return [tuple(map(float, value.split(",")[:2])) for value in text.split()]
-
-
-def ring_bounds(points: list[tuple[float, float]]):
-    longitudes = [point[0] for point in points]
-    latitudes = [point[1] for point in points]
-    return min(longitudes), min(latitudes), max(longitudes), max(latitudes)
-
-
-def simplified_ring(points: list[tuple[float, float]], tolerance_km: float) -> list[tuple[float, float]]:
-    if points[0] == points[-1]:
-        points = points[:-1]
-    simplified = douglas_peucker(points, tolerance_km)
-    if simplified[0] != simplified[-1]:
-        simplified.append(simplified[0])
-    return simplified
-
-
-def make_geography(source_dir: Path):
-    nation_root = ElementTree.parse(source_dir / "nation_kml" / "cb_2025_us_nation_5m.kml").getroot()
-    land_masses = []
-    for polygon in nation_root.findall(".//k:Polygon", KML_NAMESPACE):
-        coordinates = polygon.find(".//k:outerBoundaryIs/k:LinearRing/k:coordinates", KML_NAMESPACE)
-        if coordinates is None:
-            continue
-        points = parse_kml_ring(coordinates)
-        min_lon, min_lat, max_lon, max_lat = ring_bounds(points)
-        bounds_area = (max_lon - min_lon) * (max_lat - min_lat)
-        if min_lon >= -126 and max_lon <= -65 and min_lat >= 24 and max_lat <= 50 and bounds_area >= 0.02:
-            land_masses.append(simplified_ring(points, tolerance_km=1.2))
-    land_masses.sort(key=lambda points: -((ring_bounds(points)[2] - ring_bounds(points)[0]) * (ring_bounds(points)[3] - ring_bounds(points)[1])))
-
-    allowed_states = {
-        "AL", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "ID", "IL", "IN", "IA",
-        "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH",
-        "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX",
-        "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-    }
-    state_root = ElementTree.parse(source_dir / "state_kml" / "cb_2025_us_state_5m.kml").getroot()
-    boundaries = []
-    for placemark in state_root.findall(".//k:Placemark", KML_NAMESPACE):
-        values = {
-            item.attrib.get("name"): item.text
-            for item in placemark.findall(".//k:SimpleData", KML_NAMESPACE)
-        }
-        state = values.get("STUSPS")
-        if state not in allowed_states:
-            continue
-        state_rings = []
-        for coordinates in placemark.findall(".//k:outerBoundaryIs/k:LinearRing/k:coordinates", KML_NAMESPACE):
-            points = parse_kml_ring(coordinates)
-            bounds = ring_bounds(points)
-            area = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
-            state_rings.append((area, points))
-        if not state_rings:
-            continue
-        largest = max(area for area, _ in state_rings)
-        selected = [points for area, points in state_rings if area == largest or area >= 0.02]
-        for index, points in enumerate(selected):
-            boundaries.append({
-                "id": f"us_state_{state.lower()}_{index}",
-                "points": [rounded_coordinate(point) for point in simplified_ring(points, tolerance_km=2.0)],
-            })
-
-    # Coarse Great Lakes silhouettes are sufficient at this strategic zoom.
-    lakes = {
-        "us_lake_superior": [
-            (-92.2, 46.7), (-91.0, 46.6), (-89.4, 46.8), (-87.6, 47.5), (-86.5, 48.0),
-            (-87.4, 48.8), (-89.2, 48.1), (-90.8, 48.0), (-92.2, 47.4), (-92.2, 46.7),
-        ],
-        "us_lake_michigan": [
-            (-87.3, 41.62), (-86.8, 42.1), (-86.4, 43.0), (-86.2, 44.1), (-86.1, 45.2),
-            (-86.8, 45.9), (-87.6, 45.7), (-87.8, 44.8), (-87.9, 43.6), (-87.7, 42.5),
-            (-87.6, 41.8), (-87.3, 41.62),
-        ],
-        "us_lake_huron": [
-            (-84.8, 45.8), (-83.8, 46.1), (-82.5, 45.5), (-81.7, 44.8), (-81.8, 43.3),
-            (-82.6, 43.0), (-83.5, 43.6), (-84.2, 44.6), (-84.8, 45.8),
-        ],
-        "us_lake_erie": [
-            (-83.5, 41.7), (-82.7, 42.0), (-81.7, 42.3), (-80.2, 42.5), (-78.9, 42.8),
-            (-79.8, 42.2), (-81.1, 41.7), (-82.4, 41.4), (-83.5, 41.7),
-        ],
-        "us_lake_ontario": [
-            (-79.8, 43.3), (-78.8, 43.7), (-77.7, 44.1), (-76.7, 44.0), (-76.1, 43.6),
-            (-77.3, 43.3), (-78.5, 43.2), (-79.8, 43.3),
-        ],
-    }
-    return {
-        "version": 2,
-        "source": "US Census 2025 cartographic nation/state boundaries; strategic Great Lakes silhouettes",
-        "landMasses": [
-            {"id": f"us_land_{index:02d}", "points": [rounded_coordinate(point) for point in points]}
-            for index, points in enumerate(land_masses, 1)
-        ],
-        "waterBodies": [
-            {"id": name, "points": [rounded_coordinate(point) for point in points]}
-            for name, points in lakes.items()
-        ],
-        "boundaries": boundaries,
-    }
-
-
 def write_json(path: Path, value) -> None:
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -894,7 +785,6 @@ def main() -> None:
     write_json(arguments.output_dir / "road_nodes.json", nodes)
     write_json(arguments.output_dir / "roads.json", roads)
     write_json(arguments.output_dir / "city_markets.json", markets)
-    write_json(arguments.output_dir / "map_geography.json", make_geography(arguments.source_dir))
 
     print(
         f"Generated {len(cities)} cities, {len(nodes)} road nodes and {len(roads)} road edges "

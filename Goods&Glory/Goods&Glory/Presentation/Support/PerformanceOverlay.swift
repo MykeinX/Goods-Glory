@@ -56,8 +56,8 @@ struct PerformanceOverlay: View {
     }
 
     private var counts: String {
-        "veh \(state.vehicles.count)  job \(state.activeJobs.count)  run \(state.routeRuns.count)\n"
-            + "off \(state.offers.count)  shp \(state.shipments.count)  fac \(state.facilities.count)"
+        "veh \(state.vehicles.count)  run \(state.routeRuns.count)\n"
+            + "shp \(state.shipments.count)  fac \(state.facilities.count)"
     }
 
     private func row(_ label: String, value: String, peak: String?, isHot: Bool) -> some View {

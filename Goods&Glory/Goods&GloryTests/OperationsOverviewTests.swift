@@ -51,9 +51,6 @@ struct OperationsOverviewTests {
             load: LoadSize(massKg: massKg, volumeM3: 1),
             payout: payout,
             distanceKm: 100,
-            urgency: .normal,
-            source: .contract,
-            contractID: nil,
             laneID: nil,
             originFirmID: nil,
             destinationFirmID: nil,
@@ -67,10 +64,13 @@ struct OperationsOverviewTests {
     @Test func waitingFreightCountsAgainstItsOriginCity() throws {
         let catalog = try GameCatalog.load(from: .main)
         var setup = try newState(catalog: catalog)
-        setup.state.offers = [
+        let waiting = [
             offer(id: 1, from: setup.hq, to: setup.other, massKg: 1_200, clock: setup.state.clock),
             offer(id: 2, from: setup.hq, to: setup.other, massKg: 800, clock: setup.state.clock)
         ]
+        setup.state.shipments = waiting.map {
+            Shipment(id: $0.id, offer: $0, location: .address($0.origin), assignedRouteID: nil)
+        }
 
         let overview = OperationsOverview.make(state: setup.state, catalog: catalog)
         let origin = try #require(overview.cities.first { $0.cityID == setup.hq })
@@ -93,7 +93,6 @@ struct OperationsOverviewTests {
                 id: vehicleID,
                 typeID: try #require(catalog.vehicleTypes.first).id,
                 cityID: setup.hq,
-                assignedJobID: nil,
                 odometerKm: 0
             )
         ]
@@ -117,7 +116,16 @@ struct OperationsOverviewTests {
     @Test func freightWithNoTruckAnywhereNearItIsStalled() throws {
         let catalog = try GameCatalog.load(from: .main)
         var setup = try newState(catalog: catalog)
-        setup.state.offers = [offer(id: 4, from: setup.hq, to: setup.other, massKg: 500, clock: setup.state.clock)]
+        let waiting = offer(
+            id: 4,
+            from: setup.hq,
+            to: setup.other,
+            massKg: 500,
+            clock: setup.state.clock
+        )
+        setup.state.shipments = [
+            Shipment(id: waiting.id, offer: waiting, location: .address(setup.hq), assignedRouteID: nil)
+        ]
         setup.state.vehicles = []
 
         let overview = OperationsOverview.make(state: setup.state, catalog: catalog)
@@ -130,7 +138,6 @@ struct OperationsOverviewTests {
                 id: VehicleID(rawValue: 2),
                 typeID: try #require(catalog.vehicleTypes.first).id,
                 cityID: setup.hq,
-                assignedJobID: nil,
                 odometerKm: 0
             )
         ]
@@ -149,8 +156,15 @@ struct OperationsOverviewTests {
     @Test func aCityOnARunningRouteIsNotReportedAsStranded() throws {
         let catalog = try GameCatalog.load(from: .main)
         var setup = try newState(catalog: catalog)
-        setup.state.offers = [
-            offer(id: 7, from: setup.hq, to: setup.other, massKg: 900, clock: setup.state.clock)
+        let waiting = offer(
+            id: 7,
+            from: setup.hq,
+            to: setup.other,
+            massKg: 900,
+            clock: setup.state.clock
+        )
+        setup.state.shipments = [
+            Shipment(id: waiting.id, offer: waiting, location: .address(setup.hq), assignedRouteID: nil)
         ]
         setup.state.vehicles = []
 
@@ -201,10 +215,13 @@ struct OperationsOverviewTests {
         let third = try #require(
             catalog.cities.first { $0.id != setup.hq && $0.id != setup.other }?.id
         )
-        setup.state.offers = [
+        let waiting = [
             offer(id: 5, from: setup.other, to: setup.hq, massKg: 300, clock: setup.state.clock),
             offer(id: 6, from: third, to: setup.hq, massKg: 4_000, clock: setup.state.clock)
         ]
+        setup.state.shipments = waiting.map {
+            Shipment(id: $0.id, offer: $0, location: .address($0.origin), assignedRouteID: nil)
+        }
 
         let overview = OperationsOverview.make(state: setup.state, catalog: catalog)
         let order = overview.cities.map(\.throughputKg)

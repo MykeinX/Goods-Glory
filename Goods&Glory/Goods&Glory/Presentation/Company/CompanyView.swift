@@ -3,7 +3,7 @@
 //  Goods&Glory
 //
 //  Company hub (design 2e): identity, reputation placeholder, performance
-//  tiles and links into Finance / Facilities / Personnel / Contracts.
+//  tiles and links into Finance / Facilities / Personnel.
 //
 
 import SwiftUI
@@ -40,7 +40,7 @@ struct CompanyView: View {
                         .navigationBarTitleDisplayMode(.inline)
                 case .balanceLog:
                     DebugLedgerView()
-                case .personnel, .contracts:
+                case .personnel:
                     ComingSoonDetail(
                         title: destination.title,
                         message: destination.placeholder
@@ -86,7 +86,7 @@ struct CompanyView: View {
                     .foregroundStyle(accent)
             }
             ThemeProgressBar(value: 0, tint: accent, height: 8)
-            Text("Reputation unlocks larger tenders in a later update.")
+            Text("Reputation features are coming in a later update.")
                 .font(.gg(11, .heavy))
                 .foregroundStyle(Theme.textSecondary)
         }
@@ -96,7 +96,7 @@ struct CompanyView: View {
 
     private var statsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-            statTile("Active jobs", "\((session.state?.activeJobs.count ?? 0))")
+            statTile("Active routes", "\((session.state?.routes.count { $0.isRunning } ?? 0))")
             statTile("Delivered", "\((session.state?.stats.deliveredJobs ?? 0))")
             statTile("Fleet", "\((session.state?.vehicles.count ?? 0))")
             let onTime = "—"
@@ -173,15 +173,6 @@ struct CompanyView: View {
             }
             .buttonStyle(.plain)
 
-            NavigationLink(value: CompanyDestination.contracts) {
-                companyLinkRow(
-                    title: "Contracts",
-                    subtitle: "Long-term deals — coming soon",
-                    symbol: "doc.text.fill",
-                    tint: accent
-                )
-            }
-            .buttonStyle(.plain)
         }
     }
 
@@ -240,14 +231,13 @@ struct CompanyView: View {
 }
 
 private enum CompanyDestination: Hashable {
-    case finance, facilities, personnel, contracts, balanceLog
+    case finance, facilities, personnel, balanceLog
 
     var title: String {
         switch self {
         case .finance: return "Finance"
         case .facilities: return "Facilities"
         case .personnel: return "Personnel"
-        case .contracts: return "Contracts"
         case .balanceLog: return "Balance Log"
         }
     }
@@ -257,7 +247,6 @@ private enum CompanyDestination: Hashable {
         case .finance: return ""
         case .facilities: return ""
         case .personnel: return "Hire drivers and managers when the personnel system ships."
-        case .contracts: return "Long-term contracts and tenders will live here."
         case .balanceLog: return ""
         }
     }

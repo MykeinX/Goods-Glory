@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Build bundled world land/inland-water silhouettes for the strategic map.
+"""Build the two immutable visual atlases used by the strategic map.
 
-Downloads Natural Earth physical land + lakes and admin-0 land boundary lines
-at 50m, drops Antarctica, splits antimeridian-crossing geometry,
-simplifies to a strategic tolerance, and writes map_geography.json.
+Downloads Natural Earth land and admin-0 land boundary lines at 50m, drops
+Antarctica, splits antimeridian-crossing geometry, and writes:
 
-No cities or roads are produced.
+- map_board_silhouette.json: globally consistent, low-detail land polygons.
+- map_boundaries.json: quiet country-border polylines at final render detail.
+
+No cities, roads or gameplay routing data are produced.
 """
 
 from __future__ import annotations
@@ -18,22 +20,18 @@ import urllib.request
 from pathlib import Path
 
 # Natural Earth vector GeoJSON mirrors.
-# 50m land + lakes, matching the boundary resolution.
+# 50m land, matching the boundary resolution.
 #
 # This used to be 110m, and it made map detail regionally uneven in a way that
 # looked like a bug in our pipeline but was really the source data: 110m keeps
 # smooth coastlines faithfully and deletes intricate ones. Measured over equal
-# windows, the US mainland carried 849 land vertices and six lakes while the
+# windows, the US mainland carried 849 land vertices while the
 # Turkish Aegean carried 21 vertices and no islands at all — the whole
 # archipelago is simply absent at 110m. Borders were already 50m, so land was
 # the odd one out.
 LAND_URL = (
     "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
     "master/geojson/ne_50m_land.geojson"
-)
-LAKES_URL = (
-    "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
-    "master/geojson/ne_50m_lakes.geojson"
 )
 # 50m land boundaries: accurate enough for customs/borders without 10m weight.
 BOUNDARIES_URL = (
@@ -45,34 +43,24 @@ KM_PER_LATITUDE_DEGREE = 111.32
 # Mid-latitude approximation is fine for strategic simplification.
 KM_PER_LONGITUDE_DEGREE = 85.0
 ANTARCTICA_MAX_LAT = -55.0
-# Minimum footprint for a drawn landform or lake. Below this a shape is a
+# Minimum footprint for a drawn landform. Below this a shape is a
 # speck at strategic zoom: invisible, but it still makes the map read like a
 # navigation app instead of a game board. At 50m the source ships over a
 # thousand land rings and most of them are exactly that.
 #
-# 8,000 km² keeps every landform a player would name — Britain, Ireland,
-# Sicily, Sardinia, Corsica, Crete, Cyprus, Japan, Sri Lanka, the Great Lakes —
-# and deletes the confetti. The Aegean goes from 35 shapes to 2.
-MIN_LAND_BBOX_AREA = 0.95  # deg² ≈ 8,000 km² at mid latitudes
-MIN_LAKE_BBOX_AREA = 0.95  # deg², same rule for inland water
+# The global threshold keeps major islands such as Britain, Ireland, Japan,
+# Sri Lanka and Taiwan while deleting archipelago confetti.
+MIN_BOARD_LAND_BBOX_AREA = 4.0
 
 # Coastline smoothing, deliberately far coarser than cartographic practice.
 #
-# The budget is anchored to the original 110m build, whose level of coastal
-# detail was the one the team liked: ~4,000 land vertices for the world. The
-# problem with 110m was never that it was coarse, it was that the coarseness
-# was uneven — smooth coasts survived and intricate ones were deleted outright,
-# so Turkey got 21 vertices where the US got 849. Taking the finer 50m source
-# and flattening it hard reaches the same budget with the detail spread evenly.
-#
-# A bay narrower than ~35 km is not something a player acts on. Route arcs do
-# not depend on the shoreline at all — they follow the road graph — so
-# coarsening here cannot make a truck look lost.
-SIMPLIFY_TOLERANCE_KM = 35.0
-# Borders were two thirds of every vertex in the file at 2 km, which bought
-# precision no one can see on a strategic map. A country still reads as itself
-# at 20 km — the silhouette is intact, only surveyed wiggle is gone.
-BOUNDARY_SIMPLIFY_TOLERANCE_KM = 20.0
+# The target is roughly 900 vertices for the entire world: enough for Britain,
+# Turkey and Japan to read correctly, still far below navigation-map detail.
+# Route geometry never depends on the shoreline; it follows the domain graph.
+BOARD_SIMPLIFY_TOLERANCE_KM = 90.0
+# Country identity survives this budget while surveyed wiggle does not. This
+# is also the final render tolerance; SpriteKit does no second simplification.
+BOUNDARY_SIMPLIFY_TOLERANCE_KM = 75.0
 MIN_RING_POINTS = 4  # closed ring with ≥3 unique vertices
 MIN_BOUNDARY_POINTS = 2
 
@@ -212,7 +200,22 @@ def simplified_closed_ring(
         ring = ring[:-1]
     if len(ring) < 3:
         return None
-    simplified = douglas_peucker(ring, tolerance_km)
+
+    # Douglas–Peucker is defined for an open line. Feeding it a closed ring
+    # with two arbitrary neighboring endpoints can replace an entire coast by
+    # one long chord. Rotate to the point farthest from the centroid and close
+    # the line explicitly, so both halves of the silhouette are preserved.
+    centroid_lon = sum(point[0] for point in ring) / len(ring)
+    centroid_lat = sum(point[1] for point in ring) / len(ring)
+    anchor = max(
+        range(len(ring)),
+        key=lambda index: (
+            (ring[index][0] - centroid_lon) ** 2
+            + (ring[index][1] - centroid_lat) ** 2
+        ),
+    )
+    rotated = ring[anchor:] + ring[:anchor]
+    simplified = douglas_peucker(rotated + [rotated[0]], tolerance_km)
     if len(simplified) < 3:
         return None
     if simplified[0] != simplified[-1]:
@@ -301,20 +304,17 @@ def download(url: str, destination: Path) -> None:
         destination.write_bytes(response.read())
 
 
-def ensure_sources(cache_dir: Path, refresh: bool) -> tuple[Path, Path, Path]:
+def ensure_sources(cache_dir: Path, refresh: bool) -> tuple[Path, Path]:
     # Filenames must track the URLs. When these still said 110m after the
     # sources moved to 50m, an existing cache silently satisfied the download
     # check and the script kept rebuilding from the old, coarser data.
     land_path = cache_dir / "ne_50m_land.geojson"
-    lakes_path = cache_dir / "ne_50m_lakes.geojson"
     boundaries_path = cache_dir / "ne_50m_admin_0_boundary_lines_land.geojson"
     if refresh or not land_path.exists():
         download(LAND_URL, land_path)
-    if refresh or not lakes_path.exists():
-        download(LAKES_URL, lakes_path)
     if refresh or not boundaries_path.exists():
         download(BOUNDARIES_URL, boundaries_path)
-    return land_path, lakes_path, boundaries_path
+    return land_path, boundaries_path
 
 
 def process_land(geojson: dict) -> list[list[tuple[float, float]]]:
@@ -336,9 +336,9 @@ def process_land(geojson: dict) -> list[list[tuple[float, float]]]:
     rings = merge_dateline_wraps_into_land(rings)
     simplified_rings: list[list[tuple[float, float]]] = []
     for ring in rings:
-        if bbox_area(ring) < MIN_LAND_BBOX_AREA:
+        if bbox_area(ring) < MIN_BOARD_LAND_BBOX_AREA:
             continue
-        simplified = simplified_closed_ring(ring, SIMPLIFY_TOLERANCE_KM)
+        simplified = simplified_closed_ring(ring, BOARD_SIMPLIFY_TOLERANCE_KM)
         if simplified is None or len(simplified) < MIN_RING_POINTS:
             continue
         if is_antarctica_ring(simplified):
@@ -346,32 +346,6 @@ def process_land(geojson: dict) -> list[list[tuple[float, float]]]:
         simplified_rings.append(simplified)
     simplified_rings.sort(key=bbox_area, reverse=True)
     return simplified_rings
-
-
-def process_lakes(geojson: dict) -> list[list[tuple[float, float]]]:
-    rings: list[list[tuple[float, float]]] = []
-    for feature in geojson.get("features", []):
-        geometry = feature.get("geometry") or {}
-        props = feature.get("properties") or {}
-        name = str(props.get("name") or props.get("NAME") or "").lower()
-        for outer in iter_polygon_rings(geometry):
-            if len(outer) < 3:
-                continue
-            if is_antarctica_ring(outer):
-                continue
-            if "antar" in name:
-                continue
-            if bbox_area(outer) < MIN_LAKE_BBOX_AREA:
-                continue
-            for piece in split_ring_at_antimeridian(outer):
-                if bbox_area(piece) < MIN_LAKE_BBOX_AREA:
-                    continue
-                simplified = simplified_closed_ring(piece, SIMPLIFY_TOLERANCE_KM)
-                if simplified is None or len(simplified) < MIN_RING_POINTS:
-                    continue
-                rings.append(simplified)
-    rings.sort(key=bbox_area, reverse=True)
-    return rings
 
 
 def process_boundaries(geojson: dict) -> list[list[tuple[float, float]]]:
@@ -594,43 +568,44 @@ def rounded_coordinate(point: tuple[float, float]) -> dict[str, float]:
     return {"latitude": round(point[1], 6), "longitude": round(point[0], 6)}
 
 
-def build_geography(
-    land_path: Path, lakes_path: Path, boundaries_path: Path
-) -> dict:
+def build_board(land_path: Path) -> dict:
     land_rings = process_land(load_geojson(land_path))
-    lake_rings = process_lakes(load_geojson(lakes_path))
+    return {
+        "version": 2,
+        "source": (
+            "Natural Earth 50m land "
+            "(https://www.naturalearthdata.com/); globally coarsened for the "
+            "authored rounded game board; Antarctica omitted; "
+            "NE Asia dateline wraps stitched into Eurasia (lon>180); "
+            f"land simplify ~{BOARD_SIMPLIFY_TOLERANCE_KM:.0f} km"
+        ),
+        "landMasses": [
+            {
+                "id": f"board_land_{index:03d}",
+                "points": [
+                    rounded_coordinate(point)
+                    for point in (ring[:-1] if ring[0] == ring[-1] else ring)
+                ],
+            }
+            for index, ring in enumerate(land_rings, 1)
+        ],
+    }
+
+
+def build_boundaries(boundaries_path: Path) -> dict:
     boundary_lines = shift_dateline_wraps_east(
         process_boundaries(load_geojson(boundaries_path))
     )
     return {
-        "version": 3,
+        "version": 1,
         "source": (
-            "Natural Earth 50m land + lakes + admin-0 land boundary lines "
-            "(https://www.naturalearthdata.com/); Antarctica omitted; "
-            "NE Asia dateline wraps stitched into Eurasia (lon>180); "
-            f"land simplify ~{SIMPLIFY_TOLERANCE_KM:.0f} km, "
-            f"borders ~{BOUNDARY_SIMPLIFY_TOLERANCE_KM:.0f} km"
+            "Natural Earth 50m admin-0 land boundary lines "
+            "(https://www.naturalearthdata.com/); final game-board detail; "
+            f"Antarctica omitted; simplify ~{BOUNDARY_SIMPLIFY_TOLERANCE_KM:.0f} km"
         ),
-        "landMasses": [
-            {
-                "id": f"world_land_{index:03d}",
-                "points": [rounded_coordinate(point) for point in ring],
-            }
-            for index, ring in enumerate(land_rings, 1)
-        ],
-        "waterBodies": [
-            {
-                "id": f"world_lake_{index:03d}",
-                "points": [rounded_coordinate(point) for point in ring],
-            }
-            for index, ring in enumerate(lake_rings, 1)
-        ],
-        "boundaries": [
-            {
-                "id": f"world_border_{index:04d}",
-                "points": [rounded_coordinate(point) for point in line],
-            }
-            for index, line in enumerate(boundary_lines, 1)
+        "lines": [
+            [rounded_coordinate(point) for point in line]
+            for line in boundary_lines
         ],
     }
 
@@ -656,9 +631,9 @@ def write_json(path: Path, value: dict) -> None:
 
 def main() -> None:
     repo_scripts = Path(__file__).resolve().parent
-    default_output = (
-        repo_scripts.parent / "Goods&Glory" / "Resources" / "Catalog" / "map_geography.json"
-    )
+    catalog_dir = repo_scripts.parent / "Goods&Glory" / "Resources" / "Catalog"
+    default_board_output = catalog_dir / "map_board_silhouette.json"
+    default_boundaries_output = catalog_dir / "map_boundaries.json"
     default_cache = repo_scripts / ".cache" / "natural_earth"
 
     parser = argparse.ArgumentParser(description=__doc__)
@@ -669,10 +644,16 @@ def main() -> None:
         help="Directory for downloaded Natural Earth GeoJSON files",
     )
     parser.add_argument(
-        "--output",
+        "--board-output",
         type=Path,
-        default=default_output,
-        help="Destination map_geography.json path",
+        default=default_board_output,
+        help="Destination map_board_silhouette.json path",
+    )
+    parser.add_argument(
+        "--boundaries-output",
+        type=Path,
+        default=default_boundaries_output,
+        help="Destination map_boundaries.json path",
     )
     parser.add_argument(
         "--refresh",
@@ -681,22 +662,23 @@ def main() -> None:
     )
     arguments = parser.parse_args()
 
-    land_path, lakes_path, boundaries_path = ensure_sources(
+    land_path, boundaries_path = ensure_sources(
         arguments.cache_dir, arguments.refresh
     )
-    geography = build_geography(land_path, lakes_path, boundaries_path)
-    write_json(arguments.output, geography)
+    board = build_board(land_path)
+    boundaries = build_boundaries(boundaries_path)
+    write_json(arguments.board_output, board)
+    write_json(arguments.boundaries_output, boundaries)
 
-    land_points = sum(len(item["points"]) for item in geography["landMasses"])
-    lake_points = sum(len(item["points"]) for item in geography["waterBodies"])
-    border_points = sum(len(item["points"]) for item in geography["boundaries"])
-    size_kb = arguments.output.stat().st_size / 1024.0
+    land_points = sum(len(item["points"]) for item in board["landMasses"])
+    border_points = sum(len(line) for line in boundaries["lines"])
     print(
-        f"Wrote {arguments.output}\n"
-        f"  landMasses={len(geography['landMasses'])} ({land_points} points)\n"
-        f"  waterBodies={len(geography['waterBodies'])} ({lake_points} points)\n"
-        f"  boundaries={len(geography['boundaries'])} ({border_points} points)\n"
-        f"  size={size_kb:.1f} KB"
+        f"Wrote {arguments.board_output}\n"
+        f"  landMasses={len(board['landMasses'])} ({land_points} points)\n"
+        f"  size={arguments.board_output.stat().st_size / 1024.0:.1f} KB\n"
+        f"Wrote {arguments.boundaries_output}\n"
+        f"  boundaryLines={len(boundaries['lines'])} ({border_points} points)\n"
+        f"  size={arguments.boundaries_output.stat().st_size / 1024.0:.1f} KB"
     )
 
 

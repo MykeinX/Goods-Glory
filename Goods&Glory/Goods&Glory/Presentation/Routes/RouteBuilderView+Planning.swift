@@ -89,14 +89,6 @@ extension RouteBuilderView {
                 return "PICK UP · \(firm.name)"
             }
             return "PICK UP FLOW FREIGHT"
-        case .pickupContract(let contractID):
-            return "PICK UP · \(contractFirm(contractID, pickup: true))"
-        case .deliverContract(let contractID):
-            return "DELIVER · \(contractFirm(contractID, pickup: false))"
-        case .pickupShipment:
-            return "ONE-OFF PICKUP"
-        case .deliverShipment:
-            return "ONE-OFF DELIVERY"
         case .dropToWarehouse:
             return "STORE IN WAREHOUSE"
         case .loadFromWarehouse(let lotKey):
@@ -120,40 +112,9 @@ extension RouteBuilderView {
         }
     }
 
-    func contractFirm(_ contractID: ContractID, pickup: Bool) -> String {
-        guard let contract = session.state?.activeContract(contractID) else { return "Ended contract" }
-        let firmID = pickup ? contract.originFirmID : contract.destinationFirmID
-        return firmID.flatMap(session.catalog.firm)?.name ?? session.cityName(pickup ? contract.origin : contract.destination)
-    }
-
-
-
     func planningIssue(_ route: Route) -> String? {
         if route.stops.isEmpty { return "Add at least one city." }
         if assignedVehicles.isEmpty { return "Assign a vehicle before starting." }
-        let contractTasks = route.stops.compactMap { stop -> (ContractID, Bool)? in
-            switch stop.task {
-            case .pickupContract(let id): return (id, true)
-            case .deliverContract(let id): return (id, false)
-            default: return nil
-            }
-        }
-        // A warehouse drop or a catch-all delivery is a valid hand-off too:
-        // collection routes legitimately end at a hub instead of a customer.
-        let hasHandoff = route.stops.contains {
-            switch $0.task {
-            case .dropToWarehouse, .deliverAll, .deliverLane: return true
-            default: return false
-            }
-        }
-        if !hasHandoff {
-            for id in Set(contractTasks.map(\.0)) {
-                let entries = contractTasks.filter { $0.0 == id }
-                if entries.contains(where: { $0.1 }), !entries.contains(where: { !$0.1 }) {
-                    return "Cargo picked up here has nowhere to go — add a delivery, a warehouse drop, or 'deliver everything'."
-                }
-            }
-        }
         return nil
     }
 
@@ -213,7 +174,6 @@ extension RouteBuilderView {
         }
         hasher.combine(state.vehicles.count)
         hasher.combine(state.routeRuns.count)
-        hasher.combine(state.activeJobs.count)
         return hasher.finalize()
     }
 

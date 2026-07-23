@@ -2,7 +2,7 @@
 //  GameNotificationTests.swift
 //  Goods&GloryTests
 //
-//  Map-focus targets for tappable toasts — extend mapFocusCity(for:) as events grow.
+//  Map-focus targets for tappable route notifications.
 //
 
 import Foundation
@@ -21,17 +21,6 @@ struct GameNotificationTests {
         #expect(GameNotification.mapFocusCity(for: event) == origin)
     }
 
-    @Test func deliveryFocusesDestinationCity() {
-        let destination = CityID("us_las_vegas")
-        let event = LogEvent.jobDelivered(
-            jobID: JobID(rawValue: 1),
-            destination: destination,
-            revenue: 1_000,
-            cost: 400
-        )
-        #expect(GameNotification.mapFocusCity(for: event) == destination)
-    }
-
     @Test func routeDeliveryFocusesDestinationCity() {
         let destination = CityID("us_dallas")
         let event = LogEvent.routeShipmentDelivered(
@@ -43,11 +32,10 @@ struct GameNotificationTests {
         #expect(GameNotification.mapFocusCity(for: event) == destination)
     }
 
-    @Test func makeAttachesMapFocusForPickupAndDelivery() throws {
+    @Test func makeAttachesMapFocusForPickup() throws {
         let catalog = try GameCatalog.load(from: .main)
         let origin = CityID("us_chicago")
         let destination = CityID("us_las_vegas")
-
         let pickup = try #require(GameNotification.make(
             from: LogEntry(
                 id: 1,
@@ -61,29 +49,5 @@ struct GameNotificationTests {
             catalog: catalog
         ))
         #expect(pickup.mapFocusCityID == origin)
-
-        let delivery = try #require(GameNotification.make(
-            from: LogEntry(
-                id: 2,
-                at: .start,
-                event: .jobDelivered(
-                    jobID: JobID(rawValue: 1),
-                    destination: destination,
-                    revenue: 1_200,
-                    cost: 500
-                )
-            ),
-            catalog: catalog
-        ))
-        #expect(delivery.mapFocusCityID == destination)
-    }
-
-    @Test func contractEndedHasNoMapFocusYet() {
-        let event = LogEvent.contractEnded(
-            contractID: ContractID(rawValue: 1),
-            completed: 3,
-            missed: 0
-        )
-        #expect(GameNotification.mapFocusCity(for: event) == nil)
     }
 }

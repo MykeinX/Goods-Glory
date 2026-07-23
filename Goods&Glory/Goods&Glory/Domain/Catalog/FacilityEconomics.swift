@@ -4,8 +4,8 @@
 //
 //  Resolves facility build cost, build time, upkeep and capacity for a concrete
 //  city. Nothing here is a flat number: every value is the authored base value
-//  from economy.json scaled by that city's own catalog data (K-009 — no authored
-//  city roles, everything derives from population, cost index and access flags).
+//  from economy.json scaled by that city's own catalog data (no authored
+//  city roles — everything derives from population, cost index and access flags).
 //
 //      siteFactor = (costIndex / 1000)              regional price level (BEA RPP)
 //                 x (0.75 + 0.65 * populationNorm)   metro land scarcity
@@ -29,8 +29,6 @@ struct FacilityQuote: Equatable, Sendable {
     let docks: Int
     /// Handling duration multiplier, 1.0 = catalog baseline.
     let handlingFactor: Double
-    /// Multiplier applied to a city's contract offer slot count (office only).
-    let contractSlotFactor: Double
     /// Extra payout fraction on lanes touching this city (office only).
     let lanePremium: Double
 }
@@ -91,7 +89,6 @@ enum FacilityEconomics {
             storage: LoadSize(massKg: spec.storageMassKg, volumeM3: spec.storageVolumeM3),
             docks: spec.docks,
             handlingFactor: Double(spec.handlingPercent) / 100,
-            contractSlotFactor: Double(spec.contractSlotPercent) / 100,
             lanePremium: Double(spec.lanePremiumPercent) / 100
         )
     }
@@ -124,7 +121,6 @@ enum FacilityEconomics {
             storage: quote.storage,
             docks: quote.docks,
             handlingFactor: quote.handlingFactor,
-            contractSlotFactor: quote.contractSlotFactor,
             lanePremium: quote.lanePremium
         )
         return quote

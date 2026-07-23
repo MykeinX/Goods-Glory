@@ -18,9 +18,9 @@ extension RouteTask {
     var displaySymbol: String {
         switch self {
         case .travel: "arrow.right"
-        case .pickupShipment, .pickupContract, .pickupLane: "tray.and.arrow.up.fill"
+        case .pickupLane: "tray.and.arrow.up.fill"
         case .loadFromWarehouse: "shippingbox.and.arrow.backward.fill"
-        case .deliverShipment, .deliverContract, .deliverAll: "tray.and.arrow.down.fill"
+        case .deliverAll: "tray.and.arrow.down.fill"
         case .dropToWarehouse: "shippingbox.fill"
         case .deliverLane(_, let target): target == .warehouse ? "shippingbox.fill" : "tray.and.arrow.down.fill"
         }
@@ -31,8 +31,8 @@ extension RouteTask {
     func displayTint(accent: Color) -> Color {
         switch self {
         case .travel: Theme.textTertiary
-        case .pickupShipment, .pickupContract, .pickupLane, .loadFromWarehouse: accent
-        case .deliverShipment, .deliverContract, .deliverAll: Theme.mint
+        case .pickupLane, .loadFromWarehouse: accent
+        case .deliverAll: Theme.mint
         case .dropToWarehouse: Theme.sky
         case .deliverLane(_, let target): target == .warehouse ? Theme.sky : Theme.mint
         }
@@ -41,11 +41,11 @@ extension RouteTask {
     /// What a vehicle is doing while servicing this stop.
     var activityLabel: String {
         switch self {
-        case .pickupShipment, .pickupContract, .pickupLane:
+        case .pickupLane:
             String(localized: "Loading")
         case .loadFromWarehouse:
             String(localized: "Loading from warehouse")
-        case .deliverShipment, .deliverContract, .deliverAll:
+        case .deliverAll:
             String(localized: "Unloading")
         case .dropToWarehouse:
             String(localized: "Storing")
@@ -59,8 +59,8 @@ extension RouteTask {
     /// True for tasks that put cargo on the vehicle.
     var isPickup: Bool {
         switch self {
-        case .pickupShipment, .pickupContract, .pickupLane, .loadFromWarehouse: true
-        case .travel, .deliverShipment, .deliverContract, .deliverAll, .dropToWarehouse, .deliverLane: false
+        case .pickupLane, .loadFromWarehouse: true
+        case .travel, .deliverAll, .dropToWarehouse, .deliverLane: false
         }
     }
 }

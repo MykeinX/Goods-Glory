@@ -38,10 +38,6 @@ struct CityOperationsDetail: Equatable, Sendable {
         var waiting: [Movement] = []
         var inbound: [Movement] = []
 
-        for offer in state.offers where offer.origin == cityID {
-            waiting.append(movement(offer, counterpart: offer.destination, clock: state.clock))
-        }
-
         var cityByFacility: [FacilityID: CityID] = [:]
         cityByFacility.reserveCapacity(state.facilities.count)
         for facility in state.facilities { cityByFacility[facility.id] = facility.cityID }
@@ -61,15 +57,8 @@ struct CityOperationsDetail: Equatable, Sendable {
             }
         }
 
-        for job in state.activeJobs where job.offer.destination == cityID {
-            guard job.phase == .enRoute || job.phase == .unloading else { continue }
-            inbound.append(movement(job.offer, counterpart: job.offer.origin, clock: state.clock))
-        }
-
-        // Indexed rather than `physicalCity(of:)` per vehicle, which rescans
-        // the job and run lists for every truck in the fleet.
-        var jobByVehicle: [VehicleID: ActiveJob] = [:]
-        for job in state.activeJobs { jobByVehicle[job.vehicleID] = job }
+        // Indexed rather than `physicalCity(of:)` per vehicle, which would
+        // rescan the route-run list for every truck in the fleet.
         var runByVehicle: [VehicleID: RouteRun] = [:]
         for run in state.routeRuns { runByVehicle[run.vehicleID] = run }
 
@@ -77,13 +66,6 @@ struct CityOperationsDetail: Equatable, Sendable {
             .filter { vehicle in
                 if let run = runByVehicle[vehicle.id] {
                     return run.phase != .traveling && vehicle.cityID == cityID
-                }
-                if let job = jobByVehicle[vehicle.id] {
-                    switch job.phase {
-                    case .deadheading, .enRoute: return false
-                    case .loading: return job.offer.origin == cityID
-                    case .unloading: return job.offer.destination == cityID
-                    }
                 }
                 return vehicle.cityID == cityID
             }

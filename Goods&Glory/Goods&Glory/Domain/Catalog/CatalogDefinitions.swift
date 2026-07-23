@@ -187,8 +187,7 @@ struct Firm: Identifiable, Hashable, Sendable {
 }
 
 /// A persistent firm→firm freight relationship — the world's standing demand.
-/// Derived deterministically from city markets (never authored, never saved);
-/// shipments are produced by lanes, contracts only commit a lane's share.
+/// Derived deterministically from city markets (never authored, never saved).
 struct FreightLane: Identifiable, Hashable, Sendable {
     let id: LaneID
     let originCityID: CityID
@@ -270,8 +269,6 @@ struct FacilityLevelSpec: Codable, Sendable {
     let docks: Int
     /// Load/unload duration multiplier in percent (100 = catalog baseline).
     let handlingPercent: Int
-    /// Contract offer slot multiplier in percent (office only).
-    let contractSlotPercent: Int
     /// Extra payout percent on lanes touching this city (office only).
     let lanePremiumPercent: Int
 }
@@ -318,21 +315,10 @@ struct EconomyConfig: Codable, Sendable {
     /// backhaul, so a player who actually finds one profits from the gap.
     let emptyReturnSharePercent: Int
     /// Base profit margin over a haul's true cost (0-100). This is the spot
-    /// rate every lane parcel earns without a contract. Regional price level,
-    /// trailer fill, local presence and competition scale this margin — never
-    /// the cost recovery underneath it.
+    /// rate every lane parcel earns. Regional price level, trailer fill, local
+    /// presence and competition scale this margin — never the cost recovery
+    /// underneath it.
     let spotMarginPercent: Int
-    /// How often new open contract offers are generated.
-    let contractOfferIntervalMinutes: Int
-    let maxOpenContractOffers: Int
-    /// Signed contract length in game days.
-    let contractDurationDays: Int
-    /// Premium a committed parcel pays over the same parcel's spot rate
-    /// (0-100). Signing trades flexibility for a better price and an SLA.
-    let contractPremiumPercent: Int
-    /// Compensation charged when a shipment misses its deadline, as a percent
-    /// of that shipment's payout (0-100).
-    let contractPenaltyPercent: Int
 
     // MARK: Facilities
 
@@ -341,21 +327,6 @@ struct EconomyConfig: Codable, Sendable {
     let hqLanePremiumPercent: Int
     /// Authored base values per module kind and level.
     let facilities: FacilityConfig
-
-    // MARK: Contract shaping
-
-    /// Delivery window granted to a posted shipment, as a percent of the
-    /// reference one-way cycle. 100 = exactly one loaded run, no slack.
-    let contractDeliveryWindowPercent: Int
-    /// Lower bound of the delivery window as a percent of the shipment interval,
-    /// so daily lanes still leave a workable margin.
-    let contractDeliveryWindowFloorPercent: Int
-    /// Preparation time granted between signing and the first posted shipment,
-    /// as a percent of one reference cycle. Gives the player time to position.
-    let contractLeadTimePercent: Int
-    /// Deliveries the company must complete before shippers offer recurring
-    /// lanes. The opening hours are spot work; contracts are earned.
-    let contractsUnlockAfterDeliveries: Int
 
     // MARK: Freight lanes
 

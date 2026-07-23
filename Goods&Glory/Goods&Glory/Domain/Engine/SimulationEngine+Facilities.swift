@@ -53,7 +53,7 @@ extension SimulationEngine {
         if let required = kind.requires {
             guard state.module(required, in: cityID) != nil else {
                 throw required == .office
-                    ? CommandError.branchRequired
+                    ? CommandError.officeRequired
                     : CommandError.warehouseRequired
             }
         }

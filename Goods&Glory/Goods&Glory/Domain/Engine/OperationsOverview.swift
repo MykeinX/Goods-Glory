@@ -99,7 +99,6 @@ struct OperationsOverview: Equatable, Sendable {
 
     static func make(state: GameState, catalog: GameCatalog) -> OperationsOverview {
         var builder = Builder(state: state, catalog: catalog)
-        builder.collectWaitingFreight()
         builder.collectStoredFreight()
         builder.collectVehicles()
         builder.collectDockFreight()
@@ -133,18 +132,6 @@ private struct Builder {
         var entry = self[cityID]
         entry.urgency = max(entry.urgency, min(1, max(0, spent)))
         self[cityID] = entry
-    }
-
-    // MARK: Waiting to leave
-
-    mutating func collectWaitingFreight() {
-        for offer in state.offers {
-            var entry = self[offer.origin]
-            entry.waitingKg += offer.load.massKg
-            entry.waitingParcels += 1
-            self[offer.origin] = entry
-            noteUrgency(offer.origin, offer: offer)
-        }
     }
 
     // MARK: Waiting at the dock
@@ -233,18 +220,12 @@ private struct Builder {
     // MARK: Where the trucks are
 
     mutating func collectVehicles() {
-        var jobByVehicle: [VehicleID: ActiveJob] = [:]
-        jobByVehicle.reserveCapacity(state.activeJobs.count)
-        for job in state.activeJobs { jobByVehicle[job.vehicleID] = job }
-
         var runByVehicle: [VehicleID: RouteRun] = [:]
         runByVehicle.reserveCapacity(state.routeRuns.count)
         for run in state.routeRuns { runByVehicle[run.vehicleID] = run }
 
         for vehicle in state.vehicles {
-            if let job = jobByVehicle[vehicle.id] {
-                collect(job: job)
-            } else if let run = runByVehicle[vehicle.id] {
+            if let run = runByVehicle[vehicle.id] {
                 collect(run: run, vehicle: vehicle)
             } else {
                 idleVehicles += 1
@@ -253,28 +234,6 @@ private struct Builder {
                 entry.idleHere += 1
                 self[vehicle.cityID] = entry
             }
-        }
-    }
-
-    /// A direct job carries its own cargo: it is not in `state.shipments`, so
-    /// its tonnage has to be counted here or it disappears from the overview.
-    private mutating func collect(job: ActiveJob) {
-        switch job.phase {
-        case .loading, .unloading:
-            servicingVehicles += 1
-            let cityID = job.phase == .loading ? job.offer.origin : job.offer.destination
-            var entry = self[cityID]
-            entry.vehiclesHere += 1
-            self[cityID] = entry
-        case .deadheading:
-            movingVehicles += 1
-            arriving(at: job.offer.origin, in: job.phaseEndsAt)
-        case .enRoute:
-            movingVehicles += 1
-            arriving(at: job.offer.destination, in: job.phaseEndsAt)
-        }
-        if job.phase == .enRoute || job.phase == .unloading {
-            noteOnBoard(job.offer)
         }
     }
 

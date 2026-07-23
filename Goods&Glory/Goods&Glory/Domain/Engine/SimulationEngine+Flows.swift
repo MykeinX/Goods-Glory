@@ -1,5 +1,5 @@
 //
-//  SimulationEngine+Lanes.swift
+//  SimulationEngine+Flows.swift
 //  Goods&Glory
 //
 //  Persistent freight lanes: dock accrual, parcel claiming and one-tap
@@ -21,16 +21,11 @@ extension SimulationEngine {
         let week = tickAt.totalMinutes / (7 * GameState.minutesPerDay)
 
         for lane in catalog.lanes {
-            let fullRate = lane.ratePerDayKg(
+            let rate = lane.ratePerDayKg(
                 week: week,
                 worldSeed: state.config.seed,
                 swingPercent: config.weeklySwingPercent
             )
-            // Tonnage promised to a signed contract is posted as contract
-            // parcels on that contract's own cadence, so it must not also pile
-            // up at the dock as spot freight — that would sell it twice.
-            let free = ContractDestination.fullShareBps - committedShareBps(of: lane.id, state: state)
-            let rate = fullRate * free / ContractDestination.fullShareBps
             let gained = rate * LaneConfig.tickMinutes / GameState.minutesPerDay
             let capacity = max(gained, rate * config.parcelPatienceMinutes / GameState.minutesPerDay)
             let accrued = (state.laneAccrualKg[lane.id] ?? 0) + gained
@@ -139,9 +134,6 @@ extension SimulationEngine {
                 load: load,
                 payout: payout,
                 distanceKm: distanceKm,
-                urgency: .normal,
-                source: .lane,
-                contractID: nil,
                 laneID: lane.id,
                 originFirmID: lane.originFirmID,
                 destinationFirmID: lane.destinationFirmID,
@@ -178,53 +170,11 @@ extension SimulationEngine {
         return claimed
     }
 
-    /// Size of one posted parcel for a contract cycle.
-    ///
-    /// Bounded above by what the reference vehicle can carry (mass *and*
-    /// volume) and by the cycle's own volume — promising a full trailer when
-    /// the lane only produces half of one is how a contract starves the truck
-    /// assigned to it. Bounded below by the product's minimum shipment.
-    /// Multi-drop splits the cycle across its drops, so each drop still gets a
-    /// parcel worth sending.
-    func parcelSize(
-        product: ProductDefinition,
-        capacity: LoadSize,
-        cycleVolumeKg: Int,
-        dropCount: Int
-    ) -> LoadSize? {
-        let step = ProductDefinition.shipmentMassStepKg
-        let volumeLimitKg = Int((capacity.volumeM3 / product.densityM3PerTon * 1000).rounded(.down))
-        let perDropKg = cycleVolumeKg / max(1, dropCount)
-        // Never a parcel that fills the reference truck to the brim. A 5.0 t
-        // commitment on a 5.0 t truck can only travel on a completely empty
-        // vehicle, so one 150 kg spot claim earlier on the lap locked it out and
-        // it sat on the dock for another round, ageing towards a penalty.
-        // Leaving a tenth of the deck free is what lets committed and spot
-        // freight share a lap at all.
-        let ceilingKg = min(
-            product.maximumShipmentMassKg,
-            capacity.massKg * 9 / 10,
-            volumeLimitKg,
-            max(perDropKg, product.minimumShipmentMassKg)
-        )
-        let massKg = (ceilingKg / step) * step
-        guard massKg >= product.minimumShipmentMassKg else { return nil }
-        return parcelLoad(productID: product.id, massKg: massKg)
-    }
-
-    func weightedPick<T>(_ items: [(T, Double)], rng: inout SeededRNG) -> T? {
-        let total = items.reduce(0.0) { $0 + max(0, $1.1) }
-        guard total > 0 else { return items.first?.0 }
-        var roll = Double.random(in: 0..<total, using: &rng)
-        for (item, weight) in items {
-            roll -= max(0, weight)
-            if roll < 0 { return item }
-        }
-        return items.last?.0
-    }
-
-    func weightedPick<T>(_ items: [(T, UInt16)], rng: inout SeededRNG) -> T? {
-        weightedPick(items.map { ($0.0, Double($0.1)) }, rng: &rng)
+    /// Volume of a parcel derived from the product's density.
+    func parcelLoad(productID: ProductID, massKg: Int) -> LoadSize {
+        let density = catalog.product(productID)?.densityM3PerTon ?? 1
+        let volumeM3 = (Double(massKg) / 1000 * density * 10).rounded() / 10
+        return LoadSize(massKg: massKg, volumeM3: volumeM3)
     }
 
 }

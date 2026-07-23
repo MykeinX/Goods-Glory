@@ -17,7 +17,7 @@ final class GameMapScene: SKScene {
 
     let catalog: GameCatalog
     let projection: MapProjection
-    let geography: MapGeographyDefinition
+    let boundaryAtlas: MapBoundaryAtlas
     let cameraNode = SKCameraNode()
 
     let terrainLayer = SKNode()
@@ -27,25 +27,21 @@ final class GameMapScene: SKScene {
     let plannedVisitLayer = SKNode()
     let vehicleLayer = SKNode()
 
-    let loadedRouteNode = SKShapeNode()
-    let deadheadRouteNode = SKShapeNode()
+    let activeRouteHaloNode = SKShapeNode()
+    let activeRouteNode = SKShapeNode()
     let plannedRouteNode = SKShapeNode()
-    let previewRouteNode = SKShapeNode()
+    let landNode = SKShapeNode()
+    let boundaryNode = SKShapeNode()
 
-    /// Fixed world-unit stroke widths (≈ km). Not scaled on zoom — avoids
-    /// SKShapeNode retessellation during pinch gestures.
+    /// Base screen-space weights for the five batched map paths.
+    /// Road count and vehicle count do not change that node budget.
     enum StrokeWidth {
-        static let landCoast: CGFloat = 1
+        static let landCoast: CGFloat = 0.8
         static let waterCoast: CGFloat = 1
-        /// Country borders. Slightly heavier than the coastline, with a soft
-        /// halo underneath — a 1 px hairline sparkles under pinch-zoom; a
-        /// soft dual stroke stays readable without reading as atlas ink.
-        static let boundary: CGFloat = 2
-        static let boundaryHalo: CGFloat = 4.5
-        static let loadedRoute: CGFloat = 4.5
-        static let deadheadRoute: CGFloat = 3.5
-        static let plannedRoute: CGFloat = 3
-        static let previewRoute: CGFloat = 1.8
+        static let boundary: CGFloat = 0.5
+        static let activeRouteHalo: CGFloat = 9
+        static let activeRoute: CGFloat = 5
+        static let plannedRoute: CGFloat = 4
     }
 
     var cityNodes: [CityID: MapCityNode] = [:]
@@ -65,18 +61,16 @@ final class GameMapScene: SKScene {
     /// an unchanged scene 30 times a second is pure heat, so the view drops to
     /// `idleFramesPerSecond` once nothing has happened for `idleDelay`.
     enum FrameRate {
-        static let active = 30
-        static let idle = 8
+        static let active = 60
+        static let idle = 10
         /// Grace period before sleeping, long enough to cover the gap between
         /// one-second simulation ticks without flapping.
         static let idleDelay: TimeInterval = 1.4
     }
 
-    /// Identity of the last semantic-zoom pass. City label and badge visibility
-    /// is recomputed only when one of these actually changes; the zoom step is
-    /// quantized so a pinch reads as continuous while a still camera does no work.
+    /// Identity of the last city-detail pass. Geography and city detail stay
+    /// stable while zooming; only selection and ownership change it.
     struct SemanticZoomKey: Equatable {
-        let zoomStep: Int
         let selected: CityID?
         let hq: CityID?
         let highlightsStarters: Bool
@@ -102,20 +96,24 @@ final class GameMapScene: SKScene {
     let majorCityIDs: Set<CityID>
     let regionalCityIDs: Set<CityID>
 
-    init(catalog: GameCatalog, projection: MapProjection, geography: MapGeographyDefinition) {
+    init(
+        catalog: GameCatalog,
+        projection: MapProjection,
+        boundaryAtlas: MapBoundaryAtlas
+    ) {
         self.catalog = catalog
         self.projection = projection
-        self.geography = geography
+        self.boundaryAtlas = boundaryAtlas
         let worldBounds = Self.makeWorldBounds(
             catalog: catalog,
             projection: projection,
-            geography: geography
+            board: .bundled
         )
-        let navigationPadding = max(worldBounds.width, worldBounds.height) * 0.75
+        let boardPadding = max(worldBounds.width, worldBounds.height) * 0.12
         self.worldBounds = worldBounds
         self.cameraBounds = worldBounds.insetBy(
-            dx: -navigationPadding,
-            dy: -navigationPadding
+            dx: -boardPadding,
+            dy: -boardPadding
         )
         let citiesByPopulation = catalog.cities.sorted {
             $0.population == $1.population
@@ -141,7 +139,7 @@ final class GameMapScene: SKScene {
     override func didMove(to view: SKView) {
         view.ignoresSiblingOrder = true
         view.shouldCullNonVisibleNodes = true
-        // Strategic map: 30 fps is the ceiling, not the resting rate.
+        // SpriteKit interpolates simulation ticks at 60 fps for smooth fleets.
         view.preferredFramesPerSecond = FrameRate.active
         noteActivity()
         if !hasFittedCamera { applyCameraFocus(animated: false) }
@@ -211,15 +209,15 @@ final class GameMapScene: SKScene {
         self.highlightsStarterCities = highlightsStarterCities
         self.cameraFocus = cameraFocus
         self.accentColor = UIColor(hex: accentColorHex)
-        loadedRouteNode.strokeColor = accentColor
+        activeRouteNode.strokeColor = accentColor
+        activeRouteHaloNode.strokeColor = accentColor.withAlphaComponent(0.18)
         plannedRouteNode.strokeColor = accentColor.withAlphaComponent(0.78)
-        previewRouteNode.strokeColor = accentColor.withAlphaComponent(0.7)
         updateCityStyles()
         updateVehicleStyles()
         updatePlannedVisitStyles()
         if framingChanged, size.width > 1, size.height > 1 {
-            // Spot-job / route previews reframe. Returning to `.free` keeps the
-            // camera where the player left it (including after leaving a preview).
+            // Route previews reframe. Returning to `.free` keeps the camera
+            // where the player left it.
             if case .free = cameraFocus, hasFittedCamera {
                 // Keep current camera.
             } else {

@@ -348,7 +348,7 @@ struct RouteBuilderView: View {
             } else if isWindingDown(route) {
                 statusNotice(
                     symbol: "clock.arrow.trianglehead.counterclockwise.rotate.90",
-                    text: "Vehicles are finishing committed freight. Editing unlocks when they are idle.",
+                    text: "Vehicles are finishing loaded freight. Editing unlocks when they are idle.",
                     color: Theme.warning
                 )
                 .padding(.horizontal, 14)

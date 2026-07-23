@@ -21,9 +21,6 @@ struct MapVehiclePopup: View {
     private var type: VehicleTypeDefinition? {
         vehicle.flatMap { session.catalog.vehicleType($0.typeID) }
     }
-    private var job: ActiveJob? {
-        session.state?.activeJobs.first { $0.vehicleID == vehicleID }
-    }
     private var run: RouteRun? {
         session.state?.routeRun(for: vehicleID)
     }
@@ -35,7 +32,7 @@ struct MapVehiclePopup: View {
         guard let run, let route, route.stops.indices.contains(run.stopIndex) else { return nil }
         return route.stops[run.stopIndex]
     }
-    private var isActive: Bool { run != nil || job != nil }
+    private var isActive: Bool { run != nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -83,19 +80,10 @@ struct MapVehiclePopup: View {
             switch run.phase {
             case .traveling: return String(localized: "On route")
             case .servicing: return serviceStatus
-            case .waiting:
-                return waitingForCargo
-                    ? String(localized: "Waiting for cargo")
-                    : String(localized: "Waiting")
+            case .waiting: return String(localized: "Waiting")
             }
         }
-        guard let job else { return String(localized: "Idle") }
-        switch job.phase {
-        case .deadheading: return String(localized: "To pickup")
-        case .loading: return String(localized: "Loading")
-        case .enRoute: return String(localized: "On route")
-        case .unloading: return String(localized: "Unloading")
-        }
+        return String(localized: "Idle")
     }
 
     private var subtitle: String {
@@ -111,26 +99,7 @@ struct MapVehiclePopup: View {
                 let eta = remainingTime(until: run.phaseEndsAt)
                 return "\(serviceStatus) in \(to) · \(eta) left"
             case .waiting:
-                return waitingForCargo
-                    ? String(localized: "Waiting for cargo in \(to)")
-                    : String(localized: "Waiting in \(to)")
-            }
-        }
-        if let job, let clock = session.state?.clock {
-            let eta = Format.duration(minutes: max(0, clock.minutes(until: job.phaseEndsAt)))
-            switch job.phase {
-            case .deadheading:
-                let from = session.cityName(vehicle.cityID)
-                let to = session.cityName(job.offer.origin)
-                return String(localized: "\(from) → \(to) · \(eta) left")
-            case .loading:
-                return String(localized: "Loading in \(session.cityName(job.offer.origin)) · \(eta) left")
-            case .enRoute:
-                let from = session.cityName(job.offer.origin)
-                let to = session.cityName(job.offer.destination)
-                return String(localized: "\(from) → \(to) · \(eta) left")
-            case .unloading:
-                return String(localized: "Unloading in \(session.cityName(job.offer.destination)) · \(eta) left")
+                return String(localized: "Waiting in \(to)")
             }
         }
         let city = session.catalog.city(vehicle.cityID)?.name ?? ""
@@ -165,33 +134,6 @@ struct MapVehiclePopup: View {
                     items.append(.init(text: String(localized: "Empty"), emphasized: false))
                 }
             }
-        } else if let job {
-            switch job.phase {
-            case .deadheading:
-                items.append(.init(text: String(localized: "Empty"), emphasized: false))
-            case .loading:
-                items.append(.init(
-                    text: String(localized: "Loading \(Format.mass(kg: job.offer.load.massKg))"),
-                    emphasized: true
-                ))
-            case .enRoute, .unloading:
-                items.append(.init(text: Format.mass(kg: job.offer.load.massKg), emphasized: true))
-            }
-            if let product = session.catalog.product(job.offer.productID) {
-                items.append(.init(
-                    text: String(localized: String.LocalizationValue(product.name)),
-                    emphasized: false
-                ))
-            }
-            if job.phase == .enRoute || job.phase == .unloading,
-               let type {
-                let fill = job.offer.load.fillRatio(in: type.capacity)
-                let percent = Int((fill * 100).rounded())
-                items.append(.init(
-                    text: String(localized: "\(percent)% full"),
-                    emphasized: false
-                ))
-            }
         } else {
             items.append(.init(text: String(localized: "Find a return load"), emphasized: true))
         }
@@ -200,13 +142,6 @@ struct MapVehiclePopup: View {
 
     private var serviceStatus: String {
         currentStop?.task.activityLabel ?? String(localized: "Servicing")
-    }
-
-    private var waitingForCargo: Bool {
-        guard let run, run.phase == .waiting,
-              let currentStop,
-              case .pickupContract(let contractID) = currentStop.task else { return false }
-        return session.state?.activeContract(contractID) != nil
     }
 
     private func remainingTime(until end: GameTime) -> String {

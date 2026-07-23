@@ -82,7 +82,7 @@ enum Format {
     /// What installing this module lets the site do.
     static func moduleSummary(_ kind: FacilityModuleKind) -> String {
         switch kind {
-        case .office: return String(localized: "Your presence here: sign contracts, and build the rest of the site")
+        case .office: return String(localized: "Your local presence: build and manage the rest of the site")
         case .warehouse: return String(localized: "Store and consolidate freight — and take loading docks")
         case .dock: return String(localized: "Warehouse equipment: load and unload trucks faster")
         case .racking: return String(localized: "Shelving: more tonnage in the same warehouse")
@@ -134,14 +134,8 @@ extension LogEntry {
         case .vehiclePurchased(let typeID, let city):
             let typeName = catalog.vehicleType(typeID)?.name ?? typeID.rawValue
             return String(localized: "Purchased \(String(localized: String.LocalizationValue(typeName))) in \(cityName(city)).")
-        case .jobAccepted(_, let origin, let destination):
-            return String(localized: "Accepted job: \(cityName(origin)) → \(cityName(destination)).")
         case .jobPickedUp(_, let origin, let destination):
             return String(localized: "Picked up cargo: \(cityName(origin)) → \(cityName(destination)).")
-        case .jobDelivered(_, let destination, let revenue, let cost):
-            return String(localized: "Delivered in \(cityName(destination)): \(Format.money(revenue)) revenue, \(Format.money(cost)) cost.")
-        case .contractSigned(_, let origin, let destination):
-            return String(localized: "Signed contract: \(cityName(origin)) → \(cityName(destination)).")
         case .vehicleAssignedToRoute(let vehicleID, _):
             return String(localized: "Vehicle #\(vehicleID.rawValue) assigned to a route.")
         case .vehicleUnassignedFromRoute(let vehicleID, _):
@@ -152,12 +146,6 @@ extension LogEntry {
             return String(localized: "Route stopped.")
         case .routeShipmentDelivered(_, _, let destination, let revenue):
             return String(localized: "Route delivery in \(cityName(destination)): \(Format.money(revenue)) revenue.")
-        case .routeShipmentSkipped:
-            return String(localized: "A route pickup was skipped (cargo missing or vehicle full).")
-        case .contractShipmentMissed(_, let penalty):
-            return String(localized: "Contract shipment missed. Compensation paid: \(Format.money(penalty)).")
-        case .contractEnded(_, let completed, let missed):
-            return String(localized: "Contract ended: \(completed) delivered, \(missed) missed.")
         case .facilityConstructionStarted(_, let kind, let city, let level):
             return String(localized: "\(Format.moduleName(kind)) level \(level) started in \(cityName(city)).")
         case .facilityCompleted(_, let kind, let city, let level):
@@ -170,10 +158,6 @@ extension LogEntry {
             return String(localized: "Collected \(parcels) parcel(s) (\(Format.mass(kg: massKg))) from the \(cityName(city)) warehouse.")
         case .warehouseFull(let city, let refusedParcels):
             return String(localized: "The \(cityName(city)) warehouse is full — \(refusedParcels) parcel(s) stayed on the vehicle.")
-        case .contractCancellationRequested:
-            return String(localized: "Contract closing — no new loads, committed freight still runs.")
-        case .routeNeedsReview:
-            return String(localized: "A contract ended — its route keeps running on spot freight. Edit the dead stops.")
         }
     }
 }

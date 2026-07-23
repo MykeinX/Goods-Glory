@@ -2,13 +2,13 @@
 //  Facility.swift
 //  Goods&Glory
 //
-//  One site per city, specialised by the modules installed on it (GDD K-011).
+//  One site per city, specialised by the modules installed on it.
 //
 //  "Branch" and "warehouse" are no longer separate buildings competing for the
 //  same plot — they are capabilities of the same site:
 //
-//  - office:    commercial presence. Unlocks contract business in its city and
-//               scales how many lanes that city offers. Holds no cargo.
+//  - office:    commercial presence and the root of a company site. Holds no
+//               cargo.
 //  - warehouse: physical cargo node. Accepts, holds and dispatches freight,
 //               enabling multi-stage transport instead of point-to-point hauls.
 //  - dock:      concurrent handling. Raises how fast the site turns vehicles
@@ -132,12 +132,6 @@ extension GameState {
         facility(in: cityID)?.module(kind)
     }
 
-    /// Contract business requires a finished office. The HQ office is created
-    /// at founding and is operational immediately.
-    func hasOperationalOffice(in cityID: CityID) -> Bool {
-        facility(in: cityID)?.operationalModule(.office, at: clock) != nil
-    }
-
     func hasOperationalWarehouse(in cityID: CityID) -> Bool {
         facility(in: cityID)?.operationalModule(.warehouse, at: clock) != nil
     }
@@ -149,12 +143,5 @@ extension GameState {
         guard let facility = facility(in: cityID),
               facility.operationalModule(.warehouse, at: clock) != nil else { return nil }
         return facility
-    }
-
-    /// Cities where the player may sign contracts, in stable catalog order.
-    var contractCities: [CityID] {
-        facilities
-            .filter { $0.operationalModule(.office, at: clock) != nil }
-            .map(\.cityID)
     }
 }

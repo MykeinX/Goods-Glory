@@ -34,9 +34,9 @@ struct SaveSummary: Equatable, Sendable {
 }
 
 struct SaveRepository {
-    /// v9 drops `ActiveJob.route` / `deadheadRoute` — full road traversal lists
-    /// that were written into every save and read by nothing.
-    static let currentSaveVersion = 18
+    /// v19 removes the legacy agreement and job-board state. Older snapshots
+    /// are intentionally discarded because the prototype has no migration chain.
+    static let currentSaveVersion = 19
 
     private let fileURL: URL
 

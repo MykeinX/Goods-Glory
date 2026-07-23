@@ -11,7 +11,7 @@ import Foundation
 extension SimulationEngine {
     // MARK: - Route runner
 
-    /// Distant sentinel for waits with no timer (cargo not due yet).
+    /// Distant sentinel for warehouse waits with no timer.
     static let waitSentinel = GameTime(totalMinutes: Int.max / 4)
     /// Retry delay when a lap makes no progress or a leg has no road.
     static let idleRetryMinutes = 60
@@ -19,10 +19,8 @@ extension SimulationEngine {
     /// Spawns runs for idle vehicles on running routes and re-evaluates
     /// sentinel waits. Called from the event loop and route commands.
     func syncRouteRuns(state: inout GameState) {
-        // `isVehicleIdle` rescans activeJobs and routeRuns, so calling it per
-        // assigned vehicle made this O(fleet × (jobs + runs)) on every pass of
-        // the advance loop. The busy set is computed once and updated as runs
-        // are spawned, which keeps the same "already busy" semantics.
+        // The busy set is computed once and updated as runs are spawned, so the
+        // advance loop never rescans all runs once per assigned vehicle.
         var busy = state.busyVehicleIDs()
         for route in state.routes where route.isRunning && !route.stops.isEmpty {
             for vehicleID in route.vehicleIDs where !busy.contains(vehicleID) {
@@ -236,10 +234,7 @@ extension SimulationEngine {
             run.claimedShipmentIDs = shipmentIDs
             state.routeRuns[runIndex] = run
         }
-        func skip(loggingJob jobID: JobID? = nil) {
-            if let jobID {
-                state.appendLog(.routeShipmentSkipped(routeID: route.id, jobID: jobID))
-            }
+        func skip() {
             state.routeRuns[runIndex] = run
             advanceToNextStop(runID: runID, state: &state)
         }
@@ -267,163 +262,19 @@ extension SimulationEngine {
         case .travel:
             skip()
 
-        case .pickupShipment(let jobID):
-            let claimedByAnotherRun = state.routeRuns.contains {
-                $0.id != runID && $0.claimedShipmentIDs.contains(jobID)
-            }
-            guard !run.isWindingDown,
-                  let shipment = state.shipment(jobID),
-                  shipment.loadedVehicleID == nil,
-                  !claimedByAnotherRun else {
-                skip()
-                return
-            }
-            // The parcel may be at its origin address or resting in this
-            // city's warehouse after an earlier leg — both are collectable.
-            let isHere = shipment.location == .address(stop.cityID)
-                || state.warehouseSite(in: stop.cityID).map { shipment.location == .warehouse($0.id) } == true
-            guard isHere else {
-                skip(loggingJob: jobID)
-                return
-            }
-            guard combinedLoad(state.cargoLoad(of: vehicle.id), shipment.offer.load)
-                .fits(in: vehicleType.capacity) else {
-                skip(loggingJob: jobID)
-                return
-            }
-            startService(
-                minutes: handlingMinutes(
-                    loading: true,
-                    massKg: shipment.offer.load.massKg,
-                    at: stop.cityID,
-                    state: state
-                ),
-                claiming: [jobID]
-            )
-
-        case .pickupContract(let contractID):
-            guard !run.isWindingDown, state.activeContract(contractID) != nil else {
-                skip()
-                return
-            }
-            // Fill the vehicle, do not take one parcel and drive off. Loading a
-            // single parcel into a semi meant three quarters of every trip was
-            // paid for and empty — the surest way to lose money on a contract.
-            // Filling here is also what makes a bigger truck, or one truck
-            // serving two contracts at the same dock, actually pay off.
-            let pending = state.offers
-                .filter { $0.source == .contract && $0.contractID == contractID && $0.origin == stop.cityID }
-                .sorted { ($0.expiresAt, $0.id.rawValue) < ($1.expiresAt, $1.id.rawValue) }
-            guard !pending.isEmpty else {
-                waitForCargo()
-                return
-            }
-            var running = state.cargoLoad(of: vehicle.id)
-            var claimed: [JobID] = []
-            for offer in pending {
-                let combined = combinedLoad(running, offer.load)
-                guard combined.fits(in: vehicleType.capacity) else { continue }
-                running = combined
-                claimed.append(offer.id)
-            }
-            guard !claimed.isEmpty else {
-                // Already full from an earlier stop: come back next lap.
-                skip(loggingJob: pending[0].id)
-                return
-            }
-            // Claim now so the obligations cannot expire mid-loading.
-            let claimedSet = Set(claimed)
-            for offer in pending where claimedSet.contains(offer.id) {
-                state.shipments.append(Shipment(
-                    id: offer.id,
-                    offer: offer,
-                    location: .address(offer.origin),
-                    assignedRouteID: route.id
-                ))
-            }
-            state.offers.removeAll { claimedSet.contains($0.id) }
-            startService(
-                minutes: handlingMinutes(
-                    loading: true,
-                    massKg: shipmentMass(of: claimed, state: state),
-                    at: stop.cityID,
-                    state: state
-                ),
-                claiming: claimed
-            )
-
         case .pickupLane(let laneID):
             guard !run.isWindingDown, let lane = catalog.lane(laneID),
                   lane.originCityID == stop.cityID else {
                 skip()
                 return
             }
-            // Committed freight first. A contract is a reserved share of this
-            // very lane, so a route already serving the lane is exactly what
-            // should be carrying it — requiring a separate `pickupContract`
-            // stop for the same dock was the reason signing a contract for
-            // freight you already hauled made the board report it uncovered.
-            let committed = claimCommittedParcels(
-                laneID: laneID,
-                at: stop.cityID,
-                vehicle: vehicle,
-                vehicleType: vehicleType,
-                routeID: route.id,
-                state: &state
-            )
-            // Then whatever else is waiting, up to remaining capacity — but not
-            // the room the route still owes to committed freight.
-            //
-            // A route serving several lanes out of one city visits them stop by
-            // stop. Topping the truck up with spot at the first stop filled it
-            // to 100%, and a commitment waiting at the next stop could then
-            // never fit: one contract on this lane was posted, penalised and
-            // re-posted for a week without a single parcel ever being lifted.
-            // Reserving the room first is what makes an SLA an SLA.
-            let stillOwed = committedRoomStillNeeded(
-                route: route,
-                at: stop.cityID,
-                excluding: Set(committed),
-                capacity: vehicleType.capacity,
-                state: state
-            )
-            // If a commitment is still standing on this dock unlifted, this
-            // truck takes no spot freight at all.
-            //
-            // Reserving *room* was not enough. A small commitment that cannot
-            // fit beside a big one is passed over lap after lap, and each lap
-            // the truck fills the gap with spot — so the room never appears and
-            // the parcel ages out, every cycle, penalty included. Refusing spot
-            // while anything is owed here means the next truck arrives empty
-            // enough to take it. Spot freight is always replaceable; a
-            // commitment has a deadline and a fine attached.
-            let owesMore = stillOwed.massKg > 0
-            let claimed = committed + (owesMore ? [] : claimLaneParcels(
+            let claimed = claimLaneParcels(
                 lane: lane,
                 vehicle: vehicle,
                 vehicleType: vehicleType,
                 routeID: route.id,
-                reservedLoad: shipmentLoad(of: committed, state: state),
                 state: &state
-            ))
-            // Logged only when the truck leaves this stop with nothing: that is
-            // the case a reader needs explained. When it did take the committed
-            // parcel the `SLA` line already says so, and one line per lane stop
-            // buried the log in five identical entries.
-            // One line per city visit, not per lane stop. A route working six
-            // lanes out of one dock wrote six identical entries in the same
-            // minute, which buried everything around them.
-            if owesMore, committed.isEmpty, run.lastHoldNotedAt != state.clock {
-                state.recordDebug(
-                    .running,
-                    "HOLD  r\(route.id.rawValue) v\(vehicle.id.rawValue) \(short(stop.cityID)) "
-                        + "took no spot: \(kg(stillOwed.massKg)) of committed freight waits for room"
-                )
-                run.lastHoldNotedAt = state.clock
-                if let index = state.routeRuns.firstIndex(where: { $0.id == run.id }) {
-                    state.routeRuns[index].lastHoldNotedAt = state.clock
-                }
-            }
+            )
             guard !claimed.isEmpty else {
                 // Nothing waiting (or no room left). Move on — parking for the
                 // next accrual tick left trucks idle for hours; the next lap
@@ -440,45 +291,6 @@ extension SimulationEngine {
                     state: state
                 ),
                 claiming: claimed
-            )
-
-        case .deliverShipment(let jobID):
-            guard let shipment = state.shipment(jobID),
-                  shipment.loadedVehicleID == vehicle.id else {
-                skip()
-                return
-            }
-            guard shipment.isDeliverable(at: stop.cityID) else {
-                skip(loggingJob: jobID)
-                return
-            }
-            startService(
-                minutes: handlingMinutes(
-                    loading: false,
-                    massKg: shipment.offer.load.massKg,
-                    at: stop.cityID,
-                    state: state
-                ),
-                claiming: [jobID]
-            )
-
-        case .deliverContract(let contractID):
-            let deliverable = state.shipments.filter {
-                $0.loadedVehicleID == vehicle.id
-                    && $0.offer.contractID == contractID
-                    && $0.offer.destination == stop.cityID
-            }
-            guard !deliverable.isEmpty else {
-                skip()
-                return
-            }
-            startService(
-                minutes: handlingMinutes(
-                    loading: false,
-                    massKg: deliverable.reduce(0) { $0 + $1.offer.load.massKg },
-                    at: stop.cityID,
-                    state: state
-                )
             )
 
         case .deliverAll:
@@ -610,11 +422,7 @@ extension SimulationEngine {
             // load with no delivery stop). Forfeit it and release the vehicle
             // so cancellation cannot loop forever.
             if run.isWindingDown {
-                let stuck = state.shipments
-                    .filter { $0.loadedVehicleID == run.vehicleID }
-                    .sorted { $0.id.rawValue < $1.id.rawValue }
                 state.shipments.removeAll { $0.loadedVehicleID == run.vehicleID }
-                for shipment in stuck { detachShipment(shipment, state: &state) }
                 state.routeRuns.remove(at: runIndex)
                 return
             }
@@ -646,11 +454,4 @@ extension SimulationEngine {
     func combinedLoad(_ lhs: LoadSize, _ rhs: LoadSize) -> LoadSize {
         LoadSize(massKg: lhs.massKg + rhs.massKg, volumeM3: lhs.volumeM3 + rhs.volumeM3)
     }
-
-    /// Flags routes that still carry stops for an ended contract. No route is
-    /// ever closed for losing a contract: the lane keeps running, its lane
-    /// stops keep earning at the spot rate (the base the contract sat on),
-    /// and the falling utilisation is the player's signal to edit or fold it.
-    /// The flag exists because silently skipped stops are how a player ends
-    /// up paying for laps that collect less than they could.
 }

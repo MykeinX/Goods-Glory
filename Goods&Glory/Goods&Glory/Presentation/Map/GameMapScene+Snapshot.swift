@@ -13,40 +13,24 @@ import UIKit
 extension GameMapScene {
     // MARK: - Dynamic layers
 
-    /// Draws live and planned routes as smooth city-to-city quadratic arcs.
-    /// Planned geometry owns a separate layer so it cannot inherit live cargo
-    /// or deadhead styling.
+    /// Batches the deduplicated active network and planned lap into three shape
+    /// nodes total (halo, road and preview), regardless of fleet size.
     func rebuildRouteOverlays(_ overlays: [MapRouteOverlay]) {
-        let loaded = CGMutablePath()
-        let deadhead = CGMutablePath()
+        let active = CGMutablePath()
         let planned = CGMutablePath()
-        let preview = CGMutablePath()
         for overlay in overlays {
             let target: CGMutablePath
             switch overlay.kind {
-            case .loaded: target = loaded
-            case .deadhead: target = deadhead
+            case .active: target = active
             case .planned: target = planned
-            case .preview: target = preview
             }
-            // The adapter already produced the exact corridor polyline the
-            // vehicles ride. Drawing anything else here — as the old quad-curve
-            // reconstruction did — puts the truck beside its own route line.
             let anchors = overlay.anchors
             guard anchors.count >= 2 else { continue }
             target.addOpenPolyline(anchors)
         }
-        loadedRouteNode.path = loaded
-        // Dash the deadhead arc for the empty-return look.
-        deadheadRouteNode.path = deadhead.copy(
-            dashingWithPhase: 0,
-            lengths: [StrokeWidth.deadheadRoute * 1.6, StrokeWidth.deadheadRoute * 2.4]
-        )
+        activeRouteHaloNode.path = active
+        activeRouteNode.path = active
         plannedRouteNode.path = planned
-        previewRouteNode.path = preview.copy(
-            dashingWithPhase: 0,
-            lengths: [StrokeWidth.previewRoute * 2.2, StrokeWidth.previewRoute * 2.8]
-        )
     }
 
     func rebuildPlannedVisits(_ markers: [MapPlannedVisitMarker]) {
@@ -141,7 +125,7 @@ extension GameMapScene {
     }
 
     /// Restack name plates from live camera scale so labels lift as soon as
-    /// their capsules nest (~18%), not only when trucks share a pixel.
+    /// their capsules overlap, not only when vehicles share an exact point.
     func updateVehicleLabelStacks() {
         defer { updateVehicleZoom() }
         guard vehicleMarkers.count > 1 else {
@@ -152,7 +136,9 @@ extension GameMapScene {
         }
         let zoom = vehicleSemanticZoom(zoomOut: zoomOutAmount)
         let nodeScale = cameraNode.xScale * zoom.scale
-        let positions = vehicleMarkers.map { (id: $0.key, position: displayPosition(for: $0.value)) }
+        let positions = vehicleMarkers.map {
+            (id: $0.key, position: displayPosition(for: $0.value))
+        }
         let stacks = MapSceneAdapter.VehicleLabelStacking.indices(
             positions: positions,
             nodeScale: nodeScale
@@ -170,6 +156,7 @@ extension GameMapScene {
             position: marker.position,
             headingRadians: marker.headingRadians,
             isMoving: marker.isMoving,
+            isLoaded: marker.isLoaded,
             serviceProgress: marker.serviceProgress,
             labelStackIndex: stack
         )
@@ -198,13 +185,11 @@ extension GameMapScene {
         updateSemanticZoom()
     }
 
-    /// Inputs that decide every city's on-screen size and label opacity. Zoom is
-    /// quantized so a pinch still reads as continuous while a still camera
-    /// produces zero work.
+    /// City hierarchy is stable at every zoom. Zooming changes framing, not the
+    /// amount of map data, which keeps the surface game-like instead of turning
+    /// it into a progressively revealed navigation map.
     func updateSemanticZoom() {
-        let zoomOut = zoomOutAmount
         let key = SemanticZoomKey(
-            zoomStep: Int((zoomOut * 400).rounded()),
             selected: selectedCityID,
             hq: hqCityID,
             highlightsStarters: highlightsStarterCities
@@ -224,10 +209,26 @@ extension GameMapScene {
             } else {
                 importance = .local
             }
+            let hasGameplayState = idleFleetByCity[city.id, default: 0] > 0
+                || facilitiesByCity[city.id] != nil
+                || attentionByCity[city.id] != nil
+            let scale: CGFloat
+            let showsLabelByImportance: Bool
+            switch importance {
+            case .major:
+                scale = 0.72
+                showsLabelByImportance = true
+            case .regional:
+                scale = 0.56
+                showsLabelByImportance = false
+            case .local:
+                scale = 0.44
+                showsLabelByImportance = false
+            }
             cityNodes[city.id]?.setSemanticZoom(
-                markerScale: markerScale(zoomOut: zoomOut, importance: importance, isEmphasized: isEmphasized),
+                markerScale: isEmphasized ? 1 : scale,
                 markerAlpha: 1,
-                labelAlpha: labelAlpha(zoomOut: zoomOut, importance: importance, isEmphasized: isEmphasized)
+                labelAlpha: isEmphasized || showsLabelByImportance || hasGameplayState ? 1 : 0
             )
         }
     }
@@ -244,57 +245,6 @@ extension GameMapScene {
         let maxScale = cameraScaleRange.upperBound
         let span = max(maxScale - minScale, 0.0001)
         return ((cameraNode.xScale - minScale) / span).clamped(to: 0...1)
-    }
-
-    /// Counter-scaled cities stay ~constant on screen unless this shrinks them
-    /// as the camera pulls back — small dots at full zoom-out.
-    func markerScale(
-        zoomOut: CGFloat,
-        importance: CityImportance,
-        isEmphasized: Bool
-    ) -> CGFloat {
-        let closeScale: CGFloat = isEmphasized ? 1.20 : 1.08
-        // Pulled well below the previous floor. Cities used to bottom out near
-        // a third of their close size, which at full zoom-out still read as
-        // buttons crowding the continent rather than points on it.
-        let farScale: CGFloat
-        switch importance {
-        case .local: farScale = isEmphasized ? 0.22 : 0.14
-        case .regional: farScale = isEmphasized ? 0.27 : 0.18
-        case .major: farScale = isEmphasized ? 0.34 : 0.24
-        }
-        // Shrinking starts immediately and eases the whole way, so the map
-        // opens out gradually instead of holding size and then collapsing.
-        let t = smoothstep(zoomOut.clamped(to: 0...1))
-        return closeScale + (farScale - closeScale) * t
-    }
-
-    /// Labels disappear small → large. At full zoom-out every name is gone.
-    func labelAlpha(
-        zoomOut: CGFloat,
-        importance: CityImportance,
-        isEmphasized: Bool
-    ) -> CGFloat {
-        let start: CGFloat
-        let end: CGFloat
-        if isEmphasized {
-            // HQ / selection linger longest, but still clear by full zoom-out.
-            start = 0.55
-            end = 0.92
-        } else {
-            switch importance {
-            case .local:
-                start = 0.08
-                end = 0.36
-            case .regional:
-                start = 0.28
-                end = 0.58
-            case .major:
-                start = 0.45
-                end = 0.78
-            }
-        }
-        return 1 - smoothstep(((zoomOut - start) / max(end - start, 0.0001)).clamped(to: 0...1))
     }
 
     /// Vehicle appearance across the zoom range.
@@ -325,13 +275,12 @@ extension GameMapScene {
     static func makeWorldBounds(
         catalog: GameCatalog,
         projection: MapProjection,
-        geography: MapGeographyDefinition
+        board: MapBoardSilhouette
     ) -> CGRect {
-        // Borders are dense polylines; land/water already define the globe
-        // extent, so skip them here to keep scene init cheap.
+        // Camera fitting follows the authored game board, not detailed source
+        // geography. This keeps the composition identical to the supplied art.
         let points = catalog.cities.map(projection.point(for:))
-            + geography.landMasses.flatMap(\.points).map(projection.point(for:))
-            + geography.waterBodies.flatMap(\.points).map(projection.point(for:))
+            + board.landMasses.flatMap(\.points).map(projection.point(for:))
         guard let first = points.first else { return CGRect(x: -100, y: -100, width: 200, height: 200) }
         var minX = first.x, maxX = first.x, minY = first.y, maxY = first.y
         for point in points.dropFirst() {

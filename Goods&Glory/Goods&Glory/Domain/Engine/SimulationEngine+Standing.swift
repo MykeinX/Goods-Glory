@@ -2,8 +2,7 @@
 //  SimulationEngine+Standing.swift
 //  Goods&Glory
 //
-//  Costs that accrue whether or not anything moves, plus the expiry and
-//  penalty settlement of obligations nobody collected.
+//  Costs that accrue whether or not anything moves.
 //
 
 import Foundation
@@ -55,40 +54,4 @@ extension SimulationEngine {
                 + "→ \(money(charge))"
         )
     }
-
-    // MARK: - Spot offer generation
-
-    func removeExpiredOffers(state: inout GameState) {
-        let expired = state.offers.filter { $0.expiresAt <= state.clock }
-        guard !expired.isEmpty else { return }
-        state.offers.removeAll { $0.expiresAt <= state.clock }
-        // Contract shipments are obligations: missing the deadline costs compensation.
-        for offer in expired where offer.source == .contract {
-            chargeMissedShipment(offer: offer, state: &state)
-        }
-    }
-
-    func chargeMissedShipment(offer: JobOffer, state: inout GameState) {
-        guard let contractID = offer.contractID else { return }
-        let percent = Double(catalog.economy.contractPenaltyPercent) / 100
-        let penalty = Money(max(0, (Double(offer.payout) * percent).rounded()))
-        state.cash -= penalty
-        state.stats.totalCost += penalty
-        if let index = state.activeContracts.firstIndex(where: { $0.id == contractID }) {
-            state.activeContracts[index].shipmentsMissed += 1
-            state.activeContracts[index].penaltiesPaid += penalty
-        }
-        state.appendLog(.contractShipmentMissed(contractID: contractID, penalty: penalty))
-        state.recordDebug(
-            .charge,
-            delta: -penalty,
-            "MISS  c\(contractID.rawValue) \(short(offer.origin))→\(short(offer.destination)) "
-                + "\(kg(offer.load.massKg)) penalty \(money(penalty)) (payout was \(money(offer.payout)))"
-        )
-    }
-
-    func removeExpiredContractOffers(state: inout GameState) {
-        state.contractOffers.removeAll { $0.expiresAt <= state.clock }
-    }
-
 }

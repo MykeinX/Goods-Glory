@@ -60,20 +60,6 @@ extension SimulationEngine {
         return index
     }
 
-    /// Adding work is allowed even while a route runs: a live vehicle simply
-    /// picks up the new stop on its lap. Only a route being wound down or
-    /// cancelled is off limits, because its runs are meant to shrink, not grow.
-    func insertableRouteIndex(_ routeID: RouteID, state: GameState) throws -> Int {
-        guard let index = state.routes.firstIndex(where: { $0.id == routeID }) else {
-            throw CommandError.unknownReference
-        }
-        guard state.routes[index].cancellationRequestedAt == nil,
-              state.routes[index].isRunning || state.routeRuns(of: routeID).isEmpty else {
-            throw CommandError.routeIsRunning
-        }
-        return index
-    }
-
     /// Inserts a stop and keeps every live run pointing at the same logical
     /// stop by shifting the indices that sit at or after the insertion point.
     /// This is what makes editing a running route safe.
@@ -93,9 +79,6 @@ extension SimulationEngine {
             throw CommandError.unknownReference
         }
         switch stop.task {
-        case .pickupShipment(let jobID), .deliverShipment(let jobID):
-            // Shipment stops travel in pairs; go through the job detach path.
-            try removeJobFromRoute(jobID: jobID, routeID: routeID, state: &state)
         case .pickupLane(let laneID):
             state.routes[index].stops.removeAll { $0.id == stopID }
             // Pickup created the matching deliverLane(s); drop them too so a
@@ -105,8 +88,7 @@ extension SimulationEngine {
                 candidateLaneIDs: [laneID],
                 state: &state
             )
-        case .travel, .pickupContract, .deliverContract,
-             .dropToWarehouse, .loadFromWarehouse, .deliverAll, .deliverLane:
+        case .travel, .dropToWarehouse, .loadFromWarehouse, .deliverAll, .deliverLane:
             // Standing instructions with no cargo bookkeeping of their own.
             state.routes[index].stops.removeAll { $0.id == stopID }
         }
@@ -157,50 +139,8 @@ extension SimulationEngine {
         }
     }
 
-    func addContractTaskToRoute(
-        routeID: RouteID,
-        visitStopID: Int,
-        contractID: ContractID,
-        action: ContractRouteAction,
-        state: inout GameState
-    ) throws {
-        let routeIndex = try insertableRouteIndex(routeID, state: state)
-        guard let contract = state.activeContract(contractID) else {
-            throw CommandError.unknownReference
-        }
-        let blocks = routeVisitBlocks(state.routes[routeIndex].stops)
-        guard let block = blocks.first(where: { $0.first?.id == visitStopID }),
-              let cityID = block.first?.cityID,
-              let lastStopID = block.last?.id,
-              let insertionIndex = state.routes[routeIndex].stops.firstIndex(where: { $0.id == lastStopID }) else {
-            throw CommandError.unknownReference
-        }
-
-        let task: RouteTask
-        switch action {
-        case .pickup:
-            guard cityID == contract.origin else { throw CommandError.unknownReference }
-            task = .pickupContract(contractID)
-        case .deliver:
-            // Multi-drop contracts deliver to several cities; any of them is
-            // a valid delivery point for this task.
-            guard contract.destinations.contains(where: { $0.cityID == cityID }) else {
-                throw CommandError.unknownReference
-            }
-            task = .deliverContract(contractID)
-        }
-
-        // Repeated taps are harmless and must not create multiple recurring
-        // claims for the same contract action on one route.
-        guard !state.routes[routeIndex].stops.contains(where: {
-            $0.task == task && $0.cityID == cityID
-        }) else { return }
-        let stop = RouteStop(id: state.issueID(), cityID: cityID, task: task)
-        insertRouteStop(stop, at: insertionIndex + 1, routeIndex: routeIndex, state: &state)
-    }
-
-    /// Adds a warehouse or bulk-delivery action to a city visit. These are the
-    /// tasks that turn a point-to-point lane into an actual network.
+    /// Adds a lane, warehouse or bulk-delivery action to a city visit. These
+    /// tasks turn a point-to-point lane into an actual network.
     func addNetworkTaskToRoute(
         routeID: RouteID,
         visitStopID: Int,
@@ -237,7 +177,7 @@ extension SimulationEngine {
             case .warehouse:
                 guard state.warehouseSite(in: cityID) != nil else { throw CommandError.warehouseRequired }
             }
-        case .travel, .pickupShipment, .deliverShipment, .pickupContract, .deliverContract:
+        case .travel:
             throw CommandError.unknownReference
         }
 
@@ -321,36 +261,7 @@ extension SimulationEngine {
             if case .pickupLane(let id) = stop.task { return id }
             return nil
         })
-        let boundJobIDs = Set(block.compactMap { stop -> JobID? in
-            switch stop.task {
-            case .pickupShipment(let jobID), .deliverShipment(let jobID): return jobID
-            case .travel, .pickupContract, .pickupLane, .deliverContract,
-                 .dropToWarehouse, .loadFromWarehouse, .deliverAll, .deliverLane: return nil
-            }
-        })
-        let detached = try boundJobIDs.map { jobID -> Shipment in
-            guard let shipment = state.shipments.first(where: {
-                $0.id == jobID && $0.assignedRouteID == routeID
-            }) else {
-                throw CommandError.unknownReference
-            }
-            guard shipment.loadedVehicleID == nil else { throw CommandError.vehicleBusy }
-            return shipment
-        }.sorted { $0.id.rawValue < $1.id.rawValue }
-
-        state.shipments.removeAll {
-            $0.assignedRouteID == routeID && boundJobIDs.contains($0.id)
-        }
-        state.routes[routeIndex].stops.removeAll { stop in
-            if blockStopIDs.contains(stop.id) { return true }
-            switch stop.task {
-            case .pickupShipment(let jobID), .deliverShipment(let jobID):
-                return boundJobIDs.contains(jobID)
-            case .travel, .pickupContract, .pickupLane, .deliverContract,
-                 .dropToWarehouse, .loadFromWarehouse, .deliverAll, .deliverLane:
-                return false
-            }
-        }
+        state.routes[routeIndex].stops.removeAll { blockStopIDs.contains($0.id) }
         // Same pairing rule as removeRouteStop: deleting the Las Vegas pickup
         // visit must clear Boston's "deliver that product" without removing Boston.
         purgeOrphanedLaneDeliveries(
@@ -358,74 +269,6 @@ extension SimulationEngine {
             candidateLaneIDs: removedLanePickups,
             state: &state
         )
-        for shipment in detached {
-            detachShipment(shipment, state: &state)
-        }
-    }
-
-    /// Accepts a market offer into a route: the cargo starts waiting at its
-    /// origin firm address and pickup + delivery stops append to the lap.
-    func addJobToRoute(offerID: JobID, routeID: RouteID, state: inout GameState) throws {
-        guard let routeIndex = state.routes.firstIndex(where: { $0.id == routeID }),
-              let offerIndex = state.offers.firstIndex(where: { $0.id == offerID }) else {
-            throw CommandError.unknownReference
-        }
-        guard state.routes[routeIndex].cancellationRequestedAt == nil else {
-            throw CommandError.routeIsRunning
-        }
-        let offer = state.offers[offerIndex]
-        guard state.clock < offer.expiresAt else { throw CommandError.offerExpired }
-
-        state.offers.remove(at: offerIndex)
-        state.shipments.append(Shipment(
-            id: offer.id,
-            offer: offer,
-            location: .address(offer.origin),
-            assignedRouteID: routeID
-        ))
-        state.routes[routeIndex].stops.append(contentsOf: [
-            RouteStop(id: state.issueID(), cityID: offer.origin, task: .pickupShipment(offer.id)),
-            RouteStop(id: state.issueID(), cityID: offer.destination, task: .deliverShipment(offer.id))
-        ])
-        state.appendLog(.jobAccepted(jobID: offer.id, origin: offer.origin, destination: offer.destination))
-        syncRouteRuns(state: &state)
-    }
-
-    func removeJobFromRoute(jobID: JobID, routeID: RouteID, state: inout GameState) throws {
-        let routeIndex = try editableRouteIndex(routeID, state: state)
-        guard let shipmentIndex = state.shipments.firstIndex(where: {
-            $0.id == jobID && $0.assignedRouteID == routeID
-        }) else {
-            throw CommandError.unknownReference
-        }
-        guard state.shipments[shipmentIndex].loadedVehicleID == nil else {
-            throw CommandError.vehicleBusy
-        }
-        // Cargo already resting in a warehouse is not lost when its route is
-        // edited: it simply becomes free stock any other route can claim.
-        if state.shipments[shipmentIndex].location.facilityID != nil {
-            state.shipments[shipmentIndex].assignedRouteID = nil
-            state.routes[routeIndex].stops.removeAll {
-                $0.task == .pickupShipment(jobID) || $0.task == .deliverShipment(jobID)
-            }
-            return
-        }
-        let shipment = state.shipments.remove(at: shipmentIndex)
-        state.routes[routeIndex].stops.removeAll {
-            $0.task == .pickupShipment(jobID) || $0.task == .deliverShipment(jobID)
-        }
-        detachShipment(shipment, state: &state)
-    }
-
-    /// Contract obligations return to the market (or settle as missed);
-    /// forfeited spot cargo simply disappears without payment.
-    func detachShipment(_ shipment: Shipment, state: inout GameState) {
-        guard shipment.offer.contractID != nil else { return }
-        if state.clock < shipment.offer.expiresAt {
-            state.offers.append(shipment.offer)
-        } else {
-            chargeMissedShipment(offer: shipment.offer, state: &state)
-        }
     }
 
     func assignVehicleToRoute(routeID: RouteID, vehicleID: VehicleID, state: inout GameState) throws {
@@ -467,14 +310,6 @@ extension SimulationEngine {
         guard !state.routes[index].vehicleIDs.isEmpty else {
             throw CommandError.noVehicleAssigned
         }
-        let pickupContracts = Set(state.routes[index].stops.compactMap { stop -> ContractID? in
-            if case .pickupContract(let contractID) = stop.task { return contractID }
-            return nil
-        })
-        let deliveryContracts = Set(state.routes[index].stops.compactMap { stop -> ContractID? in
-            if case .deliverContract(let contractID) = stop.task { return contractID }
-            return nil
-        })
         // Cargo picked up must have somewhere to go on this same lap: either a
         // matching delivery, a warehouse hand-off, or a catch-all delivery stop.
         let hasHandoff = state.routes[index].stops.contains { stop in
@@ -487,7 +322,7 @@ extension SimulationEngine {
             if case .pickupLane = stop.task { return true }
             return false
         }
-        guard hasHandoff || (!hasLanePickup && pickupContracts.isSubset(of: deliveryContracts)) else {
+        guard hasHandoff || !hasLanePickup else {
             throw CommandError.incompleteRouteTasks
         }
         state.routes[index].isRunning = true
@@ -554,13 +389,7 @@ extension SimulationEngine {
             && state.shipments[shipmentIndex].location.facilityID != nil {
             state.shipments[shipmentIndex].assignedRouteID = nil
         }
-        let orphans = state.shipments
-            .filter { $0.assignedRouteID == routeID }
-            .sorted { $0.id.rawValue < $1.id.rawValue }
         state.shipments.removeAll { $0.assignedRouteID == routeID }
-        for shipment in orphans {
-            detachShipment(shipment, state: &state)
-        }
         state.routes.remove(at: index)
     }
 

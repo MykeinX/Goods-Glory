@@ -25,7 +25,7 @@ struct OperationsNetworkView: View {
             fleetStrip(overview)
 
             if overview.cities.isEmpty {
-                Text("Nothing is moving yet. Take a job from a city on the map.")
+                Text("Nothing is moving yet. Start serving a freight lane from a city on the map.")
                     .font(.gg(12.5, .bold))
                     .foregroundStyle(Theme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

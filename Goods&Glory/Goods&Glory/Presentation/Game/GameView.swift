@@ -3,7 +3,7 @@
 //  Goods&Glory
 //
 //  Main gameplay container. Full-bleed content behind a floating glass tab bar:
-//  Map · Fleet · Jobs · Facilities · Company (Finance lives under Company).
+//  Map · Fleet · Operations · Facilities · Company (Finance lives under Company).
 //
 
 import SwiftUI
@@ -51,13 +51,9 @@ struct GameView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            GameTabBar(selection: $selectedTab, accent: accent, jobsBadge: openOfferCount)
+            GameTabBar(selection: $selectedTab, accent: accent)
         }
         .background(Theme.backgroundTop)
-    }
-
-    private var openOfferCount: Int {
-        session.state?.offers.count ?? 0
     }
 }
 
@@ -66,7 +62,6 @@ struct GameView: View {
 struct GameTabBar: View {
     @Binding var selection: GameTab
     var accent: Color
-    var jobsBadge: Int
 
     private struct Item { let tab: GameTab; let symbol: String; let label: String }
     private let items: [Item] = [
@@ -116,22 +111,11 @@ struct GameTabBar: View {
     private func tabItem(_ item: Item) -> some View {
         let isActive = selection == item.tab
         VStack(spacing: 2) {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: item.symbol)
-                    .font(.system(size: 20, weight: .semibold))
-                    .symbolRenderingMode(.monochrome)
-                    .foregroundStyle(isActive ? accent : Theme.textTertiary)
-                    .frame(width: 28, height: 24)
-                if item.tab == .jobs && jobsBadge > 0 {
-                    Text("\(min(jobsBadge, 99))")
-                        .font(.gg(9.5, .heavy))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 4)
-                        .frame(minWidth: 16, minHeight: 16)
-                        .background(Capsule().fill(Theme.coral))
-                        .offset(x: 9, y: -5)
-                }
-            }
+            Image(systemName: item.symbol)
+                .font(.system(size: 20, weight: .semibold))
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(isActive ? accent : Theme.textTertiary)
+                .frame(width: 28, height: 24)
             Text(item.label)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(isActive ? accent : Theme.textTertiary)

@@ -31,93 +31,6 @@ extension SimulationEngine {
         return max(1, Int((Double(raw) * factor).rounded()))
     }
 
-    /// Lifts a lane's committed contract parcels off this dock and onto the
-    /// vehicle, deadline first, up to what the truck can still take.
-    ///
-    /// Contract freight is a reserved share of a lane, not a separate errand,
-    /// so any route working that lane's dock is entitled to it. The parcels are
-    /// claimed here — turned into shipments and taken off the board — so two
-    /// trucks cannot both promise the same load.
-    func claimCommittedParcels(
-        laneID: LaneID,
-        at cityID: CityID,
-        vehicle: Vehicle,
-        vehicleType: VehicleTypeDefinition,
-        routeID: RouteID,
-        state: inout GameState
-    ) -> [JobID] {
-        let pending = state.offers
-            .filter { $0.source == .contract && $0.origin == cityID && $0.laneID == laneID }
-            .sorted { ($0.expiresAt, $0.id.rawValue) < ($1.expiresAt, $1.id.rawValue) }
-        guard !pending.isEmpty else { return [] }
-
-        var running = state.cargoLoad(of: vehicle.id)
-        var claimed: [JobID] = []
-        for offer in pending {
-            let combined = combinedLoad(running, offer.load)
-            guard combined.fits(in: vehicleType.capacity) else { continue }
-            running = combined
-            claimed.append(offer.id)
-        }
-        guard !claimed.isEmpty else { return [] }
-
-        let claimedSet = Set(claimed)
-        for offer in pending where claimedSet.contains(offer.id) {
-            state.shipments.append(Shipment(
-                id: offer.id,
-                offer: offer,
-                location: .address(offer.origin),
-                assignedRouteID: routeID
-            ))
-        }
-        state.offers.removeAll { claimedSet.contains($0.id) }
-        state.recordDebug(
-            .running,
-            "SLA   r\(routeID.rawValue) v\(vehicle.id.rawValue) \(short(cityID)) "
-                + "took \(claimed.count) committed parcel(s) "
-                + "\(kg(shipmentMass(of: claimed, state: state))) off the lane dock"
-        )
-        return claimed
-    }
-
-    /// Room this route still owes to committed parcels waiting in this city on
-    /// lanes it serves, capped at what one truck could take anyway.
-    ///
-    /// Spot freight and contract freight come off the same dock, so without
-    /// this the truck fills with whatever it meets first and the commitment —
-    /// the load with a penalty attached — is the one left behind.
-    func committedRoomStillNeeded(
-        route: Route,
-        at cityID: CityID,
-        excluding claimed: Set<JobID>,
-        capacity: LoadSize,
-        state: GameState
-    ) -> LoadSize {
-        let lanes = Set(route.coveredLaneIDs)
-        let contracts = Set(route.coveredContractIDs)
-        var needed = LoadSize(massKg: 0, volumeM3: 0)
-        for offer in state.offers
-        where offer.source == .contract
-            && offer.origin == cityID
-            && !claimed.contains(offer.id)
-            && (offer.laneID.map { lanes.contains($0) } ?? false
-                || offer.contractID.map { contracts.contains($0) } ?? false) {
-            let combined = combinedLoad(needed, offer.load)
-            // Reserving more than the truck holds would starve it of everything.
-            guard combined.fits(in: capacity) else { break }
-            needed = combined
-        }
-        return needed
-    }
-
-    /// Combined load of a set of parcels.
-    func shipmentLoad(of ids: [JobID], state: GameState) -> LoadSize {
-        ids.reduce(LoadSize(massKg: 0, volumeM3: 0)) { running, id in
-            guard let shipment = state.shipment(id) else { return running }
-            return combinedLoad(running, shipment.offer.load)
-        }
-    }
-
     /// Mass of a set of parcels — used to size dock time.
     func shipmentMass(of ids: [JobID], state: GameState) -> Int {
         ids.reduce(0) { total, id in
@@ -227,16 +140,6 @@ extension SimulationEngine {
         switch stop.task {
         case .travel:
             break
-        case .pickupShipment, .pickupContract:
-            // Everything claimed at the dock goes on board together.
-            for claimed in run.claimedShipmentIDs {
-                guard let shipmentIndex = state.shipments.firstIndex(where: { $0.id == claimed })
-                else { continue }
-                state.shipments[shipmentIndex].location = .vehicle(vehicle.id)
-                state.shipments[shipmentIndex].assignedRouteID = route.id
-                let offer = state.shipments[shipmentIndex].offer
-                state.appendLog(.jobPickedUp(jobID: claimed, origin: offer.origin, destination: offer.destination))
-            }
         case .pickupLane(let laneID):
             // Freight that arrived while the docks were busy joins this load —
             // the longer, mass-scaled service window is what makes that possible.
@@ -263,20 +166,6 @@ extension SimulationEngine {
                 state.shipments[shipmentIndex].assignedRouteID = route.id
                 let offer = state.shipments[shipmentIndex].offer
                 state.appendLog(.jobPickedUp(jobID: claimed, origin: offer.origin, destination: offer.destination))
-            }
-        case .deliverShipment(let jobID):
-            settleRouteDelivery(jobID: jobID, routeID: route.id, state: &state)
-        case .deliverContract(let contractID):
-            let deliverable = state.shipments
-                .filter {
-                    $0.loadedVehicleID == vehicle.id
-                        && $0.offer.contractID == contractID
-                        && $0.offer.destination == stop.cityID
-                }
-                .map(\.id)
-                .sorted { $0.rawValue < $1.rawValue }
-            for jobID in deliverable {
-                settleRouteDelivery(jobID: jobID, routeID: route.id, state: &state)
             }
         case .deliverAll:
             let deliverable = state.shipments
@@ -499,12 +388,6 @@ extension SimulationEngine {
         state.cash += offer.payout
         state.stats.totalRevenue += offer.payout
         state.stats.deliveredJobs += 1
-        // The company's record with this lane's firms. Contract offers are
-        // built on it: a shipper reserves output for a carrier it has watched
-        // deliver, not for a stranger.
-        if let laneID = offer.laneID {
-            state.stats.deliveredKgByLane[laneID, default: 0] += offer.load.massKg
-        }
         // Cash arrives whole, but the parcel may have changed hands: earlier
         // legs were already credited their share when they handed it over, so
         // this route books only what is left. Across the journey the payout is
@@ -518,14 +401,9 @@ extension SimulationEngine {
             .revenue,
             delta: offer.payout,
             "DELIV r\(routeID.rawValue) \(short(offer.origin))→\(short(offer.destination)) "
-                + "\(offer.source == .contract ? "contract" : "spot") "
                 + "\(kg(offer.load.massKg)) \(km(offer.distanceKm)) "
                 + "rev \(money(offer.payout)) @\(rate(perKm))/km"
         )
-        if let contractID = offer.contractID,
-           let contractIndex = state.activeContracts.firstIndex(where: { $0.id == contractID }) {
-            state.activeContracts[contractIndex].shipmentsCompleted += 1
-        }
         state.shipments.remove(at: index)
         state.appendLog(.routeShipmentDelivered(
             routeID: routeID,

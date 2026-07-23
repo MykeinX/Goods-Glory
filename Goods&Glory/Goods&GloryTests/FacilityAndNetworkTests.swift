@@ -95,27 +95,6 @@ private enum NetFixture {
     /// The derived Alpha → Beta lane (alpha supplies, beta demands).
     static let laneID = LaneID("\(cityA.rawValue).\(product.rawValue).\(cityB.rawValue)")
 
-    /// A ready-made lane parcel waiting at Alpha, for warehouse and routing
-    /// tests that need cargo without driving the whole dock-claim path.
-    static func stagedParcel(id: Int, payout: Money = 1_000, state: GameState) -> JobOffer {
-        JobOffer(
-            id: JobID(rawValue: id),
-            origin: cityA,
-            destination: cityB,
-            productID: product,
-            load: LoadSize(massKg: 1_000, volumeM3: 2),
-            payout: payout,
-            distanceKm: 200,
-            urgency: .normal,
-            source: .lane,
-            contractID: nil,
-            laneID: laneID,
-            originFirmID: nil,
-            destinationFirmID: nil,
-            createdAt: state.clock,
-            expiresAt: state.clock + 2_160
-        )
-    }
 }
 
 // MARK: - Facilities
@@ -123,12 +102,12 @@ private enum NetFixture {
 struct FacilityTests {
     @Test func foundingCreatesAnOperationalHeadquartersBranch() throws {
         let state = NetFixture.newState()
-        let hq = try #require(state.module(.office, in: NetFixture.cityA))
+        let hq = try #require(state.facility(in: NetFixture.cityA))
+        let office = try #require(hq.module(.office))
         #expect(hq.isHeadquarters)
-        #expect(hq.isOperational(at: state.clock))
-        #expect(state.hasOperationalOffice(in: NetFixture.cityA))
+        #expect(office.isOperational(at: state.clock))
         // Nothing is granted anywhere else for free.
-        #expect(!state.hasOperationalOffice(in: NetFixture.cityB))
+        #expect(state.module(.office, in: NetFixture.cityB) == nil)
     }
 
     @Test func facilityPriceDependsOnTheCity() throws {
@@ -171,10 +150,10 @@ struct FacilityTests {
 
         // Under construction: present in state, but grants nothing.
         #expect(state.module(.office, in: NetFixture.cityB) != nil)
-        #expect(!state.hasOperationalOffice(in: NetFixture.cityB))
+        #expect(state.facility(in: NetFixture.cityB)?.operationalModule(.office, at: state.clock) == nil)
 
         engine.advance(&state, by: quote.buildMinutes)
-        #expect(state.hasOperationalOffice(in: NetFixture.cityB))
+        #expect(state.facility(in: NetFixture.cityB)?.operationalModule(.office, at: state.clock) != nil)
 
         // Building twice in the same city is refused rather than double-charged.
         #expect(throws: CommandError.facilityAlreadyExists) {
@@ -192,10 +171,10 @@ struct FacilityTests {
         state.cash += 1_000_000
 
         // Hub has nothing at all.
-        #expect(throws: CommandError.branchRequired) {
+        #expect(throws: CommandError.officeRequired) {
             try engine.apply(.installModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
         }
-        #expect(throws: CommandError.branchRequired) {
+        #expect(throws: CommandError.officeRequired) {
             try engine.apply(.installModule(kind: .dock, cityID: NetFixture.cityH), to: &state)
         }
 
@@ -346,71 +325,6 @@ struct FacilityTests {
         }
     }
 
-    @Test func contractsAreOnlyOfferedFromOfficeCities() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        // Alpha is the HQ branch; Beta has no branch, so no lanes start there.
-        #expect(!state.contractOffers.isEmpty)
-        #expect(state.contractOffers.allSatisfy { $0.origin == NetFixture.cityA })
-
-        // Signing is refused for a city whose branch has gone away.
-        let offer = try #require(state.contractOffers.first)
-        state.facilities.removeAll { $0.cityID == NetFixture.cityA }
-        #expect(throws: CommandError.branchRequired) {
-            try engine.apply(.signContract(offer.id), to: &state)
-        }
-    }
-
-    @Test func contractsStayClosedUntilTheCompanyHasDeliveredSomething() throws {
-        let economy = TestEconomy.make(startingCash: 60_000, contractsUnlockAfterDeliveries: 2)
-        let catalog = try NetFixture.catalog(economy: economy)
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState(economy: economy)
-        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-
-        // A company that has hauled nothing gets no recurring lanes, however
-        // long it sits there.
-        engine.advance(&state, by: 10 * GameState.minutesPerDay)
-        #expect(state.contractOffers.isEmpty)
-
-        // Two completed hauls open the door.
-        state.stats.deliveredJobs = 2
-        engine.advance(&state, by: GameState.minutesPerDay)
-        #expect(!state.contractOffers.isEmpty)
-    }
-
-    @Test func theContractBoardNeverGoesEmptyBetweenRefreshes() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-        engine.advance(&state, by: 0)
-        #expect(!state.contractOffers.isEmpty)
-
-        // Offers must outlive the refresh interval, or the branch's board goes
-        // blank for a day and reads as the game losing them.
-        for _ in 0..<20 {
-            engine.advance(&state, by: catalog.economy.contractOfferIntervalMinutes / 2)
-            #expect(!state.contractOffers.isEmpty)
-        }
-    }
-
-    @Test func branchLevelWidensTheContractMenu() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-        let atLevelOne = engine.contractSlots(in: NetFixture.cityA, state: state)
-
-        let index = try #require(state.facilities.firstIndex { $0.cityID == NetFixture.cityA })
-        state.facilities[index].level = 2
-        let atLevelTwo = engine.contractSlots(in: NetFixture.cityA, state: state)
-
-        #expect(atLevelTwo > atLevelOne)
-    }
 }
 
 // MARK: - Warehouses and multi-stage transport
@@ -440,26 +354,22 @@ struct WarehouseNetworkTests {
         engine.advance(&state, by: 0)
         let warehouse = try makeHubWarehouse(engine: engine, state: &state)
         let vehicle = try #require(state.vehicles.first)
-        let offer = NetFixture.stagedParcel(id: 5_000, state: state)
-        state.offers.append(offer)
-        let expectedRevenue = offer.payout
 
-        // Leg 1: collect at Alpha, hand the parcel over at the hub.
-        // addJobToRoute appends [Alpha pickup, Beta delivery]; the hub visit is
-        // added last and then moved into the middle.
+        // Leg 1: collect lane freight at Alpha, hand it over at the hub.
         try engine.apply(.createRoute(name: "Collection"), to: &state)
         let leg1 = try #require(state.routes.last?.id)
-        try engine.apply(.addJobToRoute(offerID: offer.id, routeID: leg1), to: &state)
+        try engine.apply(.addTravelStop(routeID: leg1, cityID: NetFixture.cityA), to: &state)
+        let alphaVisit = try #require(state.route(leg1)?.stops.first?.id)
         try engine.apply(.addTravelStop(routeID: leg1, cityID: NetFixture.cityH), to: &state)
-        let visits = try #require(state.route(leg1)).stops.map(\.id)
-        #expect(visits.count == 3)
-        try engine.apply(.reorderRouteVisits(
+        let collectionHubVisit = try #require(state.route(leg1)?.stops.last?.id)
+        try engine.apply(.addNetworkTaskToRoute(
             routeID: leg1,
-            orderedVisitIDs: [visits[0], visits[2], visits[1]]
+            visitStopID: alphaVisit,
+            task: .pickupLane(NetFixture.laneID)
         ), to: &state)
         try engine.apply(.addNetworkTaskToRoute(
             routeID: leg1,
-            visitStopID: visits[2],
+            visitStopID: collectionHubVisit,
             task: .dropToWarehouse
         ), to: &state)
         try engine.apply(.assignVehicleToRoute(routeID: leg1, vehicleID: vehicle.id), to: &state)
@@ -469,6 +379,7 @@ struct WarehouseNetworkTests {
         engine.advance(&state, by: 300)
         let stored = state.shipments(storedIn: warehouse.id)
         #expect(stored.count == 1)
+        let expectedRevenue = try #require(stored.first).offer.payout
         // Storing is not selling: no revenue until the parcel reaches Beta.
         #expect(state.stats.deliveredJobs == 0)
         // Stored cargo belongs to the network, not to the route that dropped it.
@@ -483,11 +394,11 @@ struct WarehouseNetworkTests {
         try engine.apply(.createRoute(name: "Distribution"), to: &state)
         let leg2 = try #require(state.routes.last?.id)
         try engine.apply(.addTravelStop(routeID: leg2, cityID: NetFixture.cityH), to: &state)
-        let hubVisit = try #require(state.route(leg2)?.stops.first?.id)
+        let distributionHubVisit = try #require(state.route(leg2)?.stops.first?.id)
         let lot = try #require(state.storageLots(in: warehouse.id).first)
         try engine.apply(.addNetworkTaskToRoute(
             routeID: leg2,
-            visitStopID: hubVisit,
+            visitStopID: distributionHubVisit,
             task: .loadFromWarehouse(lot.key)
         ), to: &state)
         try engine.apply(.addTravelStop(routeID: leg2, cityID: NetFixture.cityB), to: &state)
@@ -519,9 +430,12 @@ struct WarehouseNetworkTests {
                     level: 1, buildCost: 1_000, buildDays: 1, upkeepPerDay: 10,
                     // Room for nothing at all.
                     storageMassKg: 0, storageVolumeM3: 0, docks: 1,
-                    handlingPercent: 100, contractSlotPercent: 100, lanePremiumPercent: 0
+                    handlingPercent: 100, lanePremiumPercent: 0
                 )
-            ]
+            ],
+            dock: TestEconomy.defaultFacilities.dock,
+            racking: TestEconomy.defaultFacilities.racking,
+            forklift: TestEconomy.defaultFacilities.forklift
         )
         let economy = TestEconomy.make(startingCash: 60_000, facilities: tightStorage)
         let catalog = try NetFixture.catalog(economy: economy)
@@ -531,21 +445,21 @@ struct WarehouseNetworkTests {
         engine.advance(&state, by: 0)
         let warehouse = try makeHubWarehouse(engine: engine, state: &state)
         let vehicle = try #require(state.vehicles.first)
-        let offer = NetFixture.stagedParcel(id: 5_000, state: state)
-        state.offers.append(offer)
 
         try engine.apply(.createRoute(name: "Overflow"), to: &state)
         let routeID = try #require(state.routes.last?.id)
-        try engine.apply(.addJobToRoute(offerID: offer.id, routeID: routeID), to: &state)
+        try engine.apply(.addTravelStop(routeID: routeID, cityID: NetFixture.cityA), to: &state)
+        let alphaVisit = try #require(state.route(routeID)?.stops.first?.id)
         try engine.apply(.addTravelStop(routeID: routeID, cityID: NetFixture.cityH), to: &state)
-        let visits = try #require(state.route(routeID)).stops.map(\.id)
-        try engine.apply(.reorderRouteVisits(
+        let hubVisit = try #require(state.route(routeID)?.stops.last?.id)
+        try engine.apply(.addNetworkTaskToRoute(
             routeID: routeID,
-            orderedVisitIDs: [visits[0], visits[2], visits[1]]
+            visitStopID: alphaVisit,
+            task: .pickupLane(NetFixture.laneID)
         ), to: &state)
         try engine.apply(.addNetworkTaskToRoute(
             routeID: routeID,
-            visitStopID: visits[2],
+            visitStopID: hubVisit,
             task: .dropToWarehouse
         ), to: &state)
         try engine.apply(.assignVehicleToRoute(routeID: routeID, vehicleID: vehicle.id), to: &state)
@@ -599,9 +513,6 @@ struct WarehouseNetworkTests {
                 load: LoadSize(massKg: 1000, volumeM3: 2),
                 payout: 100,
                 distanceKm: 200,
-                urgency: .normal,
-                source: .lane,
-                contractID: nil,
                 laneID: nil,
                 originFirmID: nil,
                 destinationFirmID: nil,
@@ -710,421 +621,6 @@ struct LanePricingTests {
     }
 }
 
-// MARK: - Contract archetypes and coverage
-
-struct ContractArchetypeTests {
-    @Test func deliveryWindowIsIndependentOfTheShipmentInterval() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        // A daily cadence on a two-hour cycle must still allow a full run.
-        let window = engine.deliveryWindow(cycleMinutes: 240, interval: GameState.minutesPerDay)
-        #expect(window >= 240)
-        #expect(window > 0)
-
-        // A long cycle drives the window, not the cadence.
-        let longWindow = engine.deliveryWindow(cycleMinutes: 3_000, interval: GameState.minutesPerDay)
-        #expect(longWindow >= 3_000)
-    }
-
-    /// A contract is a relationship, not a listing. A firm reserves part of its
-    /// output for a carrier it has watched deliver — so a lane the company has
-    /// never touched offers nothing, and the share on offer grows with the
-    /// share the company already hauls.
-    @Test func contractsAreOfferedOnlyOnLanesTheCompanyAlreadyHauls() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        // Nothing delivered yet: nobody offers to reserve anything.
-        #expect(state.contractOffers.isEmpty)
-
-        let lane = try #require(catalog.lane(NetFixture.laneID))
-        #expect(engine.servedShareBps(of: lane, state: state) == 0)
-
-        // Now put a real service record on that lane.
-        state.stats.deliveredKgByLane[lane.id] = lane.baseRatePerDayKg
-        let served = engine.servedShareBps(of: lane, state: state)
-        #expect(served > 0)
-
-        engine.replenishContractOffers(state: &state)
-        let offers = state.contractOffers.filter { $0.origin == NetFixture.cityA }
-        #expect(!offers.isEmpty, "a served lane should draw an offer")
-        for offer in offers {
-            for destination in offer.destinations {
-                #expect(destination.laneID == lane.id)
-                // Never more than a little beyond what the company has proven.
-                let ceiling = Int(Double(served) * SimulationEngine.relationshipStretch) + 1
-                #expect(destination.committedShareBps <= ceiling)
-            }
-        }
-    }
-
-    /// A contract does not earn a truck of its own — it reserves part of a lane
-    /// the company already drives past. So the tests are not "does this lane
-    /// pay for a vehicle" (the pre-lane question, which made every honest offer
-    /// read as a loss) but: does signing beat carrying the same freight
-    /// unsigned, and does it stay inside what the world actually produces.
-    @Test func everyPostedLaneBeatsSpotAndFitsInsideItsLane() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        for offer in state.contractOffers {
-            let brief = try #require(engine.brief(for: offer))
-            #expect(brief.contractRevenuePerDay > 0)
-            #expect(brief.contractRevenuePerDay >= brief.spotRevenuePerDay)
-            #expect(brief.committedKgPerDay > 0)
-
-            // The commitment can never promise more than the lanes it names.
-            let laneRate = offer.destinations.reduce(0) { total, destination in
-                total + (catalog.lane(destination.laneID)?.baseRatePerDayKg ?? 0)
-            }
-            #expect(brief.committedKgPerDay <= laneRate)
-
-            // Priced by the class the parcel fits in, not by whatever is parked
-            // in the garage — otherwise the same tonnage is worth more to a
-            // company that happens to own bigger trucks.
-            let pricingType = try #require(catalog.vehicleType(offer.referenceVehicleTypeID))
-            #expect(offer.parcelMassKg <= pricingType.capacity.massKg)
-        }
-        #expect(state.contractOffers.contains { offer in
-            (engine.brief(for: offer)?.premiumPerDay ?? 0) > 0
-        })
-    }
-
-    /// Loading one parcel into a half-empty truck was the single biggest source
-    /// of contract losses: the trip was paid for either way. A dock visit now
-    /// fills the vehicle with whatever that contract has pending.
-    @Test func aContractPickupFillsTheVehicleRatherThanTakingOneParcel() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        // A contract posting three 1000 kg parcels into a 2000 kg van: the van
-        // must leave with two, not one.
-        state.activeContracts.append(ActiveContract(
-            id: ContractID(rawValue: 700),
-            origin: NetFixture.cityA,
-            productID: NetFixture.product,
-            archetype: .laneRecurring,
-            destinations: [
-                ContractDestination(
-                    cityID: NetFixture.cityB, firmID: nil,
-                    laneID: NetFixture.laneID, committedShareBps: 5_000,
-                    shareBps: ContractDestination.fullShareBps,
-                    distanceKm: 200, payoutPerParcel: 400
-                )
-            ],
-            referenceVehicleTypeID: NetFixture.van,
-            parcelMassKg: 1_000,
-            volumePerCycleKg: 3_000,
-            shipmentIntervalMinutes: GameState.minutesPerDay,
-            deliveryWindowMinutes: 2 * GameState.minutesPerDay,
-            signedAt: state.clock,
-            endsAt: state.clock + 30 * GameState.minutesPerDay,
-            nextShipmentAt: state.clock,
-            shipmentsIssued: 0,
-            shipmentsCompleted: 0,
-            shipmentsMissed: 0,
-            penaltiesPaid: 0,
-            cancellationRequestedAt: nil,
-            originFirmID: nil
-        ))
-        engine.advance(&state, by: 1)
-        #expect(state.offers.count { $0.contractID == ContractID(rawValue: 700) } == 3)
-
-        let vehicle = try #require(state.vehicles.first)
-        try engine.apply(
-            .assignVehicleToContract(contractID: ContractID(rawValue: 700), vehicleID: vehicle.id),
-            to: &state
-        )
-        engine.advance(&state, by: 1)
-        let run = try #require(state.routeRun(for: vehicle.id))
-        #expect(run.claimedShipmentIDs.count == 2)
-
-        // After loading, both parcels are aboard and one still waits.
-        engine.advance(&state, by: engine.loadingMinutes(at: NetFixture.cityA))
-        #expect(state.shipments(onBoard: vehicle.id).count == 2)
-        #expect(state.offers.count { $0.contractID == ContractID(rawValue: 700) } == 1)
-    }
-
-    /// A commitment must be worth signing: the same parcel earns more under
-    /// contract than it does unsigned, which is what pays for the SLA and the
-    /// penalty risk that come with it.
-    @Test func aCommittedParcelOutEarnsTheSameParcelOnSpot() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-        engine.advance(&state, by: 0)
-
-        let offer = try #require(state.contractOffers.first)
-        let vanType = try #require(catalog.vehicleType(NetFixture.van))
-        let destination = try #require(offer.destinations.first)
-        let parcel = engine.parcelLoad(productID: offer.productID, massKg: offer.parcelMassKg)
-        let spot = engine.freightPayout(
-            origin: offer.origin,
-            destination: destination.cityID,
-            distanceKm: destination.distanceKm,
-            load: parcel,
-            vehicleType: vanType,
-            state: state
-        )
-        #expect(destination.payoutPerParcel > spot)
-    }
-
-    @Test func archetypesUnlockWithCompanyScale() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-
-        #expect(engine.companyTier(state) == 1)
-        #expect(engine.archetypes(forTier: 1) == [.laneRecurring])
-
-        for index in 0..<5 {
-            state.vehicles.append(Vehicle(
-                id: VehicleID(rawValue: 500 + index),
-                typeID: NetFixture.van,
-                cityID: NetFixture.cityA,
-                assignedJobID: nil,
-                odometerKm: 0
-            ))
-        }
-        #expect(engine.companyTier(state) == 2)
-        #expect(engine.archetypes(forTier: 2).contains(.evergreen))
-        // Bulk work stays locked until there is somewhere to consolidate it.
-        #expect(!engine.archetypes(forTier: 2).contains(.bulkPeriodic))
-        #expect(engine.archetypes(forTier: 4).contains(.multiDrop))
-    }
-
-    @Test func aBulkCyclePostsManyParcelsAtOnce() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-
-        // Hand-built contract: one cycle of 5000 kg in 1000 kg parcels.
-        let contract = ActiveContract(
-            id: ContractID(rawValue: 800),
-            origin: NetFixture.cityA,
-            productID: NetFixture.product,
-            archetype: .bulkPeriodic,
-            destinations: [
-                ContractDestination(
-                    cityID: NetFixture.cityB,
-                    firmID: nil,
-                    laneID: NetFixture.laneID,
-                    committedShareBps: 5_000,
-                    shareBps: ContractDestination.fullShareBps,
-                    distanceKm: 200,
-                    payoutPerParcel: 500
-                )
-            ],
-            referenceVehicleTypeID: NetFixture.van,
-            parcelMassKg: 1_000,
-            volumePerCycleKg: 5_000,
-            shipmentIntervalMinutes: 7 * GameState.minutesPerDay,
-            deliveryWindowMinutes: 3 * GameState.minutesPerDay,
-            signedAt: state.clock,
-            endsAt: state.clock + 30 * GameState.minutesPerDay,
-            nextShipmentAt: state.clock,
-            shipmentsIssued: 0,
-            shipmentsCompleted: 0,
-            shipmentsMissed: 0,
-            penaltiesPaid: 0,
-            cancellationRequestedAt: nil,
-            originFirmID: nil
-        )
-        #expect(contract.parcelsPerCycle == 5)
-        state.activeContracts.append(contract)
-
-        engine.advance(&state, by: 1)
-        let posted = state.offers.filter { $0.contractID == contract.id }
-        #expect(posted.count == 5)
-        #expect(posted.allSatisfy { $0.load.massKg == 1_000 })
-        // Every parcel of a cycle shares one deadline.
-        #expect(Set(posted.map(\.expiresAt)).count == 1)
-    }
-
-    @Test func aMultiDropCycleSplitsVolumeAcrossDestinations() throws {
-        let contract = ContractOffer(
-            id: ContractID(rawValue: 810),
-            origin: NetFixture.cityA,
-            productID: NetFixture.product,
-            archetype: .multiDrop,
-            destinations: [
-                ContractDestination(cityID: NetFixture.cityH, firmID: nil, laneID: NetFixture.laneID, committedShareBps: 5_000, shareBps: 5_000, distanceKm: 100, payoutPerParcel: 300),
-                ContractDestination(cityID: NetFixture.cityB, firmID: nil, laneID: NetFixture.laneID, committedShareBps: 5_000, shareBps: 5_000, distanceKm: 200, payoutPerParcel: 500)
-            ],
-            referenceVehicleTypeID: NetFixture.van,
-            parcelMassKg: 1_000,
-            volumePerCycleKg: 4_000,
-            shipmentIntervalMinutes: 3 * GameState.minutesPerDay,
-            deliveryWindowMinutes: 2 * GameState.minutesPerDay,
-            leadTimeMinutes: 600,
-            durationDays: 30,
-            originFirmID: nil,
-            createdAt: .start,
-            expiresAt: GameTime(totalMinutes: 5_000)
-        )
-        #expect(contract.parcelsPerCycle == 4)
-        #expect(contract.isMultiDrop)
-        // Shares always total the agreed volume exactly.
-        let total = contract.destinations.reduce(0) { $0 + contract.cycleVolume(for: $1) }
-        #expect(total == contract.volumePerCycleKg)
-        #expect(contract.revenuePerCycle == 2 * 300 + 2 * 500)
-    }
-
-    @Test func evergreenContractsRunUntilSafelyCancelled() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-
-        state.activeContracts.append(ActiveContract(
-            id: ContractID(rawValue: 820),
-            origin: NetFixture.cityA,
-            productID: NetFixture.product,
-            archetype: .evergreen,
-            destinations: [
-                ContractDestination(
-                    cityID: NetFixture.cityB, firmID: nil,
-                    laneID: NetFixture.laneID, committedShareBps: 5_000,
-                    shareBps: ContractDestination.fullShareBps,
-                    distanceKm: 200, payoutPerParcel: 500
-                )
-            ],
-            referenceVehicleTypeID: NetFixture.van,
-            parcelMassKg: 1_000,
-            volumePerCycleKg: 1_000,
-            shipmentIntervalMinutes: GameState.minutesPerDay,
-            deliveryWindowMinutes: 2 * GameState.minutesPerDay,
-            signedAt: state.clock,
-            endsAt: nil,
-            nextShipmentAt: state.clock,
-            shipmentsIssued: 0,
-            shipmentsCompleted: 0,
-            shipmentsMissed: 0,
-            penaltiesPaid: 0,
-            cancellationRequestedAt: nil,
-            originFirmID: nil
-        ))
-
-        // Runs for weeks without expiring on its own.
-        engine.advance(&state, by: 20 * GameState.minutesPerDay)
-        #expect(state.activeContract(ContractID(rawValue: 820)) != nil)
-        #expect(state.activeContract(ContractID(rawValue: 820))?.shipmentsIssued ?? 0 > 10)
-
-        try engine.apply(.cancelContract(ContractID(rawValue: 820)), to: &state)
-        let issuedAtCancel = try #require(state.activeContract(ContractID(rawValue: 820))).shipmentsIssued
-
-        // No new cycles post after the safe-close request.
-        engine.advance(&state, by: 5 * GameState.minutesPerDay)
-        let remaining = state.activeContract(ContractID(rawValue: 820))
-        #expect(remaining == nil || remaining?.shipmentsIssued == issuedAtCancel)
-    }
-
-    @Test func anEndedContractFlagsItsRoutesButClosesNone() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-        engine.advance(&state, by: 0)
-        let offer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(offer.id), to: &state)
-        let vehicle = try #require(state.vehicles.first)
-        try engine.apply(
-            .assignVehicleToContract(contractID: offer.id, vehicleID: vehicle.id),
-            to: &state
-        )
-        let dedicated = try #require(state.route(serving: offer.id))
-        #expect(dedicated.isRunning)
-
-        // A second, player-built route that also serves the contract.
-        try engine.apply(.createRoute(name: "My mixed lane"), to: &state)
-        let custom = try #require(state.routes.last?.id)
-        try engine.apply(.addTravelStop(routeID: custom, cityID: offer.origin), to: &state)
-        let visit = try #require(state.route(custom)?.stops.first?.id)
-        try engine.apply(.addContractTaskToRoute(
-            routeID: custom,
-            visitStopID: visit,
-            contractID: offer.id,
-            action: .pickup
-        ), to: &state)
-
-        // Run past the contract's term.
-        let term = try #require(state.activeContract(offer.id)?.endsAt)
-        engine.advance(&state, by: max(1, state.clock.minutes(until: term)) + 10)
-        #expect(state.activeContract(offer.id) == nil)
-
-        // No route is closed for losing its contract: the lane keeps
-        // running on whatever freight remains (its lane stops, if any).
-        #expect(state.route(dedicated.id)?.isRunning == true)
-        // Both routes carrying dead contract stops are flagged for review,
-        // never silently altered.
-        for flagged in [dedicated.id, custom] {
-            #expect(state.log.contains {
-                if case .routeNeedsReview(let id, _) = $0.event { return id == flagged }
-                return false
-            })
-        }
-    }
-
-    @Test func coverageFollowsFreightNotTheContractRoute() throws {
-        let catalog = try NetFixture.catalog()
-        let engine = SimulationEngine(catalog: catalog)
-        var state = NetFixture.newState()
-        try engine.apply(.buyVehicle(NetFixture.van), to: &state)
-        engine.advance(&state, by: 0)
-        let offer = try #require(state.contractOffers.first)
-        try engine.apply(.signContract(offer.id), to: &state)
-
-        // Before the first cycle posts: preparation, not a warning.
-        let signed = try #require(state.activeContract(offer.id))
-        if case .notStarted = engine.coverage(of: signed, state: state) {} else {
-            Issue.record("a freshly signed contract should read as not started")
-        }
-
-        engine.advance(&state, by: offer.leadTimeMinutes)
-        let posted = try #require(state.activeContract(offer.id))
-        #expect(engine.coverage(of: posted, state: state) != .covered)
-
-        // The player hauls it with their own route — no contract auto-route
-        // exists, and coverage must still recognise the freight as moving.
-        let vehicle = try #require(state.vehicles.first)
-        try engine.apply(.createRoute(name: "My own lane"), to: &state)
-        let routeID = try #require(state.routes.last?.id)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: offer.origin), to: &state)
-        let originVisit = try #require(state.route(routeID)?.stops.first?.id)
-        try engine.apply(.addContractTaskToRoute(
-            routeID: routeID,
-            visitStopID: originVisit,
-            contractID: offer.id,
-            action: .pickup
-        ), to: &state)
-        try engine.apply(.addTravelStop(routeID: routeID, cityID: offer.destination), to: &state)
-        let destinationVisit = try #require(state.route(routeID)?.stops.last?.id)
-        try engine.apply(.addContractTaskToRoute(
-            routeID: routeID,
-            visitStopID: destinationVisit,
-            contractID: offer.id,
-            action: .deliver
-        ), to: &state)
-        try engine.apply(.assignVehicleToRoute(routeID: routeID, vehicleID: vehicle.id), to: &state)
-        try engine.apply(.startRoute(routeID), to: &state)
-        engine.advance(&state, by: 45)
-
-        // Coverage is a property of stops, not ownership: the player's own
-        // route is what serves the contract now.
-        #expect(state.route(serving: offer.id)?.id == routeID)
-        let hauling = try #require(state.activeContract(offer.id))
-        #expect(engine.coverage(of: hauling, state: state) == .covered)
-    }
-}
 
 // MARK: - Determinism with the new systems
 
@@ -1141,13 +637,11 @@ struct FacilityDeterminismTests {
             try engine.apply(.installModule(kind: .warehouse, cityID: NetFixture.cityH), to: &state)
             try engine.apply(.installModule(kind: .office, cityID: NetFixture.cityB), to: &state)
             engine.advance(&state, by: 0)
-            let offer = try #require(state.contractOffers.first)
-            try engine.apply(.signContract(offer.id), to: &state)
             let vehicle = try #require(state.vehicles.first)
-            try engine.apply(
-                .assignVehicleToContract(contractID: offer.id, vehicleID: vehicle.id),
-                to: &state
-            )
+            try engine.apply(.dispatchVehicleToLane(
+                laneID: NetFixture.laneID,
+                vehicleID: vehicle.id
+            ), to: &state)
             for chunk in chunks {
                 engine.advance(&state, by: chunk)
             }

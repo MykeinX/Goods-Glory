@@ -33,20 +33,19 @@ extension GameMapScene {
         addGeography()
         addCities()
 
-        loadedRouteNode.strokeColor = accentColor
-        loadedRouteNode.lineCap = .round
-        loadedRouteNode.lineJoin = .round
-        loadedRouteNode.lineWidth = StrokeWidth.loadedRoute
-        loadedRouteNode.glowWidth = 0.5
-        loadedRouteNode.zPosition = 2
-        routeLayer.addChild(loadedRouteNode)
+        activeRouteHaloNode.strokeColor = accentColor.withAlphaComponent(0.18)
+        activeRouteHaloNode.lineCap = .round
+        activeRouteHaloNode.lineJoin = .round
+        activeRouteHaloNode.lineWidth = StrokeWidth.activeRouteHalo
+        activeRouteHaloNode.zPosition = 1
+        routeLayer.addChild(activeRouteHaloNode)
 
-        deadheadRouteNode.strokeColor = MapPalette.deadhead
-        deadheadRouteNode.lineCap = .round
-        deadheadRouteNode.lineJoin = .round
-        deadheadRouteNode.lineWidth = StrokeWidth.deadheadRoute
-        deadheadRouteNode.zPosition = 1
-        routeLayer.addChild(deadheadRouteNode)
+        activeRouteNode.strokeColor = accentColor
+        activeRouteNode.lineCap = .round
+        activeRouteNode.lineJoin = .round
+        activeRouteNode.lineWidth = StrokeWidth.activeRoute
+        activeRouteNode.zPosition = 2
+        routeLayer.addChild(activeRouteNode)
 
         plannedRouteNode.strokeColor = accentColor.withAlphaComponent(0.78)
         plannedRouteNode.lineCap = .round
@@ -54,14 +53,6 @@ extension GameMapScene {
         plannedRouteNode.lineWidth = StrokeWidth.plannedRoute
         plannedRouteNode.glowWidth = 1
         plannedRouteLayer.addChild(plannedRouteNode)
-
-        previewRouteNode.strokeColor = accentColor.withAlphaComponent(0.7)
-        previewRouteNode.lineCap = .round
-        previewRouteNode.lineJoin = .round
-        previewRouteNode.lineWidth = StrokeWidth.previewRoute
-        previewRouteNode.glowWidth = 0
-        previewRouteNode.zPosition = 0
-        plannedRouteLayer.addChild(previewRouteNode)
     }
 
     /// Projected, simplified world silhouettes.
@@ -69,130 +60,116 @@ extension GameMapScene {
     /// The projection is a pure function of immutable catalog data and the
     /// simplification tolerances are constants, so every map surface in the app
     /// builds byte-identical paths. Building them once and handing out the same
-    /// `CGPath` objects removes ~13,000 Mercator projections and a full
+    /// `CGPath` objects removes thousands of coordinate projections and a full
     /// Douglas–Peucker pass from every scene after the first — which is what
     /// opening the city detail or route builder screen used to pay for.
     @MainActor
     enum TerrainPaths {
-        /// Country borders read as national outlines at strategic zoom, not as
-        /// surveyed cadastral lines. They are two thirds of all geography
-        /// vertices, so this tolerance is the one worth being generous with.
-        static let boundaryToleranceKm: CGFloat = 8
-
         static let cache = Cache()
 
         struct Built {
             let land: CGPath
             let boundaries: CGPath?
-            let water: CGPath
         }
 
         final class Cache {
             var built: Built?
 
             func paths(
-                geography: MapGeographyDefinition,
+                boundaryAtlas: MapBoundaryAtlas,
+                board: MapBoardSilhouette,
                 projection: MapProjection
             ) -> Built {
                 if let built { return built }
-                let value = Self.build(geography: geography, projection: projection)
+                let value = Self.build(
+                    boundaryAtlas: boundaryAtlas,
+                    board: board,
+                    projection: projection
+                )
                 built = value
                 return value
             }
 
             private static func build(
-                geography: MapGeographyDefinition,
+                boundaryAtlas: MapBoundaryAtlas,
+                board: MapBoardSilhouette,
                 projection: MapProjection
             ) -> Built {
                 let landPath = CGMutablePath()
-                for landMass in geography.landMasses where landMass.points.count >= 3 {
-                    let points = MapPathSimplifier.simplifyClosed(
-                        landMass.points.map(projection.point(for:))
-                    )
+                for landMass in board.landMasses where landMass.points.count >= 3 {
+                    let points = landMass.points.map(projection.point(for:))
                     guard points.count >= 3 else { continue }
-                    landPath.addClosedPolyline(points)
+                    landPath.addRoundedClosedPolyline(points)
                 }
 
                 let boundaryPath = CGMutablePath()
                 var boundaryCount = 0
-                for boundary in geography.boundaries where boundary.points.count >= 2 {
-                    let points = MapPathSimplifier.simplify(
-                        boundary.points.map(projection.point(for:)),
-                        tolerance: boundaryToleranceKm
-                    )
+                for line in boundaryAtlas.lines where line.count >= 2 {
+                    let points = line.map(projection.point(for:))
                     guard points.count >= 2 else { continue }
                     boundaryPath.addOpenPolyline(points)
                     boundaryCount += 1
                 }
 
-                let waterPath = CGMutablePath()
-                // The bundled data holds a few 4-point lakes and exact duplicate
-                // rings; at strategic zoom they read as stray angular shapes
-                // rather than water, so only well-formed, unique lakes are drawn.
-                var seenWaterSignatures = Set<String>()
-                for body in geography.waterBodies where body.points.count >= 5 {
-                    let signature = body.points
-                        .map { "\($0.latitude),\($0.longitude)" }
-                        .joined(separator: ";")
-                    guard seenWaterSignatures.insert(signature).inserted else { continue }
-                    let points = MapPathSimplifier.simplifyClosed(
-                        body.points.map(projection.point(for:))
-                    )
-                    guard points.count >= 3 else { continue }
-                    waterPath.addClosedPolyline(points)
-                }
-
                 return Built(
                     land: landPath,
-                    boundaries: boundaryCount > 0 ? boundaryPath : nil,
-                    water: waterPath
+                    boundaries: boundaryCount > 0 ? boundaryPath : nil
                 )
             }
         }
     }
 
     func addGeography() {
-        let paths = TerrainPaths.cache.paths(geography: geography, projection: projection)
+        let paths = TerrainPaths.cache.paths(
+            boundaryAtlas: boundaryAtlas,
+            board: .bundled,
+            projection: projection
+        )
 
-        let land = SKShapeNode(path: paths.land)
-        land.fillColor = MapPalette.land
-        land.strokeColor = MapPalette.coastline
-        land.lineWidth = StrokeWidth.landCoast
-        land.lineJoin = .round
-        land.zPosition = 1
-        terrainLayer.addChild(land)
+        // One oversized quad covers every legal camera position and portrait
+        // overscan; its edges must never appear as horizontal color seams.
+        let waterGradient = SKSpriteNode(
+            color: .white,
+            size: CGSize(
+                width: cameraBounds.width * 4,
+                height: cameraBounds.height * 4
+            )
+        )
+        waterGradient.position = CGPoint(x: cameraBounds.midX, y: cameraBounds.midY)
+        waterGradient.shader = SKShader(source: """
+            void main() {
+                vec2 delta = v_tex_coord - vec2(0.5);
+                float glow = 1.0 - smoothstep(0.05, 0.76, length(delta));
+                vec3 edge = vec3(0.25, 0.49, 0.86);
+                vec3 center = vec3(0.43, 0.66, 0.96);
+                gl_FragColor = vec4(mix(edge, center, glow), 1.0);
+            }
+            """)
+        waterGradient.zPosition = 0
+        terrainLayer.addChild(waterGradient)
 
-        // Country borders: static dual stroke (soft halo + main). Same path
-        // data as before — only weight and ink change, no geometry rebuild.
+        landNode.path = paths.land
+        landNode.fillColor = MapPalette.land
+        landNode.strokeColor = MapPalette.coastline
+        landNode.lineWidth = StrokeWidth.landCoast
+        landNode.lineJoin = .round
+        landNode.zPosition = 1
+        terrainLayer.addChild(landNode)
+
+        // One quiet batched border stroke keeps countries readable without
+        // turning the game board into a navigation atlas.
         if let boundaryPath = paths.boundaries {
-            let halo = SKShapeNode(path: boundaryPath)
-            halo.fillColor = .clear
-            halo.strokeColor = MapPalette.boundaryHalo
-            halo.lineWidth = StrokeWidth.boundaryHalo
-            halo.lineCap = .round
-            halo.lineJoin = .round
-            halo.isAntialiased = true
-            halo.zPosition = 2
-            terrainLayer.addChild(halo)
-
-            let borders = SKShapeNode(path: boundaryPath)
-            borders.fillColor = .clear
-            borders.strokeColor = MapPalette.boundary
-            borders.lineWidth = StrokeWidth.boundary
-            borders.lineCap = .round
-            borders.lineJoin = .round
-            borders.isAntialiased = true
-            borders.zPosition = 2.1
-            terrainLayer.addChild(borders)
+            boundaryNode.path = boundaryPath
+            boundaryNode.fillColor = .clear
+            boundaryNode.strokeColor = MapPalette.boundary
+            boundaryNode.lineWidth = StrokeWidth.boundary
+            boundaryNode.lineCap = .round
+            boundaryNode.lineJoin = .round
+            boundaryNode.isAntialiased = true
+            boundaryNode.zPosition = 2
+            terrainLayer.addChild(boundaryNode)
         }
 
-        let water = SKShapeNode(path: paths.water)
-        water.fillColor = MapPalette.water
-        water.strokeColor = MapPalette.coastline
-        water.lineWidth = StrokeWidth.waterCoast
-        water.lineJoin = .round
-        water.zPosition = 3
-        terrainLayer.addChild(water)
     }
 
     func addCities() {

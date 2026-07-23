@@ -14,7 +14,6 @@ struct VehicleDetailView: View {
 
     private var vehicle: Vehicle? { session.state?.vehicles.first { $0.id == vehicleID } }
     private var type: VehicleTypeDefinition? { vehicle.flatMap { session.catalog.vehicleType($0.typeID) } }
-    private var job: ActiveJob? { session.state?.activeJobs.first { $0.vehicleID == vehicleID } }
 
     var body: some View {
         ScrollView {
@@ -57,16 +56,15 @@ struct VehicleDetailView: View {
         VStack(spacing: 10) {
             TruckGlyph(accent: accent)
 
-            let loadKg = job.map { _ in type.capacity.massKg } ?? 0
+            let load = session.state?.cargoLoad(of: vehicle.id)
+                ?? LoadSize(massKg: 0, volumeM3: 0)
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                 SpecTile(label: "Location",
-                         value: job != nil
-                            ? "\(session.catalog.city(job!.offer.origin)?.name ?? "") → \(session.catalog.city(job!.offer.destination)?.name ?? "")"
-                            : (session.catalog.city(vehicle.cityID)?.name ?? "—"))
+                         value: location(of: vehicle))
                 SpecTile(label: "Driver", value: "Unassigned")
                 SpecTile(label: "Load",
-                         value: job != nil ? "\(Format.mass(kg: loadKg)) cap" : "Empty",
-                         progress: job != nil ? 0.75 : 0, tint: accent)
+                         value: load.massKg > 0 ? Format.mass(kg: load.massKg) : "Empty",
+                         progress: load.fillRatio(in: type.capacity), tint: accent)
                 SpecTile(label: "Fuel", value: "Not tracked", progress: 0, tint: Theme.mint)
             }
 
@@ -121,11 +119,9 @@ struct VehicleDetailView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(route.name)
                                 .font(.gg(13.5, .heavy)).foregroundStyle(Theme.textPrimary)
-                            Text(!route.coveredContractIDs.isEmpty
-                                 ? "Covers a contract — parcels load automatically"
-                                 : (!route.coveredLaneIDs.isEmpty
-                                    ? "Serves a freight lane at the spot rate"
-                                    : "Custom route"))
+                            Text(!route.coveredLaneIDs.isEmpty
+                                 ? "Serves a freight lane at the spot rate"
+                                 : "Custom route")
                                 .font(.gg(11, .bold)).foregroundStyle(Theme.textSecondary)
                         }
                         Spacer()
@@ -142,7 +138,7 @@ struct VehicleDetailView: View {
                     Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
                         .font(.title3).foregroundStyle(Theme.textTertiary)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(job != nil ? "Active delivery" : "No route assigned")
+                        Text("No route assigned")
                             .font(.gg(13.5, .heavy)).foregroundStyle(Theme.textPrimary)
                         Text("Assign this vehicle from a route builder.")
                             .font(.gg(11, .bold)).foregroundStyle(Theme.textSecondary)
@@ -158,6 +154,17 @@ struct VehicleDetailView: View {
     private func status(for vehicle: Vehicle) -> (text: String, color: Color) {
         let status = VehicleStatusDisplay.describe(vehicle, state: session.state)
         return (status.label, status.color)
+    }
+
+    private func location(of vehicle: Vehicle) -> String {
+        guard let state = session.state,
+              let run = state.routeRun(for: vehicle.id),
+              run.phase == .traveling,
+              let route = state.route(run.routeID),
+              route.stops.indices.contains(run.stopIndex) else {
+            return session.cityName(vehicle.cityID)
+        }
+        return "\(session.cityName(run.legOriginCityID)) → \(session.cityName(route.stops[run.stopIndex].cityID))"
     }
 }
 
@@ -210,4 +217,3 @@ private struct TruckGlyph: View {
 }
 
 // MARK: - Vehicle shop
-

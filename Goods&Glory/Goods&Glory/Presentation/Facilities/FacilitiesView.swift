@@ -2,8 +2,8 @@
 //  FacilitiesView.swift
 //  Goods&Glory
 //
-//  Facilities tab: the company's real estate. Branches unlock contract
-//  business in their city; warehouses store and consolidate freight.
+//  Facilities tab: the company's real estate. Offices establish a local site;
+//  warehouses store and consolidate freight.
 //  Construction itself starts from the city screen — you build somewhere,
 //  not in the abstract — so this tab is the portfolio and upgrade view.
 //
@@ -160,7 +160,7 @@ private struct FacilityCard: View {
             }
             Button("Keep", role: .cancel) { moduleToRemove = nil }
         } message: {
-            Text("You get nothing back. Removing the office also stops contracts from this city.")
+            Text("You get nothing back. Dependent modules must be removed first.")
         }
     }
 
@@ -220,12 +220,6 @@ private struct FacilityCard: View {
             }
 
             if kind == .warehouse, operational { storageBar }
-            if kind == .office, operational {
-                Text("\(openContractCount) contract lane(s) on offer here")
-                    .font(.gg(11, .bold))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-
             if operational, !module.isUpgrading {
                 HStack(spacing: 8) {
                     if let upgrade = session.upgradeQuote(for: module, in: facility.cityID) {
@@ -260,10 +254,6 @@ private struct FacilityCard: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Theme.surface.opacity(0.5))
         )
-    }
-
-    private var openContractCount: Int {
-        (session.state?.contractOffers ?? []).count { $0.origin == facility.cityID }
     }
 
     private func progressLine(_ text: String) -> some View {

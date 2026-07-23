@@ -26,8 +26,8 @@ import Testing
 
 @Suite("Catalog budgets")
 struct CatalogBudgetTests {
-    /// Every drawn vertex: coastlines, lakes and borders combined.
-    static let geographyVertexBudget = 15_000
+    /// Every drawn vertex: board silhouette and country borders combined.
+    static let geographyVertexBudget = 4_000
     /// Road graph size. Junctions exist to keep a leg on land, nothing more —
     /// density belongs where the coast forces a bend, not spread evenly.
     static let roadNodeBudget = 1_500
@@ -39,12 +39,12 @@ struct CatalogBudgetTests {
     @MainActor
     @Test("Bundled map geography stays inside its vertex budget")
     func geographyVertexCount() throws {
-        let geography = try MapGeographyDefinition.load(from: .main)
-        let vertices = geography.landMasses.reduce(0) { $0 + $1.points.count }
-            + geography.waterBodies.reduce(0) { $0 + $1.points.count }
-            + geography.boundaries.reduce(0) { $0 + $1.points.count }
+        let board = try MapBoardSilhouette.load(from: .main)
+        let boundaries = try MapBoundaryAtlas.load(from: .main)
+        let vertices = board.landMasses.reduce(0) { $0 + $1.points.count }
+            + boundaries.lines.reduce(0) { $0 + $1.count }
 
-        #expect(vertices > 3_000, "geography looks empty at \(vertices) vertices")
+        #expect(vertices > 1_000, "geography looks empty at \(vertices) vertices")
         #expect(
             vertices <= Self.geographyVertexBudget,
             "map geography is \(vertices) vertices, over the \(Self.geographyVertexBudget) budget — coarsen it or raise the budget deliberately"

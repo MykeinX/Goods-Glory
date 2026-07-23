@@ -16,45 +16,45 @@ enum TestEconomy {
             FacilityLevelSpec(
                 level: 1, buildCost: 8_000, buildDays: 1, upkeepPerDay: 20,
                 storageMassKg: 0, storageVolumeM3: 0, docks: 0,
-                handlingPercent: 100, contractSlotPercent: 100, lanePremiumPercent: 0
+                handlingPercent: 100, lanePremiumPercent: 0
             ),
             FacilityLevelSpec(
                 level: 2, buildCost: 16_000, buildDays: 2, upkeepPerDay: 40,
                 storageMassKg: 0, storageVolumeM3: 0, docks: 0,
-                handlingPercent: 100, contractSlotPercent: 150, lanePremiumPercent: 0
+                handlingPercent: 100, lanePremiumPercent: 0
             )
         ],
         warehouse: [
             FacilityLevelSpec(
                 level: 1, buildCost: 12_000, buildDays: 1, upkeepPerDay: 30,
                 storageMassKg: 60_000, storageVolumeM3: 400, docks: 2,
-                handlingPercent: 100, contractSlotPercent: 100, lanePremiumPercent: 0
+                handlingPercent: 100, lanePremiumPercent: 0
             ),
             FacilityLevelSpec(
                 level: 2, buildCost: 24_000, buildDays: 2, upkeepPerDay: 60,
                 storageMassKg: 200_000, storageVolumeM3: 1_400, docks: 4,
-                handlingPercent: 90, contractSlotPercent: 100, lanePremiumPercent: 0
+                handlingPercent: 90, lanePremiumPercent: 0
             )
         ],
         dock: [
             FacilityLevelSpec(
                 level: 1, buildCost: 6_000, buildDays: 1, upkeepPerDay: 15,
                 storageMassKg: 0, storageVolumeM3: 0, docks: 2,
-                handlingPercent: 80, contractSlotPercent: 100, lanePremiumPercent: 0
+                handlingPercent: 80, lanePremiumPercent: 0
             )
         ],
         racking: [
             FacilityLevelSpec(
                 level: 1, buildCost: 5_000, buildDays: 1, upkeepPerDay: 12,
                 storageMassKg: 30_000, storageVolumeM3: 200, docks: 0,
-                handlingPercent: 100, contractSlotPercent: 100, lanePremiumPercent: 0
+                handlingPercent: 100, lanePremiumPercent: 0
             )
         ],
         forklift: [
             FacilityLevelSpec(
                 level: 1, buildCost: 3_000, buildDays: 1, upkeepPerDay: 8,
                 storageMassKg: 0, storageVolumeM3: 0, docks: 0,
-                handlingPercent: 85, contractSlotPercent: 100, lanePremiumPercent: 0
+                handlingPercent: 85, lanePremiumPercent: 0
             )
         ]
     )
@@ -66,16 +66,8 @@ enum TestEconomy {
         fillFloor: Double = 0.5,
         emptyReturnSharePercent: Int = 85,
         spotMarginPercent: Int = 55,
-        contractPremiumPercent: Int = 25,
-        contractPenaltyPercent: Int = 40,
         hqLanePremiumPercent: Int = 0,
         facilities: FacilityConfig = defaultFacilities,
-        contractDeliveryWindowPercent: Int = 175,
-        contractDeliveryWindowFloorPercent: Int = 70,
-        contractLeadTimePercent: Int = 120,
-        // Fixtures exercise contract rules directly, so the delivery gate is
-        // off by default; the gate itself has its own test.
-        contractsUnlockAfterDeliveries: Int = 0,
         lanes: LaneConfig = defaultLanes
     ) -> EconomyConfig {
         EconomyConfig(
@@ -85,17 +77,8 @@ enum TestEconomy {
             fillFloor: fillFloor,
             emptyReturnSharePercent: emptyReturnSharePercent,
             spotMarginPercent: spotMarginPercent,
-            contractOfferIntervalMinutes: 2880,
-            maxOpenContractOffers: 3,
-            contractDurationDays: 14,
-            contractPremiumPercent: contractPremiumPercent,
-            contractPenaltyPercent: contractPenaltyPercent,
             hqLanePremiumPercent: hqLanePremiumPercent,
             facilities: facilities,
-            contractDeliveryWindowPercent: contractDeliveryWindowPercent,
-            contractDeliveryWindowFloorPercent: contractDeliveryWindowFloorPercent,
-            contractLeadTimePercent: contractLeadTimePercent,
-            contractsUnlockAfterDeliveries: contractsUnlockAfterDeliveries,
             lanes: lanes
         )
     }

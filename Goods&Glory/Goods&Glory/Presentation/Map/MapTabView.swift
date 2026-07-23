@@ -17,8 +17,6 @@ struct MapTabView: View {
     @Environment(GameSession.self) private var session
     @State private var selection: MapSelection = .none
     @State private var detail: MapDetailDestination?
-    /// Parcel expanded inside the city sheet — drives map arc + camera fit.
-    @State private var parcelPreviewOfferID: JobID?
     /// Notification (and future) soft-pans — zoom stays as the player left it.
     @State private var cameraPanRequest: MapCameraPanRequest?
     /// Which detent the city sheet is resting at; `.large` hides the map.
@@ -52,25 +50,6 @@ struct MapTabView: View {
         mapHeight * CitySheetLayout.detentFraction
     }
 
-    private var parcelPreviewOffer: JobOffer? {
-        guard let parcelPreviewOfferID else { return nil }
-        return session.state?.offers.first { $0.id == parcelPreviewOfferID }
-    }
-
-    private var mapCameraFocus: MapCameraFocus {
-        guard let offer = parcelPreviewOffer else {
-            // Preserve pan/zoom across tab switches and after leaving a preview.
-            // HQ framing is applied once inside the scene on first layout.
-            return .free
-        }
-        return .route(
-            cities: [offer.origin, offer.destination],
-            topInset: 130,
-            // Frame the leg in the strip left above the city sheet.
-            bottomInset: citySheetInset
-        )
-    }
-
     private func mapSnapshot(state: GameState) -> MapRenderSnapshot {
         let projection = MapProjection()
         let startedAt = CACurrentMediaTime()
@@ -80,24 +59,7 @@ struct MapTabView: View {
             projection: projection
         )
         PerformanceMonitor.shared.recordSnapshot(CACurrentMediaTime() - startedAt)
-        guard let offer = parcelPreviewOffer,
-              let origin = session.catalog.city(offer.origin),
-              let destination = session.catalog.city(offer.destination) else {
-            return snapshot
-        }
-        let preview = MapRouteOverlay(
-            id: "parcel-preview-\(offer.id.rawValue)",
-            anchors: [projection.point(for: origin), projection.point(for: destination)],
-            kind: .preview
-        )
-        return MapRenderSnapshot(
-            vehicles: snapshot.vehicles,
-            routes: snapshot.routes + [preview],
-            plannedVisits: snapshot.plannedVisits,
-            idleFleetByCity: snapshot.idleFleetByCity,
-            facilitiesByCity: snapshot.facilitiesByCity,
-            attentionByCity: snapshot.attentionByCity
-        )
+        return snapshot
     }
 
     var body: some View {
@@ -109,7 +71,9 @@ struct MapTabView: View {
                     accentColorHex: state.config.identity.colorHex,
                     // Snapshot work is skipped while sleeping; wake forces a fresh apply.
                     renderSnapshot: isMapRenderingEnabled ? mapSnapshot(state: state) : .empty,
-                    cameraFocus: mapCameraFocus,
+                    // Preserve pan/zoom across tab switches. HQ framing is applied
+                    // once inside the scene on first layout.
+                    cameraFocus: .free,
                     cameraPanRequest: cameraPanRequest,
                     isRenderingEnabled: isMapRenderingEnabled,
                     showsRenderStatistics: showsPerformanceHUD,
@@ -158,10 +122,7 @@ struct MapTabView: View {
             }
         )
         .onChange(of: selection) { _, newValue in
-            guard let cityID = newValue.cityID else {
-                parcelPreviewOfferID = nil
-                return
-            }
+            guard let cityID = newValue.cityID else { return }
             // Lift the tapped city into the strip left above the sheet.
             citySheetDetent = CitySheetLayout.detent
             cameraPanRequest = MapCameraPanRequest(cityID: cityID, bottomInset: citySheetInset)
@@ -171,7 +132,7 @@ struct MapTabView: View {
             set: { if !$0 { selection = .none } }
         )) {
             if let cityID = selection.cityID {
-                CityDetailSheet(cityID: cityID, previewOfferID: $parcelPreviewOfferID)
+                CityDetailSheet(cityID: cityID)
                     .presentationDetents([CitySheetLayout.detent, .large], selection: $citySheetDetent)
                     .presentationDragIndicator(.visible)
                     .presentationBackgroundInteraction(.enabled(upThrough: CitySheetLayout.detent))
@@ -195,4 +156,3 @@ struct MapTabView: View {
 }
 
 // MARK: - Top status overlay
-

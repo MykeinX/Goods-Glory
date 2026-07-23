@@ -56,14 +56,6 @@ struct CompactFleetVehicleRow: View {
                 fraction(from: run.phaseStartedAt, to: run.phaseEndsAt, clock: state.clock)
             )
         }
-        if let job = state.activeJob(for: vehicle.id) {
-            let line = "\(session.cityName(job.offer.origin)) → \(session.cityName(job.offer.destination))"
-            return (
-                line,
-                state.clock.minutes(until: job.phaseEndsAt),
-                fraction(from: job.phaseStartedAt, to: job.phaseEndsAt, clock: state.clock)
-            )
-        }
         return nil
     }
 

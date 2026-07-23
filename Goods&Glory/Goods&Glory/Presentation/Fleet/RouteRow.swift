@@ -21,13 +21,6 @@ struct RouteRow: View {
     var accent: Color
     let onOpen: () -> Void
 
-    /// First live contract this route covers through its pickup stops.
-    private var contract: ActiveContract? {
-        route.coveredContractIDs.lazy
-            .compactMap { session.state?.activeContract($0) }
-            .first
-    }
-
     private var isCancelling: Bool { route.cancellationRequestedAt != nil }
 
     private var status: (text: String, color: Color) {
@@ -86,9 +79,6 @@ struct RouteRow: View {
                     .font(.gg(15, .heavy))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
-                if contract != nil {
-                    TagPill(text: String(localized: "Contract"), color: Theme.brand)
-                }
                 Spacer(minLength: 4)
                 TagPill(text: status.text, color: status.color)
             }
@@ -153,22 +143,8 @@ struct RouteRow: View {
     }
 
     /// One line naming the route's binding constraint — the answer to "what
-    /// should I spend on next?". Contract trouble outranks route trouble.
+    /// should I spend on next?".
     private var bottleneckHint: (text: String, symbol: String, color: Color)? {
-        if contract == nil, !route.coveredContractIDs.isEmpty {
-            return (
-                String(localized: "Contract ended — running on spot freight"),
-                "doc.badge.clock",
-                Theme.warning
-            )
-        }
-        if let contract, contract.shipmentsMissed > 0 {
-            return (
-                String(localized: "\(contract.shipmentsMissed) contract loads missed"),
-                "exclamationmark.triangle.fill",
-                Theme.coral
-            )
-        }
         guard let bottleneck = session.bottleneck(of: route) else { return nil }
         switch bottleneck {
         case .noVehicle:
