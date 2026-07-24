@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
-"""Build the two immutable visual atlases used by the strategic map.
+"""Build map_board_silhouette.json: the flat-icon game board silhouette.
 
-Downloads Natural Earth land and admin-0 land boundary lines at 50m, drops
-Antarctica, splits antimeridian-crossing geometry, and writes:
+The board is drawn the way the reference art is drawn, not the way an atlas
+is drawn. Natural Earth land is rasterized onto a coarse square grid in
+projected board space, then the cell outline is traced back into polygons and
+staircase steps are cut into 45-degree diagonals. The result is the long
+straight edges, clean diagonals and uniform visual rhythm of a designed
+sticker map — SpriteKit only rounds the corners with one small fixed radius.
 
-- map_board_silhouette.json: globally consistent, low-detail land polygons.
-- map_boundaries.json: quiet country-border polylines at final render detail.
+Hand-authored sea lanes keep narrow straits (Dover, Gibraltar, Oresund,
+Bosphorus...) open where the grid would seal them, and every catalog city's
+cell is pinned to land so no port ever drowns in the stylization.
 
-No cities, roads or gameplay routing data are produced.
+Country borders are not produced: the board is a game, not an atlas.
+
+Usage: python3 -B scripts/generate_world_geography.py
 """
 
 from __future__ import annotations
@@ -19,99 +26,163 @@ import re
 import urllib.request
 from pathlib import Path
 
-# Natural Earth vector GeoJSON mirrors.
-# 50m land, matching the boundary resolution.
-#
-# This used to be 110m, and it made map detail regionally uneven in a way that
-# looked like a bug in our pipeline but was really the source data: 110m keeps
-# smooth coastlines faithfully and deletes intricate ones. Measured over equal
-# windows, the US mainland carried 849 land vertices while the
-# Turkish Aegean carried 21 vertices and no islands at all — the whole
-# archipelago is simply absent at 110m. Borders were already 50m, so land was
-# the odd one out.
+# Natural Earth 50m land GeoJSON mirror. 50m keeps small-but-visible islands
+# (Britain's neighbours, the Aegean, Japan) that 110m simply deletes.
 LAND_URL = (
     "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
     "master/geojson/ne_50m_land.geojson"
 )
-# 50m land boundaries: accurate enough for customs/borders without 10m weight.
-BOUNDARIES_URL = (
-    "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
-    "master/geojson/ne_50m_admin_0_boundary_lines_land.geojson"
-)
 
-KM_PER_LATITUDE_DEGREE = 111.32
-# Mid-latitude approximation is fine for strategic simplification.
-KM_PER_LONGITUDE_DEGREE = 85.0
+# Must match MapProjection.verticalBoardScale.
+BOARD_VERTICAL_SCALE = 1.274
+
+# Grid cell in board units (longitude degrees; latitude is pre-scaled by
+# BOARD_VERTICAL_SCALE, so a one-cell diagonal renders at exactly 45 degrees
+# in game). 1.25 divides 180, keeping the antimeridian cut on the grid.
+CELL = 1.25
+
+# Antarctica is not part of the game board.
 ANTARCTICA_MAX_LAT = -55.0
-# Minimum footprint for a drawn landform. Below this a shape is a
-# speck at strategic zoom: invisible, but it still makes the map read like a
-# navigation app instead of a game board. At 50m the source ships over a
-# thousand land rings and most of them are exactly that.
-#
-# The global threshold keeps major islands such as Britain, Ireland, Japan,
-# Sri Lanka and Taiwan while deleting archipelago confetti.
-MIN_BOARD_LAND_BBOX_AREA = 4.0
 
-# Coastline smoothing, deliberately far coarser than cartographic practice.
-#
-# The target is roughly 900 vertices for the entire world: enough for Britain,
-# Turkey and Japan to read correctly, still far below navigation-map detail.
-# Route geometry never depends on the shoreline; it follows the domain graph.
-BOARD_SIMPLIFY_TOLERANCE_KM = 90.0
-# Country identity survives this budget while surveyed wiggle does not. This
-# is also the final render tolerance; SpriteKit does no second simplification.
-BOUNDARY_SIMPLIFY_TOLERANCE_KM = 75.0
-MIN_RING_POINTS = 4  # closed ring with ≥3 unique vertices
-MIN_BOUNDARY_POINTS = 2
+# Grid domain. Longitude extends past +180 for the stitched NE-Asia dateline
+# wraps; latitude spans the drawn world with a two-cell water margin.
+LON_MIN, LON_MAX = -180.0, 200.0
+LAT_MIN, LAT_MAX = -58.0, 84.0
+
+# Island policy: only continental land, city-bearing land and the authored
+# keep-list below survive. Small Pacific, Caribbean and coastal islands are
+# visual noise on a game board, not geography the player trades across.
+CONTINENT_MIN_CELLS = 30
+KEEP_ISLAND_SEEDS: dict[str, tuple[float, float]] = {
+    "greenland": (72.0, -40.0),
+    "ireland": (53.3, -8.0),
+    "great_britain": (53.0, -1.5),
+    "japan_honshu": (36.5, 138.0),
+    "japan_hokkaido": (43.2, 142.8),
+    "japan_kyushu": (32.8, 131.0),
+    "sumatra": (-0.6, 101.5),
+    "java": (-7.3, 110.0),
+    "borneo": (0.5, 114.0),
+    "sulawesi": (-2.0, 120.5),
+    "new_guinea": (-5.5, 141.0),
+    "madagascar": (-19.5, 46.5),
+    "new_zealand_north": (-38.5, 175.5),
+    "new_zealand_south": (-43.8, 171.0),
+}
+# Water pockets below the lake threshold are noise; the big angular inland
+# seas (Black Sea, Caspian) stay as readable holes in the land.
+MAX_LAKE_CELLS = 15
+
+# Coast calm-down. One-cell bays are filled and prongs this short are shaved,
+# so the traced coast is long straight runs instead of grid noise — the bold,
+# quiet edges of the reference art. Trimming more eats thin peninsulas
+# (Baja, Italy, Japan) that the reference keeps.
+PRONG_TRIM_PASSES = 2
+
+# Seas the grid or the coast calm-down would seal shut: narrow straits and
+# the diagonal one-cell seas whose staircase cells look like dead-end bays.
+# Cells near these polylines are forced to water; catalog cities are
+# re-pinned to land afterwards, so Istanbul survives the Bosphorus carve.
+SEA_LANES: dict[str, list[tuple[float, float]]] = {
+    "english_channel": [(49.5, -3.0), (50.3, -1.0), (50.7, 1.2), (51.6, 2.6)],
+    "irish_sea": [(51.8, -5.8), (53.3, -5.0), (54.8, -5.6), (55.9, -7.0)],
+    "gibraltar": [(35.9, -6.5), (36.0, -5.2), (36.3, -3.5)],
+    "oresund": [(57.8, 10.6), (56.5, 11.8), (55.6, 12.7), (54.6, 13.6)],
+    "adriatic": [(45.0, 13.2), (43.6, 14.8), (42.0, 16.8), (40.5, 18.4)],
+    "sicily_strait": [(37.6, 10.6), (37.2, 11.8), (36.6, 13.0)],
+    # No Bosphorus lane on purpose: Thrace stays visibly connected to
+    # Anatolia and the Black Sea reads as an enclosed angular inland sea,
+    # clearly separate from the Aegean and the Mediterranean.
+    "red_sea": [
+        (13.5, 42.8), (16.5, 41.0), (20.0, 38.5), (24.0, 35.5), (27.5, 34.0),
+    ],
+    "bab_el_mandeb": [(11.8, 44.0), (12.7, 43.2), (13.8, 42.5)],
+    "persian_gulf": [(24.5, 52.5), (26.0, 54.0), (26.5, 56.4), (25.9, 57.4)],
+    "malacca": [(6.0, 97.5), (4.0, 99.5), (2.2, 101.8), (1.2, 103.9)],
+    "gulf_of_california": [
+        (23.0, -108.5), (26.0, -110.5), (29.5, -113.0), (31.0, -114.3),
+    ],
+}
+SEA_LANE_RADIUS_CELLS = 0.75
+
+# The land dual of the sea lanes: peninsulas thinner than a grid cell never
+# rasterize (their cell centers fall in the sea), yet the board is
+# unrecognizable without them. Cells near these polylines are forced to land
+# before cleanup.
+LAND_ANCHORS: dict[str, list[tuple[float, float]]] = {
+    "italy_boot": [
+        (43.8, 11.0), (42.5, 13.0), (41.5, 14.5), (40.5, 16.0),
+        (39.0, 16.5), (38.2, 15.6),
+    ],
+    "greece": [(40.0, 21.5), (39.0, 21.8), (38.0, 22.5), (37.2, 22.3)],
+    "baja_california": [
+        (31.5, -116.2), (29.0, -114.3), (26.5, -112.0), (24.5, -110.5),
+    ],
+}
+LAND_ANCHOR_RADIUS_CELLS = 0.6
 
 
-def planar(point: tuple[float, float]) -> tuple[float, float]:
-    return point[0] * KM_PER_LONGITUDE_DEGREE, point[1] * KM_PER_LATITUDE_DEGREE
+def board_x(lon: float) -> float:
+    return lon
 
 
-def douglas_peucker(
-    points: list[tuple[float, float]], tolerance_km: float
-) -> list[tuple[float, float]]:
-    if len(points) <= 2:
-        return points
-    first = planar(points[0])
-    last = planar(points[-1])
-    dx, dy = last[0] - first[0], last[1] - first[1]
-    denominator = dx * dx + dy * dy
-    index = 0
-    farthest = -1.0
-    for candidate_index, candidate in enumerate(points[1:-1], 1):
-        px, py = planar(candidate)
-        if denominator == 0:
-            distance = math.hypot(px - first[0], py - first[1])
-        else:
-            fraction = max(
-                0.0,
-                min(1.0, ((px - first[0]) * dx + (py - first[1]) * dy) / denominator),
-            )
-            distance = math.hypot(
-                px - (first[0] + fraction * dx),
-                py - (first[1] + fraction * dy),
-            )
-        if distance > farthest:
-            index, farthest = candidate_index, distance
-    if farthest <= tolerance_km:
-        return [points[0], points[-1]]
-    return (
-        douglas_peucker(points[: index + 1], tolerance_km)[:-1]
-        + douglas_peucker(points[index:], tolerance_km)
-    )
+def board_y(lat: float) -> float:
+    return lat * BOARD_VERTICAL_SCALE
 
 
-def ring_bounds(points: list[tuple[float, float]]) -> tuple[float, float, float, float]:
-    longitudes = [point[0] for point in points]
-    latitudes = [point[1] for point in points]
-    return min(longitudes), min(latitudes), max(longitudes), max(latitudes)
+GRID_X0 = LON_MIN
+GRID_Y0 = math.floor(board_y(LAT_MIN) / CELL) * CELL
+GRID_NX = int(round((LON_MAX - LON_MIN) / CELL))
+GRID_NY = int(math.ceil((board_y(LAT_MAX) - GRID_Y0) / CELL))
 
 
-def bbox_area(points: list[tuple[float, float]]) -> float:
-    min_lon, min_lat, max_lon, max_lat = ring_bounds(points)
-    return max(0.0, max_lon - min_lon) * max(0.0, max_lat - min_lat)
+def cell_center(ix: int, iy: int) -> tuple[float, float]:
+    return GRID_X0 + (ix + 0.5) * CELL, GRID_Y0 + (iy + 0.5) * CELL
+
+
+# MARK: - Source geometry
+
+
+def load_geojson(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def download(url: str, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Downloading {url}")
+    with urllib.request.urlopen(url, timeout=120) as response:
+        destination.write_bytes(response.read())
+
+
+def ensure_source(cache_dir: Path, refresh: bool) -> Path:
+    land_path = cache_dir / "ne_50m_land.geojson"
+    if refresh or not land_path.exists():
+        download(LAND_URL, land_path)
+    return land_path
+
+
+def iter_polygons(geometry: dict) -> list[list[list[tuple[float, float]]]]:
+    """All polygons as ring lists (outer first, then holes), (lon, lat)."""
+    kind = geometry.get("type")
+    coordinates = geometry.get("coordinates")
+    polygons: list[list[list[tuple[float, float]]]] = []
+    if kind == "Polygon" and coordinates:
+        polygons.append([
+            [(float(lon), float(lat)) for lon, lat, *_ in ring]
+            for ring in coordinates
+        ])
+    elif kind == "MultiPolygon":
+        for polygon in coordinates or []:
+            if polygon:
+                polygons.append([
+                    [(float(lon), float(lat)) for lon, lat, *_ in ring]
+                    for ring in polygon
+                ])
+    return polygons
+
+
+def is_antarctica_ring(points: list[tuple[float, float]]) -> bool:
+    return max(lat for _, lat in points) <= ANTARCTICA_MAX_LAT
 
 
 def unwrap_ring(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
@@ -129,496 +200,373 @@ def unwrap_ring(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
     return result
 
 
-def normalize_longitude(lon: float) -> float:
-    while lon < -180.0:
-        lon += 360.0
-    while lon > 180.0:
-        lon -= 360.0
-    return lon
+def positioned_ring(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Place a ring in the [-180, 200] board domain.
 
-
-def split_ring_at_antimeridian(
-    points: list[tuple[float, float]],
-) -> list[list[tuple[float, float]]]:
-    """Split only rings that actually jump across ±180°.
-
-    Wide continents (e.g. Eurasia from -17° to +180°) must NOT be band-split —
-    that destroys the Natural Earth dateline cut needed to stitch Chukotka.
+    Rings live in [-180, 180]. The NE-Asia remnants that Natural Earth cuts
+    at the dateline (Chukotka) belong visually east of Siberia, so rings that
+    sit hard against the far-left edge at high latitude shift east by 360.
     """
-    if len(points) < 3:
-        return []
-    ring = list(points)
-    if ring[0] != ring[-1]:
-        ring = ring + [ring[0]]
-
-    has_jump = any(
-        abs(ring[index][0] - ring[index + 1][0]) > 180.0
-        for index in range(len(ring) - 1)
-    )
-    if not has_jump:
-        return [ring]
-
-    unwrapped = unwrap_ring(ring)
-    if unwrapped[0] != unwrapped[-1]:
-        unwrapped = unwrapped + [unwrapped[0]]
-
-    min_lon = min(lon for lon, _ in unwrapped)
-    max_lon = max(lon for lon, _ in unwrapped)
-    if max_lon - min_lon <= 180.0 and -180.0 <= min_lon and max_lon <= 180.0:
-        return [[(normalize_longitude(lon), lat) for lon, lat in unwrapped]]
-
-    bands: dict[int, list[tuple[float, float]]] = {}
-    for lon, lat in unwrapped[:-1]:
-        display = normalize_longitude(lon)
-        band = int(math.floor((lon + 180.0) / 360.0))
-        bands.setdefault(band, []).append((display, lat))
-
-    rings: list[list[tuple[float, float]]] = []
-    for band_points in bands.values():
-        if len(band_points) < 3:
-            continue
-        closed = list(band_points)
-        if closed[0] != closed[-1]:
-            closed.append(closed[0])
-        if bbox_area(closed) < 1e-4:
-            continue
-        rings.append(closed)
-
-    if rings:
-        return rings
-
-    return [[(normalize_longitude(lon), lat) for lon, lat in unwrapped]]
-
-
-def simplified_closed_ring(
-    points: list[tuple[float, float]], tolerance_km: float
-) -> list[tuple[float, float]] | None:
-    if len(points) < 3:
-        return None
-    ring = list(points)
-    if ring[0] == ring[-1]:
-        ring = ring[:-1]
-    if len(ring) < 3:
-        return None
-
-    # Douglas–Peucker is defined for an open line. Feeding it a closed ring
-    # with two arbitrary neighboring endpoints can replace an entire coast by
-    # one long chord. Rotate to the point farthest from the centroid and close
-    # the line explicitly, so both halves of the silhouette are preserved.
-    centroid_lon = sum(point[0] for point in ring) / len(ring)
-    centroid_lat = sum(point[1] for point in ring) / len(ring)
-    anchor = max(
-        range(len(ring)),
-        key=lambda index: (
-            (ring[index][0] - centroid_lon) ** 2
-            + (ring[index][1] - centroid_lat) ** 2
-        ),
-    )
-    rotated = ring[anchor:] + ring[:anchor]
-    simplified = douglas_peucker(rotated + [rotated[0]], tolerance_km)
-    if len(simplified) < 3:
-        return None
-    if simplified[0] != simplified[-1]:
-        simplified.append(simplified[0])
-    return simplified
-
-
-def is_antarctica_ring(points: list[tuple[float, float]]) -> bool:
-    _, min_lat, _, max_lat = ring_bounds(points)
-    return max_lat <= ANTARCTICA_MAX_LAT
-
-
-def iter_polygon_rings(geometry: dict) -> list[list[tuple[float, float]]]:
-    """Return outer rings only as (lon, lat) lists (GeoJSON order)."""
-    kind = geometry.get("type")
-    coordinates = geometry.get("coordinates")
-    rings: list[list[tuple[float, float]]] = []
-    if kind == "Polygon":
-        if coordinates:
-            outer = coordinates[0]
-            rings.append([(float(lon), float(lat)) for lon, lat, *_ in outer])
-    elif kind == "MultiPolygon":
-        for polygon in coordinates or []:
-            if not polygon:
-                continue
-            outer = polygon[0]
-            rings.append([(float(lon), float(lat)) for lon, lat, *_ in outer])
-    return rings
-
-
-def iter_polylines(geometry: dict) -> list[list[tuple[float, float]]]:
-    """Return open polylines as (lon, lat) lists."""
-    kind = geometry.get("type")
-    coordinates = geometry.get("coordinates")
-    lines: list[list[tuple[float, float]]] = []
-    if kind == "LineString":
-        if coordinates:
-            lines.append([(float(lon), float(lat)) for lon, lat, *_ in coordinates])
-    elif kind == "MultiLineString":
-        for line in coordinates or []:
-            if len(line) >= 2:
-                lines.append([(float(lon), float(lat)) for lon, lat, *_ in line])
-    return lines
-
-
-def split_open_polyline_at_antimeridian(
-    points: list[tuple[float, float]],
-) -> list[list[tuple[float, float]]]:
-    """Split a polyline wherever consecutive vertices jump across ±180°."""
-    if len(points) < 2:
-        return []
-    segments: list[list[tuple[float, float]]] = []
-    current: list[tuple[float, float]] = [points[0]]
-    for point in points[1:]:
-        prev = current[-1]
-        if abs(point[0] - prev[0]) > 180.0:
-            if len(current) >= 2:
-                segments.append(current)
-            current = [point]
-        else:
-            current.append(point)
-    if len(current) >= 2:
-        segments.append(current)
-    return segments
-
-
-def simplified_open_polyline(
-    points: list[tuple[float, float]], tolerance_km: float
-) -> list[tuple[float, float]] | None:
-    if len(points) < 2:
-        return None
-    simplified = douglas_peucker(points, tolerance_km)
-    if len(simplified) < 2:
-        return None
-    return simplified
-
-
-def load_geojson(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def download(url: str, destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Downloading {url}")
-    with urllib.request.urlopen(url, timeout=120) as response:
-        destination.write_bytes(response.read())
-
-
-def ensure_sources(cache_dir: Path, refresh: bool) -> tuple[Path, Path]:
-    # Filenames must track the URLs. When these still said 110m after the
-    # sources moved to 50m, an existing cache silently satisfied the download
-    # check and the script kept rebuilding from the old, coarser data.
-    land_path = cache_dir / "ne_50m_land.geojson"
-    boundaries_path = cache_dir / "ne_50m_admin_0_boundary_lines_land.geojson"
-    if refresh or not land_path.exists():
-        download(LAND_URL, land_path)
-    if refresh or not boundaries_path.exists():
-        download(BOUNDARIES_URL, boundaries_path)
-    return land_path, boundaries_path
-
-
-def process_land(geojson: dict) -> list[list[tuple[float, float]]]:
-    rings: list[list[tuple[float, float]]] = []
-    for feature in geojson.get("features", []):
-        geometry = feature.get("geometry") or {}
-        for outer in iter_polygon_rings(geometry):
-            if len(outer) < 3:
-                continue
-            if is_antarctica_ring(outer):
-                continue
-            for piece in split_ring_at_antimeridian(outer):
-                if is_antarctica_ring(piece):
-                    continue
-                if len(_open_ring(piece)) < 3:
-                    continue
-                rings.append(piece if piece[0] == piece[-1] else piece + [piece[0]])
-    # Stitch NE Asia dateline wraps before DP so ±180 cut vertices survive.
-    rings = merge_dateline_wraps_into_land(rings)
-    simplified_rings: list[list[tuple[float, float]]] = []
-    for ring in rings:
-        if bbox_area(ring) < MIN_BOARD_LAND_BBOX_AREA:
-            continue
-        simplified = simplified_closed_ring(ring, BOARD_SIMPLIFY_TOLERANCE_KM)
-        if simplified is None or len(simplified) < MIN_RING_POINTS:
-            continue
-        if is_antarctica_ring(simplified):
-            continue
-        simplified_rings.append(simplified)
-    simplified_rings.sort(key=bbox_area, reverse=True)
-    return simplified_rings
-
-
-def process_boundaries(geojson: dict) -> list[list[tuple[float, float]]]:
-    """International land borders (open polylines), Antarctica omitted."""
-    lines: list[list[tuple[float, float]]] = []
-    for feature in geojson.get("features", []):
-        props = feature.get("properties") or {}
-        name = str(props.get("name") or props.get("NAME") or "").lower()
-        if "antar" in name:
-            continue
-        geometry = feature.get("geometry") or {}
-        for line in iter_polylines(geometry):
-            if len(line) < 2:
-                continue
-            if is_antarctica_ring(line):
-                continue
-            for piece in split_open_polyline_at_antimeridian(line):
-                if len(piece) < 2 or is_antarctica_ring(piece):
-                    continue
-                simplified = simplified_open_polyline(
-                    piece, BOUNDARY_SIMPLIFY_TOLERANCE_KM
-                )
-                if simplified is None or len(simplified) < MIN_BOUNDARY_POINTS:
-                    continue
-                lines.append(simplified)
-    lines.sort(key=lambda pts: -len(pts))
-    return lines
-
-
-def is_east_asia_dateline_wrap(points: list[tuple[float, float]]) -> bool:
-    """True for Chukotka-style remnants that appear on the far-left after ±180 split.
-
-    Those belong east of Asia. Alaska / Canada stay put (further east than ~-168°
-    or lower latitude).
-    """
-    min_lon, min_lat, max_lon, max_lat = ring_bounds(points)
-    if min_lat < 55.0:
-        return False
-    if max_lon > -168.0:
-        return False
-    return min_lon <= -170.0
-
-
-def _open_ring(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    ring = list(points)
-    if len(ring) >= 2 and ring[0] == ring[-1]:
-        ring = ring[:-1]
+    ring = unwrap_ring(points)
+    min_lon = min(lon for lon, _ in ring)
+    max_lon = max(lon for lon, _ in ring)
+    min_lat = min(lat for _, lat in ring)
+    if max_lon <= -168.0 and min_lon <= -170.0 and min_lat >= 55.0:
+        return [(lon + 360.0, lat) for lon, lat in ring]
     return ring
 
 
-def _on_dateline(lon: float, eps: float = 0.05) -> bool:
-    return abs(abs(lon) - 180.0) <= eps
+# MARK: - Rasterization
 
 
-def _find_dateline_cut(
-    ring: list[tuple[float, float]],
-) -> tuple[int, tuple[float, float], tuple[float, float]] | None:
-    """Index i where ring[i]→ring[i+1] is the artificial ±180 cut (lat span)."""
-    r = _open_ring(ring)
-    n = len(r)
-    if n < 3:
-        return None
-    best = None
-    for i in range(n):
-        a = r[i]
-        b = r[(i + 1) % n]
-        if not (_on_dateline(a[0]) and _on_dateline(b[0])):
-            continue
-        lat_span = abs(a[1] - b[1])
-        if lat_span < 0.4:
-            continue
-        if best is None or lat_span > best[0]:
-            best = (lat_span, i, a, b)
-    if best is None:
-        return None
-    _, index, a, b = best
-    return index, a, b
+def fill_polygon(
+    rings: list[list[tuple[float, float]]],
+    land: list[list[bool]],
+) -> None:
+    """Even-odd scanline fill of one polygon (outer + holes) into the grid."""
+    board_rings = [
+        [(board_x(lon), board_y(lat)) for lon, lat in ring]
+        for ring in rings
+        if len(ring) >= 3
+    ]
+    if not board_rings:
+        return
+    y_low = min(y for ring in board_rings for _, y in ring)
+    y_high = max(y for ring in board_rings for _, y in ring)
+    iy_low = max(0, int((y_low - GRID_Y0) / CELL - 1))
+    iy_high = min(GRID_NY - 1, int((y_high - GRID_Y0) / CELL + 1))
+
+    for iy in range(iy_low, iy_high + 1):
+        yc = GRID_Y0 + (iy + 0.5) * CELL
+        crossings: list[float] = []
+        for ring in board_rings:
+            for index in range(len(ring)):
+                x0, y0 = ring[index]
+                x1, y1 = ring[(index + 1) % len(ring)]
+                if (y0 <= yc < y1) or (y1 <= yc < y0):
+                    crossings.append(x0 + (yc - y0) * (x1 - x0) / (y1 - y0))
+        crossings.sort()
+        for pair in range(0, len(crossings) - 1, 2):
+            start, end = crossings[pair], crossings[pair + 1]
+            ix_start = max(0, math.ceil((start - GRID_X0) / CELL - 0.5))
+            ix_end = min(GRID_NX - 1, math.floor((end - GRID_X0) / CELL - 0.5))
+            for ix in range(ix_start, ix_end + 1):
+                land[iy][ix] = True
 
 
-def _shift_lon_east(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """Move western dateline remnant into lon > 180."""
-    return [(lon + 360.0 if lon < 0.0 else lon, lat) for lon, lat in points]
+def smooth_grid(land: list[list[bool]]) -> None:
+    """Coast calm-down that can never seal a through-channel.
+
+    Dead-end notches (water with three cardinal land neighbours) are filled
+    and pimples/needle tips (land with at most one cardinal land neighbour)
+    are shaved. A navigable one-cell strait has land on only two sides, so
+    seas and straits survive; only grid noise goes.
+    """
+    def count(ix: int, iy: int, offsets) -> int:
+        return sum(
+            1 for dx, dy in offsets
+            if 0 <= iy + dy < GRID_NY and 0 <= ix + dx < GRID_NX
+            and land[iy + dy][ix + dx]
+        )
+
+    cardinal = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+    ring8 = cardinal + [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+
+    for _ in range(PRONG_TRIM_PASSES):
+        notches = [
+            (ix, iy)
+            for iy in range(1, GRID_NY - 1)
+            for ix in range(1, GRID_NX - 1)
+            if not land[iy][ix] and count(ix, iy, cardinal) >= 3
+        ]
+        for ix, iy in notches:
+            land[iy][ix] = True
+        # The prong test uses all eight neighbours: diagonal one-cell land
+        # chains (Italy, Greece, Baja) have no cardinal neighbours at all and
+        # would evaporate under a four-neighbour rule.
+        prongs = [
+            (ix, iy)
+            for iy in range(GRID_NY)
+            for ix in range(GRID_NX)
+            if land[iy][ix] and count(ix, iy, ring8) <= 1
+        ]
+        for ix, iy in prongs:
+            land[iy][ix] = False
 
 
-def _exterior_path_from_cut(
-    ring: list[tuple[float, float]], cut_index: int
-) -> list[tuple[float, float]]:
-    """Vertices from cut end → around exterior → cut start (inclusive)."""
-    r = _open_ring(ring)
-    n = len(r)
-    start = (cut_index + 1) % n
-    end = cut_index
-    path = [r[start]]
-    j = (start + 1) % n
-    while j != end:
-        path.append(r[j])
-        j = (j + 1) % n
-    path.append(r[end])
-    return path
+def paint_lanes(
+    land: list[list[bool]],
+    lanes: dict[str, list[tuple[float, float]]],
+    radius_cells: float,
+    value: bool,
+) -> None:
+    radius = radius_cells * CELL
+    for lane in lanes.values():
+        board = [(board_x(lon), board_y(lat)) for lat, lon in lane]
+        for (x0, y0), (x1, y1) in zip(board, board[1:]):
+            length = math.hypot(x1 - x0, y1 - y0)
+            steps = max(1, int(length / (CELL / 2)))
+            for step in range(steps + 1):
+                t = step / steps
+                px, py = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+                ix_center = int((px - GRID_X0) / CELL)
+                iy_center = int((py - GRID_Y0) / CELL)
+                reach = int(radius / CELL) + 1
+                for iy in range(iy_center - reach, iy_center + reach + 1):
+                    for ix in range(ix_center - reach, ix_center + reach + 1):
+                        if not (0 <= iy < GRID_NY and 0 <= ix < GRID_NX):
+                            continue
+                        cx, cy = cell_center(ix, iy)
+                        if math.hypot(cx - px, cy - py) <= radius:
+                            land[iy][ix] = value
 
 
-def try_stitch_wrap_into_host(
-    host: list[tuple[float, float]],
-    wrap: list[tuple[float, float]],
-) -> list[tuple[float, float]] | None:
-    """Replace host's ±180 cut with wrap's eastern coastline (lon shifted +360)."""
-    host_cut = _find_dateline_cut(host)
-    wrap_cut = _find_dateline_cut(wrap)
-    if host_cut is None or wrap_cut is None:
-        return None
-    host_i, host_a, host_b = host_cut
-    wrap_i, wrap_a, wrap_b = wrap_cut
+def pin_cities(land: list[list[bool]], cities: list[dict]) -> None:
+    for city in cities:
+        ix = int((board_x(city["longitude"]) - GRID_X0) / CELL)
+        iy = int((board_y(city["latitude"]) - GRID_Y0) / CELL)
+        if 0 <= iy < GRID_NY and 0 <= ix < GRID_NX:
+            land[iy][ix] = True
 
-    # Host cut host_a→host_b should match wrap cut endpoints (same latitudes).
-    host_lats = sorted((host_a[1], host_b[1]))
-    wrap_lats = sorted((wrap_a[1], wrap_b[1]))
-    if abs(host_lats[0] - wrap_lats[0]) > 0.15 or abs(host_lats[1] - wrap_lats[1]) > 0.15:
-        return None
 
-    exterior = _exterior_path_from_cut(wrap, wrap_i)
-    # exterior starts at wrap_b and ends at wrap_a (cut direction wrap_a→wrap_b).
-    # Host wants path host_a→host_b. Align orientation.
-    exterior_shifted = _shift_lon_east(exterior)
+def cleanup_components(land: list[list[bool]], cities: list[dict]) -> None:
+    """Apply the island policy and fill lake noise.
 
-    def lat_key(point: tuple[float, float]) -> float:
-        return point[1]
+    Land survives if it is continental (big), carries a catalog city, or is
+    on the authored keep-list; everything else is confetti and goes.
+    """
+    protected_cells = set()
+    for city in cities:
+        ix = int((board_x(city["longitude"]) - GRID_X0) / CELL)
+        iy = int((board_y(city["latitude"]) - GRID_Y0) / CELL)
+        protected_cells.add((ix, iy))
+    for lat, lon in KEEP_ISLAND_SEEDS.values():
+        ix = int((board_x(lon) - GRID_X0) / CELL)
+        iy = int((board_y(lat) - GRID_Y0) / CELL)
+        protected_cells.add((ix, iy))
 
-    start_lat, end_lat = host_a[1], host_b[1]
-    if abs(exterior_shifted[0][1] - start_lat) > abs(exterior_shifted[-1][1] - start_lat):
-        exterior_shifted = list(reversed(exterior_shifted))
-    # Snap endpoints exactly onto the host cut vertices.
-    exterior_shifted[0] = (max(exterior_shifted[0][0], 180.0), start_lat)
-    exterior_shifted[-1] = (max(exterior_shifted[-1][0], 180.0), end_lat)
-    # Prefer host cut longitudes (typically +180).
-    exterior_shifted[0] = (host_a[0] if host_a[0] >= 180.0 else 180.0, start_lat)
-    exterior_shifted[-1] = (host_b[0] if host_b[0] >= 180.0 else 180.0, end_lat)
+    def component(seed, value, visited):
+        # Land connects across diagonals (thin peninsulas like Calabria are
+        # diagonal cell chains); water does not, or it would leak through
+        # those same chains.
+        if value:
+            offsets = (
+                (1, 0), (-1, 0), (0, 1), (0, -1),
+                (1, 1), (1, -1), (-1, 1), (-1, -1),
+            )
+        else:
+            offsets = ((1, 0), (-1, 0), (0, 1), (0, -1))
+        stack = [seed]
+        cells = []
+        visited.add(seed)
+        while stack:
+            ix, iy = stack.pop()
+            cells.append((ix, iy))
+            for dx, dy in offsets:
+                nx, ny = ix + dx, iy + dy
+                if not (0 <= ny < GRID_NY and 0 <= nx < GRID_NX):
+                    continue
+                if (nx, ny) in visited or land[ny][nx] != value:
+                    continue
+                visited.add((nx, ny))
+                stack.append((nx, ny))
+        return cells
 
-    host_open = _open_ring(host)
-    n = len(host_open)
-    # host_open[host_i]=host_a, host_open[host_i+1]=host_b
-    mid = exterior_shifted[1:-1]
-    merged = (
-        host_open[: host_i + 1]
-        + mid
-        + host_open[host_i + 1 :]
-    )
-    if merged[0] != merged[-1]:
-        merged.append(merged[0])
+    visited: set[tuple[int, int]] = set()
+    for iy in range(GRID_NY):
+        for ix in range(GRID_NX):
+            if land[iy][ix] and (ix, iy) not in visited:
+                cells = component((ix, iy), True, visited)
+                keep = (
+                    len(cells) >= CONTINENT_MIN_CELLS
+                    or bool(set(cells) & protected_cells)
+                )
+                if not keep:
+                    for cx, cy in cells:
+                        land[cy][cx] = False
+
+    visited = set()
+    border_touching = False
+    for iy in range(GRID_NY):
+        for ix in range(GRID_NX):
+            if not land[iy][ix] and (ix, iy) not in visited:
+                cells = component((ix, iy), False, visited)
+                border_touching = any(
+                    cx in (0, GRID_NX - 1) or cy in (0, GRID_NY - 1)
+                    for cx, cy in cells
+                )
+                if not border_touching and len(cells) <= MAX_LAKE_CELLS:
+                    for cx, cy in cells:
+                        land[cy][cx] = True
+
+
+# MARK: - Contour tracing
+
+
+def trace_outlines(land: list[list[bool]]) -> list[list[tuple[int, int]]]:
+    """Trace directed cell-edge loops around every land region.
+
+    Edges keep land on their left, so outer coasts wind one way and lake
+    shores the other; the even-odd fill of the renderer shows both correctly.
+    At checkerboard vertices the sharpest left turn is taken, so diagonally
+    touching land (thin peninsulas are diagonal cell chains) stays one
+    continuous outline instead of a chain of separate diamonds.
+    """
+    def is_land(ix: int, iy: int) -> bool:
+        return 0 <= iy < GRID_NY and 0 <= ix < GRID_NX and land[iy][ix]
+
+    # Directed boundary edges: (vertex from) -> (vertex to), land on left.
+    edges: dict[tuple[int, int], list[tuple[int, int]]] = {}
+
+    def add(a: tuple[int, int], b: tuple[int, int]) -> None:
+        edges.setdefault(a, []).append(b)
+
+    for iy in range(GRID_NY):
+        for ix in range(GRID_NX):
+            if not land[iy][ix]:
+                continue
+            if not is_land(ix, iy - 1):
+                add((ix, iy), (ix + 1, iy))
+            if not is_land(ix + 1, iy):
+                add((ix + 1, iy), (ix + 1, iy + 1))
+            if not is_land(ix, iy + 1):
+                add((ix + 1, iy + 1), (ix, iy + 1))
+            if not is_land(ix - 1, iy):
+                add((ix, iy + 1), (ix, iy))
+
+    loops: list[list[tuple[int, int]]] = []
+    while edges:
+        start = min(edges)
+        loop = [start]
+        current = start
+        incoming = (0, 0)
+        while True:
+            candidates = edges.get(current)
+            if not candidates:
+                break
+            if len(candidates) == 1 or incoming == (0, 0):
+                chosen = candidates[0]
+            else:
+                # Sharpest left turn relative to the incoming direction.
+                def turn(candidate: tuple[int, int]) -> float:
+                    dx, dy = candidate[0] - current[0], candidate[1] - current[1]
+                    cross = incoming[0] * dy - incoming[1] * dx
+                    dot = incoming[0] * dx + incoming[1] * dy
+                    return math.atan2(cross, dot)
+                chosen = max(candidates, key=turn)
+            candidates.remove(chosen)
+            if not candidates:
+                del edges[current]
+            incoming = (chosen[0] - current[0], chosen[1] - current[1])
+            current = chosen
+            if current == start:
+                break
+            loop.append(current)
+        if len(loop) >= 4:
+            loops.append(loop)
+    return loops
+
+
+def cut_staircases(loop: list[tuple[int, int]]) -> list[tuple[float, float]]:
+    """Turn unit staircase steps into 45-degree diagonals, then merge runs."""
+    points: list[tuple[float, float]] = [(float(x), float(y)) for x, y in loop]
+
+    changed = True
+    passes = 0
+    while changed and passes < 12 and len(points) > 4:
+        changed = False
+        passes += 1
+        index = 0
+        while index < len(points) and len(points) > 4:
+            previous = points[index - 1]
+            current = points[index]
+            following = points[(index + 1) % len(points)]
+            into = (current[0] - previous[0], current[1] - previous[1])
+            out = (following[0] - current[0], following[1] - current[1])
+            unit_in = max(abs(into[0]), abs(into[1])) <= 1.01
+            unit_out = max(abs(out[0]), abs(out[1])) <= 1.01
+            perpendicular = abs(into[0] * out[0] + into[1] * out[1]) < 0.01
+            if unit_in and unit_out and perpendicular:
+                del points[index]
+                changed = True
+                index += 1  # skip the next corner: cut alternately
+            else:
+                index += 1
+
+    # Merge collinear runs.
+    merged: list[tuple[float, float]] = []
+    for point in points:
+        while len(merged) >= 2:
+            a, b = merged[-2], merged[-1]
+            cross = (b[0] - a[0]) * (point[1] - b[1]) - (b[1] - a[1]) * (point[0] - b[0])
+            dot = (b[0] - a[0]) * (point[0] - b[0]) + (b[1] - a[1]) * (point[1] - b[1])
+            if abs(cross) < 1e-9 and dot > 0:
+                merged.pop()
+            else:
+                break
+        merged.append(point)
+    if len(merged) >= 3:
+        a, b, c = merged[-2], merged[-1], merged[0]
+        cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
+        dot = (b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1])
+        if abs(cross) < 1e-9 and dot > 0:
+            merged.pop()
     return merged
 
 
-def merge_dateline_wraps_into_land(
-    rings: list[list[tuple[float, float]]],
-) -> list[list[tuple[float, float]]]:
-    """Stitch NE Asia dateline remnants into the Eurasian ring (no seam)."""
-    wraps = [r for r in rings if is_east_asia_dateline_wrap(r)]
-    others = [r for r in rings if not is_east_asia_dateline_wrap(r)]
-    if not wraps:
-        return rings
+# MARK: - Assembly
 
-    # Primary host: largest ring that reaches the dateline from the west/Asia side.
-    host_index = None
-    host_area = -1.0
-    for index, ring in enumerate(others):
-        min_lon, min_lat, max_lon, max_lat = ring_bounds(ring)
-        if max_lon < 179.5 or max_lat < 60.0:
+
+def build_board(land_path: Path, cities: list[dict]) -> dict:
+    land = [[False] * GRID_NX for _ in range(GRID_NY)]
+    for feature in load_geojson(land_path).get("features", []):
+        geometry = feature.get("geometry") or {}
+        for polygon in iter_polygons(geometry):
+            outer = polygon[0]
+            if len(outer) < 3 or is_antarctica_ring(outer):
+                continue
+            positioned = [positioned_ring(ring) for ring in polygon]
+            fill_polygon(positioned, land)
+
+    smooth_grid(land)
+    paint_lanes(land, SEA_LANES, SEA_LANE_RADIUS_CELLS, False)
+    paint_lanes(land, LAND_ANCHORS, LAND_ANCHOR_RADIUS_CELLS, True)
+    pin_cities(land, cities)
+    cleanup_components(land, cities)
+
+    land_masses = []
+    for loop in trace_outlines(land):
+        outline = cut_staircases(loop)
+        if len(outline) < 3:
             continue
-        area = bbox_area(ring)
-        if area > host_area:
-            host_area = area
-            host_index = index
+        points = []
+        for gx, gy in outline:
+            lon = GRID_X0 + gx * CELL
+            lat = (GRID_Y0 + gy * CELL) / BOARD_VERTICAL_SCALE
+            points.append({
+                "latitude": round(lat, 6),
+                "longitude": round(lon, 6),
+            })
+        land_masses.append(points)
+    land_masses.sort(key=len, reverse=True)
 
-    consumed: set[int] = set()
-    if host_index is not None:
-        host = others[host_index]
-        for wrap_index, wrap in enumerate(wraps):
-            stitched = try_stitch_wrap_into_host(host, wrap)
-            if stitched is None:
-                continue
-            host = stitched
-            consumed.add(wrap_index)
-        others[host_index] = host
-
-    # Leftover wraps: try eastern island halves (e.g. Wrangel), else shift only.
-    for wrap_index, wrap in enumerate(wraps):
-        if wrap_index in consumed:
-            continue
-        merged = False
-        for index, ring in enumerate(others):
-            min_lon, min_lat, max_lon, max_lat = ring_bounds(ring)
-            if max_lon < 178.0 or min_lon < 100.0 or min_lat < 55.0:
-                continue
-            stitched = try_stitch_wrap_into_host(ring, wrap)
-            if stitched is None:
-                continue
-            others[index] = stitched
-            merged = True
-            break
-        if not merged:
-            others.append(_shift_lon_east(wrap))
-
-    others.sort(key=bbox_area, reverse=True)
-    return others
-
-
-def shift_dateline_wraps_east(
-    geometries: list[list[tuple[float, float]]],
-) -> list[list[tuple[float, float]]]:
-    """Shift (don't stitch) — used for open border polylines."""
-    shifted: list[list[tuple[float, float]]] = []
-    for points in geometries:
-        if is_east_asia_dateline_wrap(points):
-            shifted.append(_shift_lon_east(points))
-        else:
-            shifted.append(points)
-    return shifted
-
-
-def rounded_coordinate(point: tuple[float, float]) -> dict[str, float]:
-    return {"latitude": round(point[1], 6), "longitude": round(point[0], 6)}
-
-
-def build_board(land_path: Path) -> dict:
-    land_rings = process_land(load_geojson(land_path))
     return {
-        "version": 2,
+        "version": 3,
         "source": (
             "Natural Earth 50m land "
-            "(https://www.naturalearthdata.com/); globally coarsened for the "
-            "authored rounded game board; Antarctica omitted; "
-            "NE Asia dateline wraps stitched into Eurasia (lon>180); "
-            f"land simplify ~{BOARD_SIMPLIFY_TOLERANCE_KM:.0f} km"
+            "(https://www.naturalearthdata.com/); rasterized onto a "
+            f"{CELL}-degree board grid, staircase steps cut to 45-degree "
+            "diagonals; authored sea lanes keep narrow straits open; "
+            "catalog cities pinned to land; Antarctica omitted"
         ),
         "landMasses": [
-            {
-                "id": f"board_land_{index:03d}",
-                "points": [
-                    rounded_coordinate(point)
-                    for point in (ring[:-1] if ring[0] == ring[-1] else ring)
-                ],
-            }
-            for index, ring in enumerate(land_rings, 1)
+            {"id": f"board_land_{index:03d}", "points": points}
+            for index, points in enumerate(land_masses, start=1)
         ],
     }
 
 
-def build_boundaries(boundaries_path: Path) -> dict:
-    boundary_lines = shift_dateline_wraps_east(
-        process_boundaries(load_geojson(boundaries_path))
-    )
-    return {
-        "version": 1,
-        "source": (
-            "Natural Earth 50m admin-0 land boundary lines "
-            "(https://www.naturalearthdata.com/); final game-board detail; "
-            f"Antarctica omitted; simplify ~{BOUNDARY_SIMPLIFY_TOLERANCE_KM:.0f} km"
-        ),
-        "lines": [
-            [rounded_coordinate(point) for point in line]
-            for line in boundary_lines
-        ],
-    }
-
-
-def write_json(path: Path, value: dict) -> None:
-    """Indented JSON, except that each coordinate stays on one line.
-
-    Fully indented, one coordinate spans four lines, so a regenerated world is
-    a ~90,000 line diff nobody can review. Collapsing just the innermost
-    `{latitude, longitude}` objects cuts that by three quarters and loses
-    nothing: the file is still ordinary, readable JSON and the Swift decoder
-    never sees the difference.
-    """
+def write_json(path: Path, value) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(value, indent=2, ensure_ascii=False)
     text = re.sub(
@@ -632,28 +580,19 @@ def write_json(path: Path, value: dict) -> None:
 def main() -> None:
     repo_scripts = Path(__file__).resolve().parent
     catalog_dir = repo_scripts.parent / "Goods&Glory" / "Resources" / "Catalog"
-    default_board_output = catalog_dir / "map_board_silhouette.json"
-    default_boundaries_output = catalog_dir / "map_boundaries.json"
-    default_cache = repo_scripts / ".cache" / "natural_earth"
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--cache-dir",
         type=Path,
-        default=default_cache,
+        default=repo_scripts / ".cache" / "natural_earth",
         help="Directory for downloaded Natural Earth GeoJSON files",
     )
     parser.add_argument(
         "--board-output",
         type=Path,
-        default=default_board_output,
+        default=catalog_dir / "map_board_silhouette.json",
         help="Destination map_board_silhouette.json path",
-    )
-    parser.add_argument(
-        "--boundaries-output",
-        type=Path,
-        default=default_boundaries_output,
-        help="Destination map_boundaries.json path",
     )
     parser.add_argument(
         "--refresh",
@@ -662,23 +601,16 @@ def main() -> None:
     )
     arguments = parser.parse_args()
 
-    land_path, boundaries_path = ensure_sources(
-        arguments.cache_dir, arguments.refresh
-    )
-    board = build_board(land_path)
-    boundaries = build_boundaries(boundaries_path)
+    cities = json.loads((catalog_dir / "cities.json").read_text(encoding="utf-8"))
+    land_path = ensure_source(arguments.cache_dir, arguments.refresh)
+    board = build_board(land_path, cities)
     write_json(arguments.board_output, board)
-    write_json(arguments.boundaries_output, boundaries)
 
     land_points = sum(len(item["points"]) for item in board["landMasses"])
-    border_points = sum(len(line) for line in boundaries["lines"])
     print(
         f"Wrote {arguments.board_output}\n"
         f"  landMasses={len(board['landMasses'])} ({land_points} points)\n"
-        f"  size={arguments.board_output.stat().st_size / 1024.0:.1f} KB\n"
-        f"Wrote {arguments.boundaries_output}\n"
-        f"  boundaryLines={len(boundaries['lines'])} ({border_points} points)\n"
-        f"  size={arguments.boundaries_output.stat().st_size / 1024.0:.1f} KB"
+        f"  size={arguments.board_output.stat().st_size / 1024.0:.1f} KB"
     )
 
 

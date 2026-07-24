@@ -1,10 +1,12 @@
 # Contiguous-US map sources
 
-The bundled US slice is generated offline by `generate_us_map.py`. It is a
-strategic game map, not a navigation database: divided carriageways and
-sub-kilometre bends are collapsed at build time into a routing graph
-(`road_nodes` + `roads` with `distanceKm`). Runtime does not store TIGER road
-polylines; the map derives its shared schematic corridors from this graph.
+`generate_us_map.py` produces the US city roster (`cities.json`) and market
+profiles (`city_markets.json`) from the pinned sources below. The routing
+graph (`road_nodes.json` + `roads.json`) is **not** generated from TIGER
+anymore: the shipped network is the authored world trade-corridor graph from
+`generate_trade_network.py`, which covers all continents with a sparse,
+metro-style line set. Runtime derives its shared schematic corridors from
+that graph.
 
 Pinned inputs:
 

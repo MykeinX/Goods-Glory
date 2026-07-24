@@ -1,9 +1,6 @@
 //
 //  Goods_GloryApp.swift
 //  Goods&Glory
-//
-//  Created by Muhammet Erdem on 18.07.2026.
-//
 
 import SwiftUI
 

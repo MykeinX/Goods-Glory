@@ -1,41 +1,29 @@
-# World map sources
+# World board art
 
-`generate_world_geography.py` produces the two presentation atlases used by
-SpriteKit:
+The game board silhouette is **authored Mini Metro–style art**, not a live
+Natural Earth pipeline.
 
-- `map_board_silhouette.json`: low-detail land polygons for the rounded board.
-- `map_boundaries.json`: country-border lines at final render detail.
+- Source: `scripts/assets/board_art_reference.png` (white land on soft blue sea)
+- Importer: `python3 -B scripts/import_board_art.py`
+- Output: `Resources/Catalog/map_board_silhouette.json`
 
-Both outputs are generated globally from the same Natural Earth 1:50m source.
-The whole world therefore receives one detail budget; no region has a
-hand-tuned or higher-resolution exception.
+The importer:
 
-Pinned inputs:
+1. Thresholds white land (drops letterbox frame noise)
+2. Traces high-detail contours and inland-sea holes
+3. Snaps every coast edge to the eight board directions (H / V / 45°) and
+   merges collinear runs — this is the Mini Metro look
+4. Maps pixels to lat/lon for the board projection (city placement can follow
+   the art later; the silhouette is the priority)
 
-- Natural Earth 50m land GeoJSON:
-  `https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_land.geojson`
-- Natural Earth 50m admin-0 land boundary lines GeoJSON:
-  `https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_boundary_lines_land.geojson`
+SpriteKit only applies a small fixed corner radius and a soft drop shadow at
+render time. Country borders are not drawn.
 
-Processing rules:
+`generate_world_geography.py` remains as legacy Natural Earth tooling and is
+**not** the source of the shipped board silhouette.
 
-- Antarctica is omitted.
-- Small island confetti is removed globally by one footprint threshold.
-- Land is simplified to roughly 900 vertices for the entire board.
-- Country borders are simplified once offline; SpriteKit does not simplify them again.
-- Coast rounding is a renderer concern and does not mutate geographic data.
-- Cities and transport graphs are independent. Road traversal is land because
-  the Domain road graph says so, not because presentation performs polygon
-  collision against the silhouette.
-
-Generate both resources:
+Seed / refresh the reference PNG then re-import:
 
 ```sh
-python3 -B scripts/generate_world_geography.py
-```
-
-Refresh pinned source caches:
-
-```sh
-python3 -B scripts/generate_world_geography.py --refresh
+python3 -B scripts/import_board_art.py --seed-from /path/to/reference.png
 ```

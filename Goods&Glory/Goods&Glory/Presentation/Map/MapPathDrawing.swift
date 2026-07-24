@@ -8,60 +8,35 @@
 import CoreGraphics
 
 extension CGMutablePath {
-    /// Straight polygon edges with a small, globally consistent corner radius.
-    ///
-    /// The fixed cap prevents large continental segments from becoming
-    /// bulbous, while the edge fraction keeps small islands from collapsing.
-    /// This reads like an iOS rounded rectangle applied to a low-poly map.
+    /// Draws fixed-radius iOS-style corners as native quadratic curves.
+    /// The sampled variant in `MapPathSimplifier` remains for geometry that
+    /// vehicles must physically follow; static land can keep the smaller path.
     func addRoundedClosedPolyline(
         _ points: [CGPoint],
-        cornerRadius: CGFloat = 220,
-        maximumCornerFraction: CGFloat = 0.28
+        cornerRadius: CGFloat,
+        maximumCornerFraction: CGFloat
     ) {
         guard points.count >= 3 else { return }
-
-        func inset(
-            _ vertex: CGPoint,
-            toward neighbor: CGPoint,
-            distance: CGFloat
-        ) -> CGPoint {
-            let dx = neighbor.x - vertex.x
-            let dy = neighbor.y - vertex.y
-            let length = hypot(dx, dy)
-            guard length > 0.001 else { return vertex }
-            let fraction = min(1, distance / length)
-            return CGPoint(
-                x: vertex.x + dx * fraction,
-                y: vertex.y + dy * fraction
+        let corners = points.indices.compactMap {
+            MapPathSimplifier.roundedCorner(
+                at: $0,
+                in: points,
+                radius: cornerRadius,
+                cornerFraction: maximumCornerFraction
             )
         }
-
-        func corner(at index: Int) -> (inlet: CGPoint, outlet: CGPoint) {
-            let previous = points[(index - 1 + points.count) % points.count]
-            let vertex = points[index]
-            let next = points[(index + 1) % points.count]
-            let incomingLength = hypot(vertex.x - previous.x, vertex.y - previous.y)
-            let outgoingLength = hypot(next.x - vertex.x, next.y - vertex.y)
-            let trim = min(
-                cornerRadius,
-                incomingLength * maximumCornerFraction,
-                outgoingLength * maximumCornerFraction
-            )
-            return (
-                inset(vertex, toward: previous, distance: trim),
-                inset(vertex, toward: next, distance: trim)
-            )
+        guard corners.count == points.count else {
+            addClosedPolyline(points)
+            return
         }
 
-        move(to: corner(at: 0).outlet)
+        move(to: corners[0].outlet)
         for index in 1...points.count {
             let vertexIndex = index % points.count
-            let vertex = points[vertexIndex]
-            let rounded = corner(at: vertexIndex)
-            addLine(to: rounded.inlet)
+            addLine(to: corners[vertexIndex].inlet)
             addQuadCurve(
-                to: rounded.outlet,
-                control: vertex
+                to: corners[vertexIndex].outlet,
+                control: points[vertexIndex]
             )
         }
         closeSubpath()

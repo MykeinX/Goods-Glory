@@ -17,7 +17,6 @@ final class GameMapScene: SKScene {
 
     let catalog: GameCatalog
     let projection: MapProjection
-    let boundaryAtlas: MapBoundaryAtlas
     let cameraNode = SKCameraNode()
 
     let terrainLayer = SKNode()
@@ -31,17 +30,18 @@ final class GameMapScene: SKScene {
     let activeRouteNode = SKShapeNode()
     let plannedRouteNode = SKShapeNode()
     let landNode = SKShapeNode()
-    let boundaryNode = SKShapeNode()
+    let landShadowNode = SKShapeNode()
 
-    /// Base screen-space weights for the five batched map paths.
+    /// Base screen-space weights for the batched map paths.
     /// Road count and vehicle count do not change that node budget.
     enum StrokeWidth {
-        static let landCoast: CGFloat = 0.8
+        static let landCoast: CGFloat = 0.5
         static let waterCoast: CGFloat = 1
-        static let boundary: CGFloat = 0.5
-        static let activeRouteHalo: CGFloat = 9
-        static let activeRoute: CGFloat = 5
-        static let plannedRoute: CGFloat = 4
+        /// White casing width. Sits a few points proud of `activeRoute` so the
+        /// coloured line reads as a metro line cut cleanly out of the map.
+        static let activeRouteHalo: CGFloat = 9.5
+        static let activeRoute: CGFloat = 5.5
+        static let plannedRoute: CGFloat = 4.5
     }
 
     var cityNodes: [CityID: MapCityNode] = [:]
@@ -98,12 +98,10 @@ final class GameMapScene: SKScene {
 
     init(
         catalog: GameCatalog,
-        projection: MapProjection,
-        boundaryAtlas: MapBoundaryAtlas
+        projection: MapProjection
     ) {
         self.catalog = catalog
         self.projection = projection
-        self.boundaryAtlas = boundaryAtlas
         let worldBounds = Self.makeWorldBounds(
             catalog: catalog,
             projection: projection,

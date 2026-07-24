@@ -35,26 +35,91 @@ enum MapPathSimplifier {
         return zip(points, keep).compactMap { point, keepFlag in keepFlag ? point : nil }
     }
 
-    /// Closed rings (land silhouettes). Does not duplicate the closing vertex.
-    static func simplifyClosed(
+    /// Fixed-radius corner rounding: every corner is replaced by a quadratic
+    /// bezier sampled into the polyline itself, so consumers that walk the
+    /// geometry (vehicles on corridors) follow exactly the drawn soft bend.
+    ///
+    /// Unlike Chaikin, the radius does not grow with edge length — a corner
+    /// between two continent-sized coast edges gets the same "iOS box radius"
+    /// as a small one, which is the flat-icon look of the game board.
+    ///
+    /// - Parameters:
+    ///   - radius: rounding radius in world units (≈ km).
+    ///   - cornerFraction: cap as a share of each adjacent edge, so tight
+    ///     zigzags never overlap their own rounding.
+    ///   - closed: treat the points as a ring (no pinned endpoints).
+    static func roundedPolyline(
         _ points: [CGPoint],
-        tolerance: CGFloat = displayToleranceKm
+        radius: CGFloat,
+        cornerFraction: CGFloat = 0.22,
+        samplesPerCorner: Int = 5,
+        closed: Bool = false
     ) -> [CGPoint] {
-        guard points.count > 3 else { return points }
-        var ring = points
-        if let first = ring.first, let last = ring.last,
-           hypot(first.x - last.x, first.y - last.y) < 0.01 {
-            ring.removeLast()
+        guard points.count >= 3 else { return points }
+
+        var result: [CGPoint] = []
+        result.reserveCapacity(points.count * (samplesPerCorner + 1))
+        if !closed { result.append(points[0]) }
+
+        let cornerRange = closed ? 0..<points.count : 1..<(points.count - 1)
+        for index in cornerRange {
+            guard let rounded = roundedCorner(
+                at: index,
+                in: points,
+                radius: radius,
+                cornerFraction: cornerFraction
+            ) else { continue }
+            let corner = points[index]
+            let inlet = rounded.inlet
+            let outlet = rounded.outlet
+            result.append(inlet)
+
+            for sample in 1...samplesPerCorner {
+                let t = CGFloat(sample) / CGFloat(samplesPerCorner)
+                let inverse = 1 - t
+                result.append(CGPoint(
+                    x: inverse * inverse * inlet.x
+                        + 2 * inverse * t * corner.x
+                        + t * t * outlet.x,
+                    y: inverse * inverse * inlet.y
+                        + 2 * inverse * t * corner.y
+                        + t * t * outlet.y
+                ))
+            }
         }
-        guard ring.count > 3 else { return points }
-        // Anchor on the vertex farthest from the centroid so the silhouette
-        // does not collapse toward an arbitrary catalog start index.
-        let anchor = farthestIndex(in: ring)
-        let rotated = Array(ring[anchor...]) + Array(ring[..<anchor])
-        let open = rotated + [rotated[0]]
-        let simplifiedOpen = simplify(open, tolerance: tolerance)
-        guard simplifiedOpen.count > 1 else { return points }
-        return Array(simplifiedOpen.dropLast())
+
+        if !closed { result.append(points[points.count - 1]) }
+        return result
+    }
+
+    static func roundedCorner(
+        at index: Int,
+        in points: [CGPoint],
+        radius: CGFloat,
+        cornerFraction: CGFloat
+    ) -> (inlet: CGPoint, outlet: CGPoint)? {
+        let previous = points[(index - 1 + points.count) % points.count]
+        let corner = points[index]
+        let next = points[(index + 1) % points.count]
+        let incomingLength = hypot(corner.x - previous.x, corner.y - previous.y)
+        let outgoingLength = hypot(next.x - corner.x, next.y - corner.y)
+        guard incomingLength > 0.01, outgoingLength > 0.01 else { return nil }
+
+        let offset = min(
+            radius,
+            incomingLength * cornerFraction,
+            outgoingLength * cornerFraction
+        )
+        return (
+            CGPoint(
+                x: corner.x + (previous.x - corner.x) * offset / incomingLength,
+                y: corner.y + (previous.y - corner.y) * offset / incomingLength
+            ),
+            CGPoint(
+                x: corner.x + (next.x - corner.x) * offset / outgoingLength,
+                y: corner.y + (next.y - corner.y) * offset / outgoingLength
+            )
+        )
     }
 
     private static func simplifySection(
@@ -116,20 +181,4 @@ enum MapPathSimplifier {
         return (numerator * numerator) / (dx * dx + dy * dy)
     }
 
-    private static func farthestIndex(in points: [CGPoint]) -> Int {
-        let centroid = CGPoint(
-            x: points.reduce(0) { $0 + $1.x } / CGFloat(points.count),
-            y: points.reduce(0) { $0 + $1.y } / CGFloat(points.count)
-        )
-        var best = 0
-        var bestDistance: CGFloat = -1
-        for (index, point) in points.enumerated() {
-            let distance = hypot(point.x - centroid.x, point.y - centroid.y)
-            if distance > bestDistance {
-                bestDistance = distance
-                best = index
-            }
-        }
-        return best
-    }
 }

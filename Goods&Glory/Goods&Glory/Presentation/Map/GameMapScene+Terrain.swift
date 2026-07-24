@@ -2,8 +2,8 @@
 //  GameMapScene+Terrain.swift
 //  Goods&Glory
 //
-//  One-time scene construction: batched land, water and border geometry
-//  plus the city nodes. Built once, then only restyled.
+//  One-time scene construction: batched land and water geometry plus the
+//  city nodes. Built once, then only restyled.
 //
 
 import QuartzCore
@@ -33,7 +33,10 @@ extension GameMapScene {
         addGeography()
         addCities()
 
-        activeRouteHaloNode.strokeColor = accentColor.withAlphaComponent(0.18)
+        // White casing beneath the coloured line: a crisp cut-out edge that
+        // keeps routes legible over both the grey land and the blue sea, the
+        // way a metro line stays readable across a printed map.
+        activeRouteHaloNode.strokeColor = MapPalette.routeCasing
         activeRouteHaloNode.lineCap = .round
         activeRouteHaloNode.lineJoin = .round
         activeRouteHaloNode.lineWidth = StrokeWidth.activeRouteHalo
@@ -67,109 +70,99 @@ extension GameMapScene {
     enum TerrainPaths {
         static let cache = Cache()
 
-        struct Built {
-            let land: CGPath
-            let boundaries: CGPath?
-        }
+        /// The silhouette ships as authored Mini Metro art (import_board_art.py)
+        /// with octilinear coasts already baked in. This is the single
+        /// "iOS box-radius" knob: how far a coast corner is rounded, in world
+        /// units (≈ km). Large enough to read as premium iOS softness without
+        /// melting continents into blobs.
+        static let coastCornerRadiusKm: CGFloat = 200
 
         final class Cache {
-            var built: Built?
+            var built: CGPath?
 
-            func paths(
-                boundaryAtlas: MapBoundaryAtlas,
+            func land(
                 board: MapBoardSilhouette,
                 projection: MapProjection
-            ) -> Built {
+            ) -> CGPath {
                 if let built { return built }
-                let value = Self.build(
-                    boundaryAtlas: boundaryAtlas,
-                    board: board,
-                    projection: projection
-                )
+                let value = Self.build(board: board, projection: projection)
                 built = value
                 return value
             }
 
             private static func build(
-                boundaryAtlas: MapBoundaryAtlas,
                 board: MapBoardSilhouette,
                 projection: MapProjection
-            ) -> Built {
+            ) -> CGPath {
                 let landPath = CGMutablePath()
                 for landMass in board.landMasses where landMass.points.count >= 3 {
-                    let points = landMass.points.map(projection.point(for:))
-                    guard points.count >= 3 else { continue }
-                    landPath.addRoundedClosedPolyline(points)
+                    var projected = landMass.points.map(projection.point(for:))
+                    if let first = projected.first, let last = projected.last,
+                       hypot(first.x - last.x, first.y - last.y) < 0.01 {
+                        projected.removeLast()
+                    }
+                    guard projected.count >= 3 else { continue }
+                    // Native quadratic curves stay smooth under close zoom and
+                    // keep the cached path smaller than sampled polylines.
+                    landPath.addRoundedClosedPolyline(
+                        projected,
+                        cornerRadius: coastCornerRadiusKm,
+                        maximumCornerFraction: 0.18
+                    )
                 }
-
-                let boundaryPath = CGMutablePath()
-                var boundaryCount = 0
-                for line in boundaryAtlas.lines where line.count >= 2 {
-                    let points = line.map(projection.point(for:))
-                    guard points.count >= 2 else { continue }
-                    boundaryPath.addOpenPolyline(points)
-                    boundaryCount += 1
-                }
-
-                return Built(
-                    land: landPath,
-                    boundaries: boundaryCount > 0 ? boundaryPath : nil
-                )
+                return landPath
             }
         }
     }
 
+    enum TerrainShadowStyle {
+        // A filled duplicate is both cheaper and more reliable than stroked or
+        // shader-blurred coastlines: those produce wedges at tight corners.
+        static let alpha: CGFloat = 0.24
+        static let screenOffsetY: CGFloat = -5
+    }
+
     func addGeography() {
-        let paths = TerrainPaths.cache.paths(
-            boundaryAtlas: boundaryAtlas,
+        let landPath = TerrainPaths.cache.land(
             board: .bundled,
             projection: projection
         )
 
-        // One oversized quad covers every legal camera position and portrait
-        // overscan; its edges must never appear as horizontal color seams.
-        let waterGradient = SKSpriteNode(
-            color: .white,
+        // One flat sea quad, exactly the reference tone. It is oversized to
+        // cover every legal camera position and portrait overscan.
+        let water = SKSpriteNode(
+            color: MapPalette.water,
             size: CGSize(
                 width: cameraBounds.width * 4,
                 height: cameraBounds.height * 4
             )
         )
-        waterGradient.position = CGPoint(x: cameraBounds.midX, y: cameraBounds.midY)
-        waterGradient.shader = SKShader(source: """
-            void main() {
-                vec2 delta = v_tex_coord - vec2(0.5);
-                float glow = 1.0 - smoothstep(0.05, 0.76, length(delta));
-                vec3 edge = vec3(0.25, 0.49, 0.86);
-                vec3 center = vec3(0.43, 0.66, 0.96);
-                gl_FragColor = vec4(mix(edge, center, glow), 1.0);
-            }
-            """)
-        waterGradient.zPosition = 0
-        terrainLayer.addChild(waterGradient)
+        water.position = CGPoint(x: cameraBounds.midX, y: cameraBounds.midY)
+        water.zPosition = 0
+        terrainLayer.addChild(water)
 
-        landNode.path = paths.land
+        // A slightly lowered copy of the filled silhouette supplies the blue
+        // lift from the reference. The land covers its interior, leaving one
+        // clean edge without stroke joins, glow shaders or effect textures.
+        landShadowNode.path = landPath
+        landShadowNode.fillColor = MapPalette.landShadow.withAlphaComponent(
+            TerrainShadowStyle.alpha
+        )
+        landShadowNode.strokeColor = .clear
+        landShadowNode.lineWidth = 0
+        landShadowNode.glowWidth = 0
+        landShadowNode.isAntialiased = true
+        landShadowNode.position = CGPoint(x: 0, y: TerrainShadowStyle.screenOffsetY)
+        landShadowNode.zPosition = 0.5
+        terrainLayer.addChild(landShadowNode)
+
+        landNode.path = landPath
         landNode.fillColor = MapPalette.land
         landNode.strokeColor = MapPalette.coastline
         landNode.lineWidth = StrokeWidth.landCoast
         landNode.lineJoin = .round
         landNode.zPosition = 1
         terrainLayer.addChild(landNode)
-
-        // One quiet batched border stroke keeps countries readable without
-        // turning the game board into a navigation atlas.
-        if let boundaryPath = paths.boundaries {
-            boundaryNode.path = boundaryPath
-            boundaryNode.fillColor = .clear
-            boundaryNode.strokeColor = MapPalette.boundary
-            boundaryNode.lineWidth = StrokeWidth.boundary
-            boundaryNode.lineCap = .round
-            boundaryNode.lineJoin = .round
-            boundaryNode.isAntialiased = true
-            boundaryNode.zPosition = 2
-            terrainLayer.addChild(boundaryNode)
-        }
-
     }
 
     func addCities() {

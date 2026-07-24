@@ -68,8 +68,7 @@ private struct SpriteKitMapSurface: UIViewRepresentable {
         Coordinator(
             scene: GameMapScene(
                 catalog: catalog,
-                projection: MapProjection(),
-                boundaryAtlas: MapBoundaryAtlas.bundled
+                projection: MapProjection()
             ),
             selection: $selection
         )

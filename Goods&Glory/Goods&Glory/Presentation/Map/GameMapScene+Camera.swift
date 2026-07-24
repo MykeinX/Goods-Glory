@@ -244,7 +244,7 @@ extension GameMapScene {
         activeRouteNode.lineWidth = StrokeWidth.activeRoute * scale
         plannedRouteNode.lineWidth = StrokeWidth.plannedRoute * scale
         landNode.lineWidth = StrokeWidth.landCoast * scale
-        boundaryNode.lineWidth = StrokeWidth.boundary * scale
+        landShadowNode.position.y = TerrainShadowStyle.screenOffsetY * scale
 
         for node in cityNodes.values { node.setScale(scale) }
         for node in plannedVisitNodes.values { node.setScale(scale) }

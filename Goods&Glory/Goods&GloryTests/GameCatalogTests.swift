@@ -30,8 +30,10 @@ struct GameCatalogTests {
         #expect(!catalog.products.isEmpty)
         #expect(catalog.cityMarkets.count == catalog.cities.count)
         #expect(catalog.cities.count == 71)
-        #expect(catalog.networkNodes.count >= 500)
-        #expect(catalog.roads.count >= 700)
+        // The authored trade network is deliberately sparse: 71 cities plus a
+        // few dozen steering junctions, connected by named world corridors.
+        #expect(catalog.networkNodes.count >= 90)
+        #expect(catalog.roads.count >= 110)
         #expect(catalog.cities.allSatisfy {
             ["us_", "eu_", "as_"].contains(where: $0.id.rawValue.hasPrefix)
         })

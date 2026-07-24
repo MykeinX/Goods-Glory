@@ -81,14 +81,14 @@ Benzer bölme: `GameCatalog` (`+Loading`, `+Validation`, `+Routing`, `+Derivatio
 - Yol grafı (`road_nodes.json` / `roads.json`) mesafe ve rota hesabının tek kaynağıdır. Harita sunumu aynı graftan türetilir; simülasyon ekran koordinatı kullanmaz.
 - Oyuncu metinleri `Localizable.xcstrings` üzerinden gider.
 
-Ana katalog dosyaları: `cities.json`, `city_markets.json`, `products.json`, `roads.json`, `road_nodes.json`, `vehicle_types.json`, `economy.json`, `map_board_silhouette.json`, `map_boundaries.json`.
+Ana katalog dosyaları: `cities.json`, `city_markets.json`, `products.json`, `roads.json`, `road_nodes.json`, `vehicle_types.json`, `economy.json`, `map_board_silhouette.json`.
 
 ## Harita teknik sözleşmesi
 
 - SpriteKit yalnız `MapRenderSnapshot` çizer; simülasyon ve rota kuralı Domain'de kalır.
-- `map_board_silhouette.json` tüm dünyaya tek detay bütçesi uygulayan kara silüetidir; renderer düz kenarları koruyup yalnız köşeleri radius ile yumuşatır. `map_boundaries.json` yalnız nihai ayrıntıdaki sessiz ülke sınırlarını taşır. Yakınlaştırma yeni coğrafi detay üretmez.
+- `map_board_silhouette.json` yazarlı Mini Metro tahta sanatıdır (`import_board_art.py`): yüksek detaylı kontur + oktilinear (yatay/dikey/45°) kenar snap. Renderer düz kenarları koruyup yalnız köşeleri küçük sabit radius ile yumuşatır. Ülke sınırı çizilmez; yakınlaştırma yeni coğrafi detay üretmez.
 - `MapProjection` şehirleri, yolları ve silüeti aynı yazarlı tahta koordinatına taşır.
-- Domain yol grafı kanoniktir. `MapCorridorCache` katalog başına bir kez şematik ve yumuşak `RoadID` geometrisi kurar; çizgi ile araç aynı koridoru kullanır.
+- Domain yol grafı kanoniktir ve yazarlıdır: `generate_trade_network.py` şehirleri ve az sayıda yönlendirme kavşağını dünya ticaret koridorları (Interstate'ler, İpek Yolu, Trans-Sibirya…) olarak bağlar. `MapCorridorCache` katalog başına bir kez şematik ve yumuşak `RoadID` geometrisi kurar; çizgi ile araç aynı koridoru kullanır, kesişen rotalar ortak segmenti paylaşır. Ağ kullanıcıya gösterilmez; yalnız aktif rotaların kullandığı parçalar çizilir.
 - Kara/deniz geçilebilirliği sunum poligonundan çıkarılmaz. Bugünkü `roads.json` kara ağıdır; deniz taşımacılığı geldiğinde kendi modlu ağına sahip olur.
 - Aktif rotalar araç başına çizilmez. Kullanılan `RoadID` birleşimi tek halo + tek yol path'i olarak batch edilir.
 - Hareketli araçlar havuzlanan kapsül `MapVehicleNode`'larıdır; şehirdeki boşta araçlar ayrı sprite yerine şehir sayacında özetlenir.

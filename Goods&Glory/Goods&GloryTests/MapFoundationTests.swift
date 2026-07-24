@@ -39,12 +39,8 @@ struct MapFoundationTests {
 
     @Test func bundledMapAtlasesLoad() throws {
         let board = try MapBoardSilhouette.load(from: .main)
-        let boundaries = try MapBoundaryAtlas.load(from: .main)
         #expect(board.version > 0)
-        #expect(boundaries.version > 0)
         #expect(!board.landMasses.isEmpty)
-        #expect(!boundaries.lines.isEmpty)
-        #expect(boundaries.lines.allSatisfy { $0.count >= 2 })
 
         let latitudes = board.landMasses.flatMap(\.points).map(\.latitude)
         let longitudes = board.landMasses.flatMap(\.points).map(\.longitude)
@@ -52,6 +48,19 @@ struct MapFoundationTests {
         #expect((latitudes.max() ?? 0) > 60)
         #expect((longitudes.min() ?? 0) < -100)
         #expect((longitudes.max() ?? 0) > 100)
+
+        let land = try #require(board.landMasses.first { !$0.id.contains("_hole_") })
+        let holes = board.landMasses.filter { $0.id.contains("_hole_") }
+        #expect(!holes.isEmpty)
+
+        func signedArea(_ points: [GeoCoordinate]) -> Double {
+            zip(points, points.dropFirst()).reduce(0) { area, edge in
+                area + edge.0.longitude * edge.1.latitude
+                    - edge.1.longitude * edge.0.latitude
+            } / 2
+        }
+        let outerWinding = signedArea(land.points)
+        #expect(holes.allSatisfy { signedArea($0.points) * outerWinding < 0 })
     }
 
     @MainActor @Test func movingVehicleRidesItsDrawnCorridorAtHalfProgress() throws {

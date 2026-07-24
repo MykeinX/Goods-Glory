@@ -100,7 +100,10 @@ struct MapCorridor: Equatable {
 final class MapCorridorCache {
     static let shared = MapCorridorCache()
 
-    private static let guideToleranceKm: CGFloat = 125
+    // The trade network is authored sparsely (cities plus steering
+    // junctions), so simplification only needs to drop near-collinear
+    // steering points — never an authored bend like Lyon or Jönköping.
+    private static let guideToleranceKm: CGFloat = 30
     private static let directAngleTolerance: CGFloat = 7 * .pi / 180
 
     private struct Signature: Equatable {
@@ -329,56 +332,14 @@ final class MapCorridorCache {
         for index in 1..<guides.count {
             append(octilinearLeg(from: guides[index - 1], to: guides[index]), to: &result)
         }
-        return roundedPolyline(MapCorridor(points: result).points)
-    }
-
-    /// Rounds the shared metro geometry itself, so vehicles and route strokes
-    /// follow the same soft bends instead of only painting rounded line joins.
-    private static func roundedPolyline(
-        _ points: [CGPoint],
-        radius: CGFloat = 90,
-        samplesPerCorner: Int = 5
-    ) -> [CGPoint] {
-        guard points.count >= 3 else { return points }
-
-        var result = [points[0]]
-        result.reserveCapacity(points.count * (samplesPerCorner + 1))
-
-        for index in 1..<(points.count - 1) {
-            let previous = points[index - 1]
-            let corner = points[index]
-            let next = points[index + 1]
-            let incomingLength = corner.distance(to: previous)
-            let outgoingLength = corner.distance(to: next)
-            guard incomingLength > 0.01, outgoingLength > 0.01 else { continue }
-
-            let offset = min(radius, incomingLength * 0.22, outgoingLength * 0.22)
-            let inlet = corner.interpolated(
-                to: previous,
-                fraction: offset / incomingLength
-            )
-            let outlet = corner.interpolated(
-                to: next,
-                fraction: offset / outgoingLength
-            )
-            result.append(inlet)
-
-            for sample in 1...samplesPerCorner {
-                let t = CGFloat(sample) / CGFloat(samplesPerCorner)
-                let inverse = 1 - t
-                result.append(CGPoint(
-                    x: inverse * inverse * inlet.x
-                        + 2 * inverse * t * corner.x
-                        + t * t * outlet.x,
-                    y: inverse * inverse * inlet.y
-                        + 2 * inverse * t * corner.y
-                        + t * t * outlet.y
-                ))
-            }
-        }
-
-        result.append(points[points.count - 1])
-        return MapCorridor(points: result).points
+        // Round the shared metro geometry itself, so vehicles and route
+        // strokes follow the same soft bends instead of only painting
+        // rounded line joins.
+        let rounded = MapPathSimplifier.roundedPolyline(
+            MapCorridor(points: result).points,
+            radius: 90
+        )
+        return MapCorridor(points: rounded).points
     }
 
     /// One clean bend chosen from the eight metro-map directions.

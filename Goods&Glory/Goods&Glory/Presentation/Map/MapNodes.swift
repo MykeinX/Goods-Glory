@@ -140,9 +140,11 @@ final class MapCityNode: SKNode {
         markerContainer.zPosition = 2
         addChild(markerContainer)
 
-        marker.fillColor = MapPalette.city
-        marker.strokeColor = MapPalette.cityStroke
-        marker.lineWidth = 1.8
+        // Metro-station pin: a crisp white disc with a bold dark ring, legible
+        // over grey land and blue sea alike.
+        marker.fillColor = MapPalette.station
+        marker.strokeColor = MapPalette.city
+        marker.lineWidth = 2.2
         marker.zPosition = 2
         markerContainer.addChild(marker)
 
@@ -295,14 +297,13 @@ final class MapCityNode: SKNode {
             hqMarker.strokeColor = MapPalette.water
             halo.strokeColor = accent
         } else {
-            let color = isStarter ? MapPalette.gold : MapPalette.city
-            marker.fillColor = color
-            marker.strokeColor = isStarter ? MapPalette.gold : MapPalette.cityStroke
-            halo.strokeColor = color
+            marker.fillColor = isStarter ? MapPalette.gold : MapPalette.station
+            marker.strokeColor = MapPalette.city
+            halo.strokeColor = isStarter ? MapPalette.gold : accent
         }
         halo.isHidden = !(isHQ || isStarter)
         selectionRing.isHidden = !isSelected
-        selectionRing.strokeColor = isHQ ? accent : .white
+        selectionRing.strokeColor = accent
         refreshHaloPulse()
 
         let showBadge = idleFleetCount > 0

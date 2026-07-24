@@ -782,9 +782,11 @@ def main() -> None:
 
     arguments.output_dir.mkdir(parents=True, exist_ok=True)
     write_json(arguments.output_dir / "cities.json", cities)
-    write_json(arguments.output_dir / "road_nodes.json", nodes)
-    write_json(arguments.output_dir / "roads.json", roads)
     write_json(arguments.output_dir / "city_markets.json", markets)
+    # road_nodes.json / roads.json are no longer written here: the shipped
+    # network is the authored trade-corridor graph from
+    # generate_trade_network.py. The TIGER graph would overwrite it.
+    _ = (nodes, roads)
 
     print(
         f"Generated {len(cities)} cities, {len(nodes)} road nodes and {len(roads)} road edges "
