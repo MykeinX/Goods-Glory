@@ -29,13 +29,23 @@ struct GameCatalogTests {
         #expect(!catalog.vehicleTypes.isEmpty)
         #expect(!catalog.products.isEmpty)
         #expect(catalog.cityMarkets.count == catalog.cities.count)
-        #expect(catalog.cities.count == 71)
-        // The authored trade network is deliberately sparse: 71 cities plus a
-        // few dozen steering junctions, connected by named world corridors.
-        #expect(catalog.networkNodes.count >= 90)
-        #expect(catalog.roads.count >= 110)
+        #expect(catalog.cities.count == 9)
+        #expect(catalog.networkNodes.count == 26)
+        #expect(catalog.roads.count == 32)
+        let expectedCityIDs: Set<CityID> = [
+            CityID("us_los_angeles"),
+            CityID("us_dallas"),
+            CityID("us_chicago"),
+            CityID("us_atlanta"),
+            CityID("us_new_york"),
+            CityID("eu_london"),
+            CityID("eu_paris"),
+            CityID("eu_frankfurt"),
+            CityID("eu_istanbul")
+        ]
+        #expect(Set(catalog.cities.map(\.id)) == expectedCityIDs)
         #expect(catalog.cities.allSatisfy {
-            ["us_", "eu_", "as_"].contains(where: $0.id.rawValue.hasPrefix)
+            ["us_", "eu_"].contains(where: $0.id.rawValue.hasPrefix)
         })
         #expect(catalog.product(ProductID("consumer_electronics")) != nil)
         for city in catalog.cities {
@@ -45,18 +55,15 @@ struct GameCatalogTests {
             #expect(catalog.cityMarket(city.id) != nil)
         }
         #expect(catalog.cities.contains { $0.hasSeaPortAccess })
-        #expect(catalog.cities.contains { !$0.hasAirCargoAccess })
-        #expect(catalog.cities.contains { !$0.hasRailFreightAccess })
-        #expect(catalog.city(CityID("us_las_vegas"))?.hasRailFreightAccess == false)
-        #expect(catalog.city(CityID("us_new_orleans"))?.hasSeaPortAccess == true)
-        #expect(catalog.city(CityID("us_st_louis"))?.hasAirCargoAccess == false)
+        #expect(catalog.cities.contains { !$0.hasSeaPortAccess })
+        #expect(catalog.cities.allSatisfy { $0.hasAirCargoAccess })
+        #expect(catalog.cities.allSatisfy { $0.hasRailFreightAccess })
         #expect(catalog.city(CityID("us_dallas"))?.hasSeaPortAccess == false)
-        #expect(catalog.starterCities.count >= 6)
-        #expect(catalog.cities.contains { $0.isStarterCity && $0.id == CityID("us_seattle") })
-        #expect(catalog.cities.contains { $0.isStarterCity && $0.id == CityID("us_miami") })
         #expect(catalog.cities.contains { $0.isStarterCity && $0.id == CityID("us_los_angeles") })
-        #expect(catalog.city(CityID("us_st_louis"))?.isStarterCity == false)
         #expect(catalog.city(CityID("us_dallas"))?.isStarterCity == false)
+        for continent in Set(catalog.cities.map(\.continent)) {
+            #expect(catalog.starterCities.contains { $0.continent == continent })
+        }
     }
 
     @Test func cityMarketsRejectMissingUnknownDuplicateOversizedAndUnorderedProducts() throws {
@@ -128,12 +135,12 @@ struct GameCatalogTests {
         }
     }
 
-    @Test func bundledCatalogProvidesNationwideRoutes() throws {
+    @Test func bundledCatalogProvidesRegionalRoutes() throws {
         let catalog = try GameCatalog.load(from: .main)
         let pairs = [
-            (CityID("us_los_angeles"), CityID("us_new_york"), 3_500.0...5_200.0),
-            (CityID("us_seattle"), CityID("us_miami"), 4_500.0...6_200.0),
-            (CityID("us_denver"), CityID("us_salt_lake_city"), 450.0...900.0)
+            (CityID("us_los_angeles"), CityID("us_new_york"), 4_500.0...5_500.0),
+            (CityID("us_dallas"), CityID("us_chicago"), 1_300.0...1_900.0),
+            (CityID("eu_london"), CityID("eu_istanbul"), 2_500.0...3_400.0)
         ]
 
         for (origin, destination, plausibleDistance) in pairs {
@@ -142,6 +149,52 @@ struct GameCatalogTests {
             #expect(!route.traversals.isEmpty)
             #expect(route.nodes.first == catalog.city(origin)?.roadNodeID)
             #expect(route.nodes.last == catalog.city(destination)?.roadNodeID)
+        }
+    }
+
+    @Test func bundledRegionalBackbonesStaySparseAndRedundant() throws {
+        let catalog = try GameCatalog.load(from: .main)
+        var adjacency: [RoadNodeID: Set<RoadNodeID>] = [:]
+        for node in catalog.networkNodes {
+            adjacency[node.id] = []
+        }
+        for road in catalog.roads {
+            adjacency[road.from, default: []].insert(road.to)
+            adjacency[road.to, default: []].insert(road.from)
+        }
+
+        #expect(adjacency.values.map(\.count).max() == 4)
+        var unvisited = Set(adjacency.keys)
+        var components: [Set<RoadNodeID>] = []
+        while let seed = unvisited.first {
+            var component: Set<RoadNodeID> = [seed]
+            var pending = [seed]
+            while let node = pending.popLast() {
+                for neighbor in adjacency[node] ?? [] where component.insert(neighbor).inserted {
+                    pending.append(neighbor)
+                }
+            }
+            unvisited.subtract(component)
+            components.append(component)
+        }
+
+        #expect(components.count == 2)
+        for component in components {
+            let edgeCount = catalog.roads.filter {
+                component.contains($0.from) && component.contains($0.to)
+            }.count
+            let continents = Set(
+                component.compactMap { nodeID -> Continent? in
+                    guard let cityID = catalog.networkNode(nodeID)?.cityID else {
+                        return nil
+                    }
+                    return catalog.city(cityID)?.continent
+                }
+            )
+            #expect(component.count == 13)
+            #expect(edgeCount == 16)
+            #expect(edgeCount - component.count + 1 == 4)
+            #expect(continents.count == 1)
         }
     }
 

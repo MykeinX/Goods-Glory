@@ -1,734 +1,194 @@
 [
   {
-    "id": "am_road_00001",
-    "from": "us_city_san_francisco",
-    "to": "us_city_salt_lake_city",
-    "distanceKm": 1106.04
+    "id": "eu_road_city_frankfurt_to_city_paris",
+    "from": "eu_city_paris",
+    "to": "eu_city_frankfurt",
+    "distanceKm": 994.28
   },
   {
-    "id": "am_road_00002",
-    "from": "us_city_salt_lake_city",
-    "to": "us_city_denver",
-    "distanceKm": 699.79
+    "id": "eu_road_city_frankfurt_to_jct_brussels",
+    "from": "eu_jct_brussels",
+    "to": "eu_city_frankfurt",
+    "distanceKm": 639.51
   },
   {
-    "id": "am_road_00003",
-    "from": "us_city_denver",
-    "to": "us_city_kansas_city",
-    "distanceKm": 1022.85
+    "id": "eu_road_city_frankfurt_to_jct_munich",
+    "from": "eu_city_frankfurt",
+    "to": "eu_jct_munich",
+    "distanceKm": 477.19
   },
   {
-    "id": "am_road_00004",
-    "from": "us_city_kansas_city",
-    "to": "us_city_st_louis",
-    "distanceKm": 433.11
+    "id": "eu_road_city_frankfurt_to_jct_vienna",
+    "from": "eu_city_frankfurt",
+    "to": "eu_jct_vienna",
+    "distanceKm": 758.2
   },
   {
-    "id": "am_road_00005",
+    "id": "eu_road_city_istanbul_to_jct_sofia",
+    "from": "eu_jct_sofia",
+    "to": "eu_city_istanbul",
+    "distanceKm": 222.75
+  },
+  {
+    "id": "eu_road_city_london_to_jct_calais",
+    "from": "eu_city_london",
+    "to": "eu_jct_calais",
+    "distanceKm": 1292.74
+  },
+  {
+    "id": "eu_road_city_paris_to_jct_calais",
+    "from": "eu_jct_calais",
+    "to": "eu_city_paris",
+    "distanceKm": 474.34
+  },
+  {
+    "id": "eu_road_city_paris_to_jct_lyon",
+    "from": "eu_city_paris",
+    "to": "eu_jct_lyon",
+    "distanceKm": 750.02
+  },
+  {
+    "id": "eu_road_jct_belgrade_to_jct_budapest",
+    "from": "eu_jct_budapest",
+    "to": "eu_jct_belgrade",
+    "distanceKm": 140.01
+  },
+  {
+    "id": "eu_road_jct_belgrade_to_jct_sofia",
+    "from": "eu_jct_belgrade",
+    "to": "eu_jct_sofia",
+    "distanceKm": 518.42
+  },
+  {
+    "id": "eu_road_jct_belgrade_to_jct_vienna",
+    "from": "eu_jct_vienna",
+    "to": "eu_jct_belgrade",
+    "distanceKm": 409.68
+  },
+  {
+    "id": "eu_road_jct_brussels_to_jct_calais",
+    "from": "eu_jct_calais",
+    "to": "eu_jct_brussels",
+    "distanceKm": 796.48
+  },
+  {
+    "id": "eu_road_jct_budapest_to_jct_vienna",
+    "from": "eu_jct_vienna",
+    "to": "eu_jct_budapest",
+    "distanceKm": 270.17
+  },
+  {
+    "id": "eu_road_jct_lyon_to_jct_stuttgart",
+    "from": "eu_jct_lyon",
+    "to": "eu_jct_stuttgart",
+    "distanceKm": 724.36
+  },
+  {
+    "id": "eu_road_jct_munich_to_jct_stuttgart",
+    "from": "eu_jct_stuttgart",
+    "to": "eu_jct_munich",
+    "distanceKm": 676.4
+  },
+  {
+    "id": "eu_road_jct_munich_to_jct_vienna",
+    "from": "eu_jct_munich",
+    "to": "eu_jct_vienna",
+    "distanceKm": 281.21
+  },
+  {
+    "id": "us_road_city_atlanta_to_jct_charlotte",
     "from": "us_city_atlanta",
-    "to": "us_city_nashville",
-    "distanceKm": 395.15
+    "to": "us_jct_charlotte",
+    "distanceKm": 1558.53
   },
   {
-    "id": "am_road_00006",
-    "from": "us_city_nashville",
-    "to": "us_city_st_louis",
-    "distanceKm": 471.91
+    "id": "us_road_city_atlanta_to_jct_memphis",
+    "from": "us_jct_memphis",
+    "to": "us_city_atlanta",
+    "distanceKm": 1041.52
   },
   {
-    "id": "am_road_00007",
-    "from": "us_city_st_louis",
-    "to": "us_city_chicago",
-    "distanceKm": 479.54
+    "id": "us_road_city_atlanta_to_jct_nashville",
+    "from": "us_jct_nashville",
+    "to": "us_city_atlanta",
+    "distanceKm": 768.52
   },
   {
-    "id": "am_road_00008",
+    "id": "us_road_city_chicago_to_jct_cleveland",
     "from": "us_city_chicago",
-    "to": "us_city_detroit",
-    "distanceKm": 440.25
+    "to": "us_jct_cleveland",
+    "distanceKm": 1961.55
   },
   {
-    "id": "am_road_00009",
-    "from": "us_city_detroit",
-    "to": "am_jct_cleveland",
-    "distanceKm": 175.48
-  },
-  {
-    "id": "am_road_00010",
-    "from": "am_jct_cleveland",
-    "to": "us_city_new_york",
-    "distanceKm": 746.92
-  },
-  {
-    "id": "am_road_00011",
-    "from": "us_city_new_orleans",
-    "to": "us_city_atlanta",
-    "distanceKm": 763.31
-  },
-  {
-    "id": "am_road_00012",
-    "from": "us_city_minneapolis",
-    "to": "us_city_kansas_city",
-    "distanceKm": 756.38
-  },
-  {
-    "id": "am_road_00013",
-    "from": "us_city_kansas_city",
-    "to": "us_city_dallas",
-    "distanceKm": 841.46
-  },
-  {
-    "id": "am_road_00014",
-    "from": "us_city_dallas",
-    "to": "am_jct_san_antonio",
-    "distanceKm": 470.81
-  },
-  {
-    "id": "am_road_00015",
-    "from": "am_jct_el_paso",
-    "to": "us_city_dallas",
-    "distanceKm": 1050.99
-  },
-  {
-    "id": "am_road_00016",
-    "from": "us_city_dallas",
-    "to": "am_jct_little_rock",
-    "distanceKm": 536.96
-  },
-  {
-    "id": "am_road_00017",
-    "from": "am_jct_little_rock",
-    "to": "us_city_nashville",
-    "distanceKm": 601.82
-  },
-  {
-    "id": "am_road_00018",
-    "from": "us_city_los_angeles",
-    "to": "us_city_las_vegas",
-    "distanceKm": 422.75
-  },
-  {
-    "id": "am_road_00019",
-    "from": "us_city_las_vegas",
-    "to": "us_city_salt_lake_city",
-    "distanceKm": 670.89
-  },
-  {
-    "id": "am_road_00020",
-    "from": "us_city_boston",
-    "to": "us_city_new_york",
-    "distanceKm": 353.56
-  },
-  {
-    "id": "am_road_00021",
-    "from": "us_city_new_york",
-    "to": "us_city_washington",
-    "distanceKm": 375.38
-  },
-  {
-    "id": "am_road_00022",
-    "from": "us_city_seattle",
-    "to": "am_jct_billings",
-    "distanceKm": 1235.21
-  },
-  {
-    "id": "am_road_00023",
-    "from": "am_jct_billings",
-    "to": "us_city_minneapolis",
-    "distanceKm": 1370.16
-  },
-  {
-    "id": "am_road_00024",
-    "from": "us_city_minneapolis",
+    "id": "us_road_city_chicago_to_jct_kansas_city",
+    "from": "us_jct_kansas_city",
     "to": "us_city_chicago",
-    "distanceKm": 654.65
+    "distanceKm": 930.21
   },
   {
-    "id": "am_road_00025",
-    "from": "us_city_seattle",
-    "to": "us_city_san_francisco",
-    "distanceKm": 1258.86
+    "id": "us_road_city_chicago_to_jct_nashville",
+    "from": "us_city_chicago",
+    "to": "us_jct_nashville",
+    "distanceKm": 937.09
   },
   {
-    "id": "am_road_00026",
-    "from": "us_city_san_francisco",
-    "to": "us_city_los_angeles",
-    "distanceKm": 642.99
+    "id": "us_road_city_dallas_to_jct_albuquerque",
+    "from": "us_jct_albuquerque",
+    "to": "us_city_dallas",
+    "distanceKm": 1639.38
   },
   {
-    "id": "am_road_00027",
-    "from": "us_city_washington",
-    "to": "us_city_charlotte",
-    "distanceKm": 612.08
-  },
-  {
-    "id": "am_road_00028",
-    "from": "us_city_charlotte",
-    "to": "us_city_atlanta",
-    "distanceKm": 421.28
-  },
-  {
-    "id": "am_road_00029",
-    "from": "us_city_atlanta",
-    "to": "us_city_miami",
-    "distanceKm": 1123.11
-  },
-  {
-    "id": "am_road_00030",
-    "from": "us_city_los_angeles",
-    "to": "us_city_phoenix",
-    "distanceKm": 656.57
-  },
-  {
-    "id": "am_road_00031",
-    "from": "us_city_phoenix",
-    "to": "am_jct_el_paso",
-    "distanceKm": 651.32
-  },
-  {
-    "id": "am_road_00032",
-    "from": "am_jct_el_paso",
-    "to": "am_jct_san_antonio",
-    "distanceKm": 923.61
-  },
-  {
-    "id": "am_road_00033",
-    "from": "am_jct_san_antonio",
-    "to": "us_city_houston",
-    "distanceKm": 347.95
-  },
-  {
-    "id": "am_road_00034",
-    "from": "us_city_houston",
-    "to": "us_city_new_orleans",
-    "distanceKm": 605.42
-  },
-  {
-    "id": "am_road_00035",
+    "id": "us_road_city_dallas_to_jct_kansas_city",
     "from": "us_city_dallas",
-    "to": "us_city_houston",
-    "distanceKm": 413.0
+    "to": "us_jct_kansas_city",
+    "distanceKm": 1153.74
   },
   {
-    "id": "ea_road_00001",
-    "from": "eu_rotterdam_node",
-    "to": "ea_jct_hannover",
-    "distanceKm": 415.96
+    "id": "us_road_city_dallas_to_jct_memphis",
+    "from": "us_city_dallas",
+    "to": "us_jct_memphis",
+    "distanceKm": 1020.76
   },
   {
-    "id": "ea_road_00002",
-    "from": "ea_jct_hannover",
-    "to": "eu_berlin_node",
-    "distanceKm": 287.05
+    "id": "us_road_city_los_angeles_to_jct_phoenix",
+    "from": "us_city_los_angeles",
+    "to": "us_jct_phoenix",
+    "distanceKm": 849.95
   },
   {
-    "id": "ea_road_00003",
-    "from": "as_ankara_node",
-    "to": "ea_jct_tabriz",
-    "distanceKm": 1354.05
+    "id": "us_road_city_new_york_to_jct_charlotte",
+    "from": "us_jct_charlotte",
+    "to": "us_city_new_york",
+    "distanceKm": 1806.96
   },
   {
-    "id": "ea_road_00004",
-    "from": "ea_jct_tabriz",
-    "to": "as_tehran_node",
-    "distanceKm": 604.39
+    "id": "us_road_city_new_york_to_jct_cleveland",
+    "from": "us_jct_cleveland",
+    "to": "us_city_new_york",
+    "distanceKm": 1636.56
   },
   {
-    "id": "ea_road_00005",
-    "from": "ea_jct_belgrade",
-    "to": "ea_jct_skopje",
-    "distanceKm": 369.44
+    "id": "us_road_jct_albuquerque_to_jct_denver",
+    "from": "us_jct_albuquerque",
+    "to": "us_jct_denver",
+    "distanceKm": 579.96
   },
   {
-    "id": "ea_road_00006",
-    "from": "ea_jct_skopje",
-    "to": "eu_athens_node",
-    "distanceKm": 559.5
+    "id": "us_road_jct_albuquerque_to_jct_phoenix",
+    "from": "us_jct_phoenix",
+    "to": "us_jct_albuquerque",
+    "distanceKm": 1003.02
   },
   {
-    "id": "ea_road_00007",
-    "from": "as_tehran_node",
-    "to": "ea_jct_zahedan",
-    "distanceKm": 1290.17
+    "id": "us_road_jct_cleveland_to_jct_nashville",
+    "from": "us_jct_nashville",
+    "to": "us_jct_cleveland",
+    "distanceKm": 1798.63
   },
   {
-    "id": "ea_road_00008",
-    "from": "ea_jct_zahedan",
-    "to": "as_karachi_node",
-    "distanceKm": 916.17
-  },
-  {
-    "id": "ea_road_00009",
-    "from": "as_kolkata_node",
-    "to": "as_dhaka_node",
-    "distanceKm": 288.14
-  },
-  {
-    "id": "ea_road_00010",
-    "from": "eu_berlin_node",
-    "to": "eu_prague_node",
-    "distanceKm": 323.3
-  },
-  {
-    "id": "ea_road_00011",
-    "from": "eu_prague_node",
-    "to": "eu_vienna_node",
-    "distanceKm": 288.5
-  },
-  {
-    "id": "ea_road_00012",
-    "from": "eu_munich_node",
-    "to": "ea_jct_innsbruck",
-    "distanceKm": 111.73
-  },
-  {
-    "id": "ea_road_00013",
-    "from": "ea_jct_innsbruck",
-    "to": "eu_milan_node",
-    "distanceKm": 302.21
-  },
-  {
-    "id": "ea_road_00014",
-    "from": "ea_jct_kunming",
-    "to": "as_yangon_node",
-    "distanceKm": 1303.1
-  },
-  {
-    "id": "ea_road_00015",
-    "from": "eu_london_node",
-    "to": "ea_jct_calais",
-    "distanceKm": 173.67
-  },
-  {
-    "id": "ea_road_00016",
-    "from": "ea_jct_calais",
-    "to": "eu_paris_node",
-    "distanceKm": 270.87
-  },
-  {
-    "id": "ea_road_00017",
-    "from": "ea_jct_calais",
-    "to": "eu_brussels_node",
-    "distanceKm": 202.15
-  },
-  {
-    "id": "ea_road_00018",
-    "from": "as_shanghai_node",
-    "to": "as_guangzhou_node",
-    "distanceKm": 1393.67
-  },
-  {
-    "id": "ea_road_00019",
-    "from": "as_xian_node",
-    "to": "as_beijing_node",
-    "distanceKm": 1041.22
-  },
-  {
-    "id": "ea_road_00020",
-    "from": "as_xian_node",
-    "to": "as_chengdu_node",
-    "distanceKm": 713.06
-  },
-  {
-    "id": "ea_road_00021",
-    "from": "as_kolkata_node",
-    "to": "as_chennai_node",
-    "distanceKm": 1562.11
-  },
-  {
-    "id": "ea_road_00022",
-    "from": "eu_budapest_node",
-    "to": "ea_jct_bucharest",
-    "distanceKm": 739.62
-  },
-  {
-    "id": "ea_road_00023",
-    "from": "ea_jct_bucharest",
-    "to": "eu_istanbul_node",
-    "distanceKm": 514.3
-  },
-  {
-    "id": "ea_road_00024",
-    "from": "eu_budapest_node",
-    "to": "ea_jct_belgrade",
-    "distanceKm": 368.09
-  },
-  {
-    "id": "ea_road_00025",
-    "from": "ea_jct_belgrade",
-    "to": "ea_jct_sofia",
-    "distanceKm": 376.41
-  },
-  {
-    "id": "ea_road_00026",
-    "from": "ea_jct_sofia",
-    "to": "eu_istanbul_node",
-    "distanceKm": 580.59
-  },
-  {
-    "id": "ea_road_00027",
-    "from": "eu_vienna_node",
-    "to": "eu_budapest_node",
-    "distanceKm": 246.15
-  },
-  {
-    "id": "ea_road_00028",
-    "from": "as_mumbai_node",
-    "to": "ea_jct_bangalore",
-    "distanceKm": 971.95
-  },
-  {
-    "id": "ea_road_00029",
-    "from": "ea_jct_bangalore",
-    "to": "as_chennai_node",
-    "distanceKm": 334.28
-  },
-  {
-    "id": "ea_road_00030",
-    "from": "as_delhi_node",
-    "to": "as_mumbai_node",
-    "distanceKm": 1320.31
-  },
-  {
-    "id": "ea_road_00031",
-    "from": "as_dhaka_node",
-    "to": "as_yangon_node",
-    "distanceKm": 1126.22
-  },
-  {
-    "id": "ea_road_00032",
-    "from": "eu_warsaw_node",
-    "to": "eu_kyiv_node",
-    "distanceKm": 792.45
-  },
-  {
-    "id": "ea_road_00033",
-    "from": "eu_kyiv_node",
-    "to": "ea_jct_bucharest",
-    "distanceKm": 859.26
-  },
-  {
-    "id": "ea_road_00034",
-    "from": "eu_warsaw_node",
-    "to": "ea_jct_minsk",
-    "distanceKm": 546.33
-  },
-  {
-    "id": "ea_road_00035",
-    "from": "ea_jct_minsk",
-    "to": "eu_moscow_node",
-    "distanceKm": 777.08
-  },
-  {
-    "id": "ea_road_00036",
-    "from": "as_delhi_node",
-    "to": "as_kolkata_node",
-    "distanceKm": 1499.41
-  },
-  {
-    "id": "ea_road_00037",
-    "from": "as_lahore_node",
-    "to": "as_delhi_node",
-    "distanceKm": 487.43
-  },
-  {
-    "id": "ea_road_00038",
-    "from": "as_riyadh_node",
-    "to": "as_dubai_node",
-    "distanceKm": 998.3
-  },
-  {
-    "id": "ea_road_00039",
-    "from": "as_riyadh_node",
-    "to": "ea_jct_kuwait",
-    "distanceKm": 615.19
-  },
-  {
-    "id": "ea_road_00040",
-    "from": "ea_jct_kuwait",
-    "to": "as_tehran_node",
-    "distanceKm": 885.92
-  },
-  {
-    "id": "ea_road_00041",
-    "from": "eu_hamburg_node",
-    "to": "eu_berlin_node",
-    "distanceKm": 293.54
-  },
-  {
-    "id": "ea_road_00042",
-    "from": "ea_jct_lanzhou",
-    "to": "as_chengdu_node",
-    "distanceKm": 702.13
-  },
-  {
-    "id": "ea_road_00043",
-    "from": "eu_lisbon_node",
-    "to": "eu_madrid_node",
-    "distanceKm": 577.81
-  },
-  {
-    "id": "ea_road_00044",
-    "from": "eu_madrid_node",
-    "to": "eu_barcelona_node",
-    "distanceKm": 580.86
-  },
-  {
-    "id": "ea_road_00045",
-    "from": "as_ho_chi_minh_city_node",
-    "to": "ea_jct_phnom_penh",
-    "distanceKm": 234.26
-  },
-  {
-    "id": "ea_road_00046",
-    "from": "ea_jct_phnom_penh",
-    "to": "as_bangkok_node",
-    "distanceKm": 618.62
-  },
-  {
-    "id": "ea_road_00047",
-    "from": "eu_milan_node",
-    "to": "eu_rome_node",
-    "distanceKm": 548.42
-  },
-  {
-    "id": "ea_road_00048",
-    "from": "as_beijing_node",
-    "to": "as_shanghai_node",
-    "distanceKm": 1227.41
-  },
-  {
-    "id": "ea_road_00049",
-    "from": "as_tehran_node",
-    "to": "ea_jct_mashhad",
-    "distanceKm": 853.86
-  },
-  {
-    "id": "ea_road_00050",
-    "from": "ea_jct_mashhad",
-    "to": "as_tashkent_node",
-    "distanceKm": 1152.04
-  },
-  {
-    "id": "ea_road_00051",
-    "from": "as_beijing_node",
-    "to": "ea_jct_shenyang",
-    "distanceKm": 720.95
-  },
-  {
-    "id": "ea_road_00052",
-    "from": "ea_jct_shenyang",
-    "to": "as_seoul_node",
-    "distanceKm": 644.04
-  },
-  {
-    "id": "ea_road_00053",
-    "from": "eu_kyiv_node",
-    "to": "eu_moscow_node",
-    "distanceKm": 869.1
-  },
-  {
-    "id": "ea_road_00054",
-    "from": "as_ankara_node",
-    "to": "ea_jct_adana",
-    "distanceKm": 448.71
-  },
-  {
-    "id": "ea_road_00055",
-    "from": "ea_jct_adana",
-    "to": "ea_jct_amman",
-    "distanceKm": 648.95
-  },
-  {
-    "id": "ea_road_00056",
-    "from": "ea_jct_amman",
-    "to": "as_riyadh_node",
-    "distanceKm": 1521.33
-  },
-  {
-    "id": "ea_road_00057",
-    "from": "eu_madrid_node",
-    "to": "eu_paris_node",
-    "distanceKm": 1210.83
-  },
-  {
-    "id": "ea_road_00058",
-    "from": "as_bangkok_node",
-    "to": "as_kuala_lumpur_node",
-    "distanceKm": 1365.9
-  },
-  {
-    "id": "ea_road_00059",
-    "from": "as_karachi_node",
-    "to": "as_lahore_node",
-    "distanceKm": 1187.95
-  },
-  {
-    "id": "ea_road_00060",
-    "from": "as_guangzhou_node",
-    "to": "as_hanoi_node",
-    "distanceKm": 920.39
-  },
-  {
-    "id": "ea_road_00061",
-    "from": "eu_hamburg_node",
-    "to": "eu_copenhagen_node",
-    "distanceKm": 331.89
-  },
-  {
-    "id": "ea_road_00062",
-    "from": "eu_copenhagen_node",
-    "to": "ea_jct_malmo",
-    "distanceKm": 32.64
-  },
-  {
-    "id": "ea_road_00063",
-    "from": "ea_jct_malmo",
-    "to": "ea_jct_jonkoping",
-    "distanceKm": 290.41
-  },
-  {
-    "id": "ea_road_00064",
-    "from": "ea_jct_jonkoping",
-    "to": "eu_stockholm_node",
-    "distanceKm": 327.38
-  },
-  {
-    "id": "ea_road_00065",
-    "from": "eu_paris_node",
-    "to": "eu_brussels_node",
-    "distanceKm": 303.57
-  },
-  {
-    "id": "ea_road_00066",
-    "from": "eu_brussels_node",
-    "to": "eu_rotterdam_node",
-    "distanceKm": 137.72
-  },
-  {
-    "id": "ea_road_00067",
-    "from": "eu_rotterdam_node",
-    "to": "eu_amsterdam_node",
-    "distanceKm": 65.81
-  },
-  {
-    "id": "ea_road_00068",
-    "from": "eu_amsterdam_node",
-    "to": "eu_hamburg_node",
-    "distanceKm": 420.13
-  },
-  {
-    "id": "ea_road_00069",
-    "from": "eu_berlin_node",
-    "to": "eu_warsaw_node",
-    "distanceKm": 594.75
-  },
-  {
-    "id": "ea_road_00070",
-    "from": "eu_paris_node",
-    "to": "ea_jct_lyon",
-    "distanceKm": 450.85
-  },
-  {
-    "id": "ea_road_00071",
-    "from": "eu_barcelona_node",
-    "to": "ea_jct_lyon",
-    "distanceKm": 611.37
-  },
-  {
-    "id": "ea_road_00072",
-    "from": "ea_jct_lyon",
-    "to": "eu_milan_node",
-    "distanceKm": 390.89
-  },
-  {
-    "id": "ea_road_00073",
-    "from": "eu_munich_node",
-    "to": "eu_vienna_node",
-    "distanceKm": 408.68
-  },
-  {
-    "id": "ea_road_00074",
-    "from": "as_tashkent_node",
-    "to": "as_almaty_node",
-    "distanceKm": 760.76
-  },
-  {
-    "id": "ea_road_00075",
-    "from": "as_almaty_node",
-    "to": "ea_jct_urumqi",
-    "distanceKm": 1000.76
-  },
-  {
-    "id": "ea_road_00076",
-    "from": "ea_jct_urumqi",
-    "to": "ea_jct_lanzhou",
-    "distanceKm": 1869.13
-  },
-  {
-    "id": "ea_road_00077",
-    "from": "ea_jct_lanzhou",
-    "to": "as_xian_node",
-    "distanceKm": 577.28
-  },
-  {
-    "id": "ea_road_00078",
-    "from": "eu_paris_node",
-    "to": "ea_jct_stuttgart",
-    "distanceKm": 574.78
-  },
-  {
-    "id": "ea_road_00079",
-    "from": "ea_jct_stuttgart",
-    "to": "eu_munich_node",
-    "distanceKm": 219.74
-  },
-  {
-    "id": "ea_road_00080",
-    "from": "as_bangkok_node",
-    "to": "as_yangon_node",
-    "distanceKm": 663.46
-  },
-  {
-    "id": "ea_road_00081",
-    "from": "as_novosibirsk_node",
-    "to": "ea_jct_ulaanbaatar",
-    "distanceKm": 2100.76
-  },
-  {
-    "id": "ea_road_00082",
-    "from": "ea_jct_ulaanbaatar",
-    "to": "as_beijing_node",
-    "distanceKm": 1344.97
-  },
-  {
-    "id": "ea_road_00083",
-    "from": "as_yekaterinburg_node",
-    "to": "as_novosibirsk_node",
-    "distanceKm": 1609.52
-  },
-  {
-    "id": "ea_road_00084",
-    "from": "as_novosibirsk_node",
-    "to": "as_almaty_node",
-    "distanceKm": 1589.4
-  },
-  {
-    "id": "ea_road_00085",
-    "from": "as_hanoi_node",
-    "to": "as_ho_chi_minh_city_node",
-    "distanceKm": 1308.57
-  },
-  {
-    "id": "ea_road_00086",
-    "from": "as_chengdu_node",
-    "to": "ea_jct_kunming",
-    "distanceKm": 723.69
-  },
-  {
-    "id": "ea_road_00087",
-    "from": "ea_jct_kunming",
-    "to": "as_hanoi_node",
-    "distanceKm": 630.43
+    "id": "us_road_jct_denver_to_jct_kansas_city",
+    "from": "us_jct_denver",
+    "to": "us_jct_kansas_city",
+    "distanceKm": 1429.08
   }
 ]

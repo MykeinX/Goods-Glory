@@ -23,9 +23,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-# Linear fit from artwork land bbox → geographic extents. The board art's
-# composition is the driver (cities can be re-placed later). Re-tune only if
-# framing changes.
+# Linear fit from artwork land bbox → geographic extents. City coordinates in
+# cities.json are authored in this same board space (not raw WGS84). Re-tune
+# only if framing changes.
 LON0, LON1 = -170.0, 190.0
 LAT0, LAT1 = 80.0, -55.0
 

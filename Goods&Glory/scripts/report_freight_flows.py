@@ -2,7 +2,7 @@
 """
 Advisory mirror of GameCatalog freight-flow derivation, for calibration only.
 
-Canonical derivation lives in Swift (GameCatalog.deriveFlows); this script
+Canonical derivation lives in Swift (GameCatalog.deriveLanes); this script
 re-implements the same formula so flow bands can be eyeballed and tuned without
 building the app. If the two disagree, Swift wins — update this mirror.
 
@@ -109,7 +109,7 @@ def main() -> None:
     roads = json.loads((CATALOG / "roads.json").read_text())
     markets_by_id = {m["cityID"]: m for m in json.loads((CATALOG / "city_markets.json").read_text())}
     economy = json.loads((CATALOG / "economy.json").read_text())
-    flow_config = economy["flows"]
+    flow_config = economy["lanes"]
 
     distances = city_distances(cities, nodes, roads)
     flows = derive_flows(cities, markets_by_id, flow_config, distances)

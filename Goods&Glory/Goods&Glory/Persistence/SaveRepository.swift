@@ -34,9 +34,10 @@ struct SaveSummary: Equatable, Sendable {
 }
 
 struct SaveRepository {
-    /// v19 removes the legacy agreement and job-board state. Older snapshots
-    /// are intentionally discarded because the prototype has no migration chain.
-    static let currentSaveVersion = 19
+    /// v20 resets the catalog to the foundation city/road network. Older
+    /// snapshots contain removed city, firm, lane and route references and are
+    /// intentionally discarded because the prototype has no migration chain.
+    static let currentSaveVersion = 20
 
     private let fileURL: URL
 

@@ -12,7 +12,7 @@ import Testing
 struct GameNotificationTests {
     @Test func pickupFocusesOriginCity() {
         let origin = CityID("us_chicago")
-        let destination = CityID("us_las_vegas")
+        let destination = CityID("us_dallas")
         let event = LogEvent.jobPickedUp(
             jobID: JobID(rawValue: 1),
             origin: origin,
@@ -35,7 +35,7 @@ struct GameNotificationTests {
     @Test func makeAttachesMapFocusForPickup() throws {
         let catalog = try GameCatalog.load(from: .main)
         let origin = CityID("us_chicago")
-        let destination = CityID("us_las_vegas")
+        let destination = CityID("us_dallas")
         let pickup = try #require(GameNotification.make(
             from: LogEntry(
                 id: 1,

@@ -13,8 +13,8 @@ struct CityInsightTests {
     @Test func foundingCostScalesWithCostIndex() {
         let cheap = sampleCity(id: "cheap", population: 1_000_000, costIndex: 1_000)
         let pricey = sampleCity(id: "pricey", population: 1_000_000, costIndex: 1_155)
-        #expect(CityInsight.foundingCost(for: cheap) == 40_000)
-        #expect(CityInsight.foundingCost(for: pricey) == 46_200)
+        #expect(CityInsight.foundingCost(for: cheap) == 22_000)
+        #expect(CityInsight.foundingCost(for: pricey) == 25_410)
     }
 
     @Test func marketAndCompetitionNormalizeAgainstCatalogRange() throws {
@@ -34,14 +34,14 @@ struct CityInsightTests {
 
     @Test func perksFollowAccessFlags() throws {
         let catalog = try GameCatalog.load(from: .main)
-        let vegas = try #require(catalog.city(CityID("us_las_vegas")))
-        let orleans = try #require(catalog.city(CityID("us_new_orleans")))
+        let dallas = try #require(catalog.city(CityID("us_dallas")))
+        let newYork = try #require(catalog.city(CityID("us_new_york")))
 
-        let vegasInsight = CityInsight.make(city: vegas, catalog: catalog)
-        let orleansInsight = CityInsight.make(city: orleans, catalog: catalog)
+        let dallasInsight = CityInsight.make(city: dallas, catalog: catalog)
+        let newYorkInsight = CityInsight.make(city: newYork, catalog: catalog)
 
-        #expect(!vegasInsight.perkLabels.contains(where: { $0.localizedCaseInsensitiveContains("rail") }))
-        #expect(orleansInsight.perkLabels.contains(where: { $0.localizedCaseInsensitiveContains("sea") }))
+        #expect(!dallasInsight.perkLabels.contains(where: { $0.localizedCaseInsensitiveContains("sea") }))
+        #expect(newYorkInsight.perkLabels.contains(where: { $0.localizedCaseInsensitiveContains("sea") }))
     }
 
     @Test func newCampaignDeductsFoundingCostFromStartingCash() throws {
@@ -59,7 +59,6 @@ struct CityInsightTests {
             foundingCost: foundingCost
         )
 
-        #expect(catalog.economy.startingCash == 75_000)
         #expect(state.cash == catalog.economy.startingCash - foundingCost)
         #expect(state.cash >= 14_000)
     }

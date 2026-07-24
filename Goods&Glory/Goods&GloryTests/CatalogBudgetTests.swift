@@ -16,8 +16,8 @@
 //  current numbers, so ordinary content work never touches them and a silent
 //  doubling always does.
 //
-//  When a budget legitimately needs to rise, raise it in the same commit as the
-//  content and say why. The point is that it becomes a decision.
+//  Road budgets intentionally leave room for the planned global expansion;
+//  the lower bound protects the deliberately small foundation catalog.
 //
 
 import Foundation
@@ -34,7 +34,7 @@ struct CatalogBudgetTests {
     static let roadEdgeBudget = 2_000
     /// Guards the other direction too: a catalog that lost its content should
     /// fail loudly rather than quietly shipping an empty world.
-    static let minimumCities = 60
+    static let minimumCities = 9
 
     @MainActor
     @Test("Bundled map geography stays inside its vertex budget")

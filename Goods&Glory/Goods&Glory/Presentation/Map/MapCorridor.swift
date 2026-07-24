@@ -343,7 +343,9 @@ final class MapCorridorCache {
     }
 
     /// One clean bend chosen from the eight metro-map directions.
-    private static func octilinearLeg(from start: CGPoint, to end: CGPoint) -> [CGPoint] {
+    /// Internal so the visual contract can be verified without mistaking the
+    /// sampled rounded-corner output for straight guide runs.
+    static func octilinearLeg(from start: CGPoint, to end: CGPoint) -> [CGPoint] {
         let delta = CGPoint(x: end.x - start.x, y: end.y - start.y)
         let distance = hypot(delta.x, delta.y)
         guard distance > 0.01 else { return [start, end] }
