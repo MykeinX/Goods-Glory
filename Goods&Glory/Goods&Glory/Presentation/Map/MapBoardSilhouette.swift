@@ -2,7 +2,7 @@
 //  MapBoardSilhouette.swift
 //  Goods&Glory
 //
-//  The globally coarsened world silhouette used by the rounded game board.
+//  The authored world board silhouette used by the rounded game board.
 //  Gameplay traversal remains in the domain transport graph.
 //
 

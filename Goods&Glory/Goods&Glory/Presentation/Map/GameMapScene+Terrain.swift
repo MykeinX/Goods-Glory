@@ -33,28 +33,27 @@ extension GameMapScene {
         addGeography()
         addCities()
 
-        // White casing beneath the coloured line: a crisp cut-out edge that
-        // keeps routes legible over both the grey land and the blue sea, the
-        // way a metro line stays readable across a printed map.
+        // Thin metro casing: shared RoadID geometry is stroked once, with a
+        // slight bevel so sharp 45°/90° hinges stay crisp like Mini Metro.
         activeRouteHaloNode.strokeColor = MapPalette.routeCasing
         activeRouteHaloNode.lineCap = .round
-        activeRouteHaloNode.lineJoin = .round
+        activeRouteHaloNode.lineJoin = .bevel
         activeRouteHaloNode.lineWidth = StrokeWidth.activeRouteHalo
         activeRouteHaloNode.zPosition = 1
         routeLayer.addChild(activeRouteHaloNode)
 
         activeRouteNode.strokeColor = accentColor
         activeRouteNode.lineCap = .round
-        activeRouteNode.lineJoin = .round
+        activeRouteNode.lineJoin = .bevel
         activeRouteNode.lineWidth = StrokeWidth.activeRoute
         activeRouteNode.zPosition = 2
         routeLayer.addChild(activeRouteNode)
 
         plannedRouteNode.strokeColor = accentColor.withAlphaComponent(0.78)
         plannedRouteNode.lineCap = .round
-        plannedRouteNode.lineJoin = .round
+        plannedRouteNode.lineJoin = .bevel
         plannedRouteNode.lineWidth = StrokeWidth.plannedRoute
-        plannedRouteNode.glowWidth = 1
+        plannedRouteNode.glowWidth = 0
         plannedRouteLayer.addChild(plannedRouteNode)
     }
 
@@ -70,12 +69,12 @@ extension GameMapScene {
     enum TerrainPaths {
         static let cache = Cache()
 
-        /// The silhouette ships as authored Mini Metro art (import_board_art.py)
-        /// with octilinear coasts already baked in. This is the single
-        /// "iOS box-radius" knob: how far a coast corner is rounded, in world
-        /// units (≈ km). Large enough to read as premium iOS softness without
-        /// melting continents into blobs.
-        static let coastCornerRadiusKm: CGFloat = 200
+        /// The silhouette ships as contour-faithful authored board art
+        /// (import_board_art.py). This is the single "iOS box-radius" knob:
+        /// how far a coast corner is rounded, in world units (≈ km). Soft
+        /// enough to match the reference's eased transitions without melting
+        /// continents into blobs.
+        static let coastCornerRadiusKm: CGFloat = 320
 
         final class Cache {
             var built: CGPath?
@@ -107,7 +106,7 @@ extension GameMapScene {
                     landPath.addRoundedClosedPolyline(
                         projected,
                         cornerRadius: coastCornerRadiusKm,
-                        maximumCornerFraction: 0.18
+                        maximumCornerFraction: 0.28
                     )
                 }
                 return landPath

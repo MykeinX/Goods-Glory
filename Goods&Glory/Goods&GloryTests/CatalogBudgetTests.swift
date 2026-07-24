@@ -28,8 +28,8 @@ import Testing
 struct CatalogBudgetTests {
     /// Every drawn vertex of the board silhouette.
     static let geographyVertexBudget = 4_000
-    /// Road graph size. Junctions exist to keep a leg on land, nothing more —
-    /// density belongs where the coast forces a bend, not spread evenly.
+    /// Road graph size. One node per city; edges are the sparse authored
+    /// backbone. Density belongs in city count, not invisible steering nodes.
     static let roadNodeBudget = 1_500
     static let roadEdgeBudget = 2_000
     /// Guards the other direction too: a catalog that lost its content should
@@ -64,18 +64,12 @@ struct CatalogBudgetTests {
         )
     }
 
-    /// Junction count should track the coastline's demands, not the city count.
-    /// A fixed-interval resampling pass — the mistake that tripled this graph —
-    /// shows up here immediately.
-    @Test("Junctions stay proportionate to cities")
-    func junctionDensity() throws {
+    /// Every road node is a city. Extra nodes would mean the old junction
+    /// system leaked back in.
+    @Test("Road nodes match cities one-to-one")
+    func roadNodesMatchCities() throws {
         let catalog = try GameCatalog.load(from: .main)
-        let junctions = catalog.networkNodes.count - catalog.cities.count
-        let perCity = Double(junctions) / Double(max(catalog.cities.count, 1))
-
-        #expect(
-            perCity < 20,
-            "\(junctions) junctions for \(catalog.cities.count) cities (\(perCity) each) — that is uniform resampling, not terrain-driven density"
-        )
+        #expect(catalog.networkNodes.count == catalog.cities.count)
+        #expect(catalog.networkNodes.allSatisfy { $0.kind == .city && $0.cityID != nil })
     }
 }

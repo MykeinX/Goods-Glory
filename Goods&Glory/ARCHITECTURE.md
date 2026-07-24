@@ -86,11 +86,14 @@ Ana katalog dosyaları: `cities.json`, `city_markets.json`, `products.json`, `ro
 ## Harita teknik sözleşmesi
 
 - SpriteKit yalnız `MapRenderSnapshot` çizer; simülasyon ve rota kuralı Domain'de kalır.
-- `map_board_silhouette.json` yazarlı Mini Metro tahta sanatıdır (`import_board_art.py`): yüksek detaylı kontur + oktilinear (yatay/dikey/45°) kenar snap. Renderer düz kenarları koruyup yalnız köşeleri küçük sabit radius ile yumuşatır. Ülke sınırı çizilmez; yakınlaştırma yeni coğrafi detay üretmez.
+- `map_board_silhouette.json` yazarlı tahta sanatıdır (`import_board_art.py`): kaynağın konturuna sadık sadeleştirme (oktilinear snap yok). Renderer düz kenarları koruyup yalnız köşeleri sabit radius ile yumuşatır. Ülke sınırı çizilmez; yakınlaştırma yeni coğrafi detay üretmez.
 - `MapProjection` şehirleri, yolları ve silüeti aynı yazarlı tahta koordinatına taşır. `cities.json` lat/lon’u ham WGS84 değil; silüetle aynı board uzayıdır (pin’ler tahta sanatına oturur).
-- Domain yol grafı kanoniktir ve yazarlıdır: `generate_trade_network.py` şehirleri gerçek koridorlardan esinlenen az sayıda yönlendirme kavşağı ve döngülü bölgesel omurgayla bağlar. Yeni şehir en yakın omurga kenarını bölerek veya bir-iki hub'a bağlanarak eklenir; tam bağlı şehir grafı kurulmaz. `MapCorridorCache` katalog başına bir kez şematik ve yumuşak `RoadID` geometrisi kurar; çizgi ile araç aynı koridoru kullanır, kesişen rotalar ortak segmenti paylaşır. Ağ kullanıcıya gösterilmez; yalnız aktif rotaların kullandığı parçalar çizilir.
-- Kara/deniz geçilebilirliği sunum poligonundan çıkarılmaz. Bugünkü `roads.json` kara ağıdır; deniz taşımacılığı geldiğinde kendi modlu ağına sahip olur.
-- Aktif rotalar araç başına çizilmez. Kullanılan `RoadID` birleşimi tek halo + tek yol path'i olarak batch edilir.
+- Domain yol grafı kanoniktir ve yazarlıdır: `generate_trade_network.py` şehirleri seyrek, döngülü bölgesel omurgalarla **doğrudan** bağlar. Kavşak / gizli yönlendirme düğümü yoktur. Yeni şehir aynı kara parçasındaki bir-iki yakın şehre tutunur; tam bağlı şehir grafı kurulmaz.
+- **Rota geometrisi build-time'da pişer, runtime'da üretilmez.** Aynı script her şehri tek bir ortak octilinear kafese (45 km, projekte uzayda kare) oturtur ve her yolu bu kafes üzerinde kara-kısıtlı A* ile çizer (`scripts/map_grid.py`). Su hücreleri geçilemez: "karayolu denizden geçmez" bir puanlama sezgiseli değil, yapısal garantidir. Bilinçli sabit bağlantılar (Manş: London–Paris) `WATER_CROSSINGS`'te km bütçesiyle bildirilir; bildirilmemiş bir su geçişinde script hata verir.
+- Dönüş cezası, kısa-koşu cezası ve kıyı cezası uzun düz koşular üretir; bağlı şehirler mümkünse aynı satır / sütun / köşegene hizalanır. `cities.json` lat/lon'u da bu snap sonucudur — pin ile yol tam olarak aynı kafes noktasındadır.
+- Pişmiş polyline'lar `road_geometry.json`'dadır, `roads.json`'da değil: sunum verisidir ve simülasyon yalnız `distanceKm` okur. `MapCorridorCache` bunları bir kez projekte edip paylaştırır; şematik geometri **üretmez**. Çizgi ile araç aynı koridoru kullanır, kesişen rotalar ortak segmenti paylaşır (kalınlaşmaz / paralel şerit olmaz). Ağ kullanıcıya gösterilmez; yalnız aktif rotaların kullandığı parçalar çizilir.
+- Bugünkü ağ kara ağıdır; deniz taşımacılığı geldiğinde maske ters çevrilerek aynı kafes ve aynı arama ile kendi modlu ağını alır.
+- Aktif rotalar araç başına çizilmez. Kullanılan `RoadID` birleşimi tek halo + tek yol path'i olarak batch edilir. Rota önizlemesi de aynı birleşimi kullanır (kapalı turda aynı kenar iki kez çizilmez).
 - Hareketli araçlar havuzlanan kapsül `MapVehicleNode`'larıdır; şehirdeki boşta araçlar ayrı sprite yerine şehir sayacında özetlenir.
 
 ## Bugünkü oyun iskeleti

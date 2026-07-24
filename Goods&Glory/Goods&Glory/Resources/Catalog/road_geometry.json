@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "source": "Octilinear lattice at 45 km, land-constrained A* (generate_trade_network.py)",
+  "roads": [
+    {
+      "id": "eu_road_city_frankfurt_to_city_istanbul",
+      "points": [
+        { "latitude": 37.5041, "longitude": 22.7803 },
+        { "latitude": 29.5022, "longitude": 22.7803 },
+        { "latitude": 24.7604, "longitude": 29.2482 },
+        { "latitude": 24.7604, "longitude": 31.6736 }
+      ]
+    },
+    {
+      "id": "eu_road_city_frankfurt_to_city_paris",
+      "points": [
+        { "latitude": 37.5041, "longitude": 13.0785 },
+        { "latitude": 37.5041, "longitude": 22.7803 }
+      ]
+    },
+    {
+      "id": "eu_road_city_istanbul_to_city_paris",
+      "points": [
+        { "latitude": 37.5041, "longitude": 13.0785 },
+        { "latitude": 36.3186, "longitude": 13.0785 },
+        { "latitude": 24.7604, "longitude": 28.844 },
+        { "latitude": 24.7604, "longitude": 31.6736 }
+      ]
+    },
+    {
+      "id": "eu_road_city_london_to_city_paris",
+      "points": [
+        { "latitude": 39.2823, "longitude": -4.3039 },
+        { "latitude": 35.4295, "longitude": 0.9513 },
+        { "latitude": 35.4295, "longitude": 10.2488 },
+        { "latitude": 37.5041, "longitude": 13.0785 }
+      ]
+    },
+    {
+      "id": "us_road_city_atlanta_to_city_chicago",
+      "points": [
+        { "latitude": 41.0605, "longitude": -94.8541 },
+        { "latitude": 33.355, "longitude": -94.8541 },
+        { "latitude": 28.6131, "longitude": -88.3862 }
+      ]
+    },
+    {
+      "id": "us_road_city_atlanta_to_city_dallas",
+      "points": [
+        { "latitude": 27.724, "longitude": -106.5771 },
+        { "latitude": 27.724, "longitude": -89.5989 },
+        { "latitude": 28.6131, "longitude": -88.3862 }
+      ]
+    },
+    {
+      "id": "us_road_city_atlanta_to_city_new_york",
+      "points": [
+        { "latitude": 28.6131, "longitude": -88.3862 },
+        { "latitude": 37.5041, "longitude": -76.2589 },
+        { "latitude": 37.5041, "longitude": -58.4723 }
+      ]
+    },
+    {
+      "id": "us_road_city_chicago_to_city_dallas",
+      "points": [
+        { "latitude": 27.724, "longitude": -106.5771 },
+        { "latitude": 32.4659, "longitude": -106.5771 },
+        { "latitude": 41.0605, "longitude": -94.8541 }
+      ]
+    },
+    {
+      "id": "us_road_city_chicago_to_city_new_york",
+      "points": [
+        { "latitude": 41.0605, "longitude": -94.8541 },
+        { "latitude": 37.5041, "longitude": -90.0032 },
+        { "latitude": 37.5041, "longitude": -58.4723 }
+      ]
+    },
+    {
+      "id": "us_road_city_dallas_to_city_los_angeles",
+      "points": [
+        { "latitude": 31.2804, "longitude": -134.0655 },
+        { "latitude": 31.2804, "longitude": -111.428 },
+        { "latitude": 27.724, "longitude": -106.5771 }
+      ]
+    }
+  ]
+}

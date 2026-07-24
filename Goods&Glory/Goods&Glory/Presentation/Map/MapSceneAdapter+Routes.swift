@@ -77,14 +77,16 @@ extension MapSceneAdapter {
             }
     }
 
-    /// Consecutive tasks in one city form one visit. The path closes to its
-    /// first visit, while markers group repeated physical cities (`1·4`).
+    /// Consecutive tasks in one city form one visit. Markers group repeated
+    /// physical cities (`1·4`). The drawn preview is the union of `RoadID`s on
+    /// the closed lap — each track once, Mini Metro style — never an out-and-
+    /// back polyline that double-strokes the Channel on the return leg.
     static func routePreview(
         route: Route,
         catalog: GameCatalog,
         projection: MapProjection,
-        leg: (CityID, CityID) -> MapCorridor
-    ) -> (overlay: MapRouteOverlay?, markers: [MapPlannedVisitMarker]) {
+        corridors: MapCorridorCache
+    ) -> (overlays: [MapRouteOverlay], markers: [MapPlannedVisitMarker]) {
         struct Visit {
             let cityID: CityID
             var hasPickup: Bool
@@ -145,23 +147,36 @@ extension MapSceneAdapter {
             cityIDs.append(first)
         }
 
-        var anchors: [CGPoint] = []
+        var roadIDs = Set<RoadID>()
         for index in 0..<max(0, cityIDs.count - 1) {
-            let points = leg(cityIDs[index], cityIDs[index + 1]).points
-            anchors.append(contentsOf: index == 0 ? points[...] : points.dropFirst())
-        }
-        if anchors.isEmpty, let only = cityIDs.first,
-           let point = catalog.city(only).map(projection.point(for:)) {
-            anchors = [point]
+            let origin = cityIDs[index]
+            let destination = cityIDs[index + 1]
+            guard origin != destination else { continue }
+            roadIDs.formUnion(
+                corridors.roadIDs(
+                    from: origin,
+                    to: destination,
+                    catalog: catalog,
+                    projection: projection
+                )
+            )
         }
 
-        let overlay = anchors.count > 1
-            ? MapRouteOverlay(
-                id: "preview-\(route.id.rawValue)",
-                anchors: anchors,
-                kind: .planned
-            )
-            : nil
-        return (overlay, markers)
+        let overlays = roadIDs
+            .sorted { $0.rawValue < $1.rawValue }
+            .compactMap { roadID -> MapRouteOverlay? in
+                guard let points = corridors.points(
+                    for: roadID,
+                    catalog: catalog,
+                    projection: projection
+                ), points.count >= 2 else { return nil }
+                return MapRouteOverlay(
+                    id: "preview-\(route.id.rawValue)-\(roadID.rawValue)",
+                    anchors: points,
+                    kind: .planned
+                )
+            }
+
+        return (overlays, markers)
     }
 }

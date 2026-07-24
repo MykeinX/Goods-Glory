@@ -1,158 +1,56 @@
 [
   {
     "id": "eu_city_frankfurt",
-    "coordinate": { "latitude": 37.5472, "longitude": 22.7413 },
+    "coordinate": { "latitude": 37.5041, "longitude": 22.7803 },
     "kind": "city",
     "cityID": "eu_frankfurt"
   },
   {
     "id": "eu_city_istanbul",
-    "coordinate": { "latitude": 24.8113, "longitude": 31.7761 },
+    "coordinate": { "latitude": 24.7604, "longitude": 31.6736 },
     "kind": "city",
     "cityID": "eu_istanbul"
   },
   {
     "id": "eu_city_london",
-    "coordinate": { "latitude": 39.2453, "longitude": -4.1313 },
+    "coordinate": { "latitude": 39.2823, "longitude": -4.3039 },
     "kind": "city",
     "cityID": "eu_london"
   },
   {
     "id": "eu_city_paris",
-    "coordinate": { "latitude": 36.8679, "longitude": 13.0116 },
+    "coordinate": { "latitude": 37.5041, "longitude": 13.0785 },
     "kind": "city",
     "cityID": "eu_paris"
   },
   {
-    "id": "eu_jct_belgrade",
-    "coordinate": { "latitude": 29.566, "longitude": 28.0695 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "eu_jct_brussels",
-    "coordinate": { "latitude": 37.0377, "longitude": 16.4865 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "eu_jct_budapest",
-    "coordinate": { "latitude": 30.5849, "longitude": 27.6062 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "eu_jct_calais",
-    "coordinate": { "latitude": 38.566, "longitude": 8.8417 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "eu_jct_lyon",
-    "coordinate": { "latitude": 32.1132, "longitude": 17.1815 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "eu_jct_munich",
-    "coordinate": { "latitude": 34.3208, "longitude": 25.0579 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "eu_jct_sofia",
-    "coordinate": { "latitude": 26.3396, "longitude": 30.8494 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "eu_jct_stuttgart",
-    "coordinate": { "latitude": 37.3774, "longitude": 19.7297 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "eu_jct_vienna",
-    "coordinate": { "latitude": 32.4528, "longitude": 26.4479 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
     "id": "us_city_atlanta",
-    "coordinate": { "latitude": 28.717, "longitude": -88.2239 },
+    "coordinate": { "latitude": 28.6131, "longitude": -88.3862 },
     "kind": "city",
     "cityID": "us_atlanta"
   },
   {
     "id": "us_city_chicago",
-    "coordinate": { "latitude": 40.9434, "longitude": -94.7104 },
+    "coordinate": { "latitude": 41.0605, "longitude": -94.8541 },
     "kind": "city",
     "cityID": "us_chicago"
   },
   {
     "id": "us_city_dallas",
-    "coordinate": { "latitude": 27.8679, "longitude": -106.5251 },
+    "coordinate": { "latitude": 27.724, "longitude": -106.5771 },
     "kind": "city",
     "cityID": "us_dallas"
   },
   {
     "id": "us_city_los_angeles",
-    "coordinate": { "latitude": 31.2642, "longitude": -134.0927 },
+    "coordinate": { "latitude": 31.2804, "longitude": -134.0655 },
     "kind": "city",
     "cityID": "us_los_angeles"
   },
   {
     "id": "us_city_new_york",
-    "coordinate": { "latitude": 37.5472, "longitude": -58.5714 },
+    "coordinate": { "latitude": 37.5041, "longitude": -58.4723 },
     "kind": "city",
     "cityID": "us_new_york"
-  },
-  {
-    "id": "us_jct_albuquerque",
-    "coordinate": { "latitude": 35.0, "longitude": -119.0347 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_jct_charlotte",
-    "coordinate": { "latitude": 32.6226, "longitude": -74.7876 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_jct_cleveland",
-    "coordinate": { "latitude": 39.0755, "longitude": -74.7876 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_jct_denver",
-    "coordinate": { "latitude": 36.3585, "longitude": -113.7066 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_jct_kansas_city",
-    "coordinate": { "latitude": 35.0, "longitude": -100.0386 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_jct_memphis",
-    "coordinate": { "latitude": 28.3774, "longitude": -97.4903 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_jct_nashville",
-    "coordinate": { "latitude": 34.1509, "longitude": -91.2355 },
-    "kind": "junction",
-    "cityID": null
-  },
-  {
-    "id": "us_jct_phoenix",
-    "coordinate": { "latitude": 30.2453, "longitude": -126.4479 },
-    "kind": "junction",
-    "cityID": null
   }
 ]

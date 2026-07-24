@@ -422,15 +422,15 @@ struct MapFoundationTests {
             previewRoute: route,
             corridors: MapCorridorCache()
         )
-        let planned = try #require(snapshot.routes.first { $0.kind == .planned })
+        let planned = snapshot.routes.filter { $0.kind == .planned }
         let markerA = try #require(snapshot.plannedVisits.first { $0.id == cityA })
         let markerB = try #require(snapshot.plannedVisits.first { $0.id == cityB })
 
-        // Three legs (A→B→C→A), each drawn as a road corridor rather than a
-        // single point per visit, so the exact count depends on the terrain.
-        // What must hold is that the lap is continuous and closes on itself.
-        #expect(planned.anchors.count >= 4)
-        #expect(planned.anchors.first == planned.anchors.last)
+        // Closed lap is drawn as the unique RoadID union (each track once), not
+        // a continuous out-and-back polyline.
+        #expect(!planned.isEmpty)
+        #expect(Set(planned.map(\.id)).count == planned.count)
+        #expect(planned.allSatisfy { $0.anchors.count >= 2 })
         #expect(snapshot.plannedVisits.count == 3)
         #expect(markerA.stepNumbers == [1, 4])
         #expect(markerA.hasDelivery)

@@ -260,11 +260,9 @@ enum MapSceneAdapter {
                 route: previewRoute,
                 catalog: catalog,
                 projection: projection,
-                leg: leg
+                corridors: corridors
             )
-            if let overlay = preview.overlay {
-                routes.append(overlay)
-            }
+            routes.append(contentsOf: preview.overlays)
             plannedVisits = preview.markers
         } else {
             plannedVisits = []

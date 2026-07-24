@@ -30,8 +30,6 @@ extension GameCatalog {
                 guard linkedCityIDs.insert(cityID).inserted else {
                     throw CatalogError.validationFailure("city \(cityID) is linked to multiple road nodes")
                 }
-            case (.junction, .none):
-                break
             default:
                 throw CatalogError.validationFailure("road node \(node.id) has invalid kind or city link")
             }

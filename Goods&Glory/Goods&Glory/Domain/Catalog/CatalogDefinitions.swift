@@ -89,14 +89,13 @@ struct CityDefinition: Codable, Identifiable, Sendable {
 
 enum NetworkNodeKind: String, Codable, Sendable {
     case city
-    case junction
 }
 
 struct NetworkNodeDefinition: Codable, Identifiable, Sendable {
     let id: RoadNodeID
     let coordinate: GeoCoordinate
     let kind: NetworkNodeKind
-    /// Present only when this node is the road entry point for a city.
+    /// The city this road node belongs to. Every network node is a city pin.
     let cityID: CityID?
 }
 

@@ -37,11 +37,12 @@ final class GameMapScene: SKScene {
     enum StrokeWidth {
         static let landCoast: CGFloat = 0.5
         static let waterCoast: CGFloat = 1
-        /// White casing width. Sits a few points proud of `activeRoute` so the
-        /// coloured line reads as a metro line cut cleanly out of the map.
-        static let activeRouteHalo: CGFloat = 9.5
-        static let activeRoute: CGFloat = 5.5
-        static let plannedRoute: CGFloat = 4.5
+        /// Thin white casing under the coloured metro stroke. Just enough to
+        /// keep the line readable on land and water without reading as a
+        /// thick highway.
+        static let activeRouteHalo: CGFloat = 4.5
+        static let activeRoute: CGFloat = 2.75
+        static let plannedRoute: CGFloat = 2.25
     }
 
     var cityNodes: [CityID: MapCityNode] = [:]

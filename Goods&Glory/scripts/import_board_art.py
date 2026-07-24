@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Import Mini Metro–style board art into map_board_silhouette.json.
+"""Import authored board art into map_board_silhouette.json.
 
-Unlike aggressive polygon approximation (which collapses continents into
-triangles), this keeps a high-detail contour then snaps every coast edge to
-the eight board directions (horizontal, vertical, 45°). SpriteKit only rounds
-corners with a small fixed radius at render time.
+Follows the source silhouette closely: light contour simplification only.
+Does not force octilinear (H/V/45°) edges — those made coasts harsher than the
+art. SpriteKit rounds corners with a fixed radius at render time.
 
 Usage:
   python3 -B scripts/import_board_art.py
@@ -29,39 +28,39 @@ import numpy as np
 LON0, LON1 = -170.0, 190.0
 LAT0, LAT1 = 80.0, -55.0
 
-# Light Douglas–Peucker fraction of perimeter for continents. Aggressive
-# values (~0.01+) produce the triangle disaster; stay well below that.
-CONTOUR_EPS_FRAC = 0.00035
-# Small islands get a stronger simplify so they read as soft chips.
+# Contour fidelity. Keep well below the old "triangle disaster" (~0.01+).
+CONTOUR_EPS_FRAC = 0.00022
 SMALL_AREA_PX = 3_500
-SMALL_CONTOUR_EPS_FRAC = 0.004
-MIN_OUTER_AREA = 120
-MIN_HOLE_AREA = 120
-
-OCTI_GUARD_PX = 6.0
-OCTI_GUARD_SMALL_PX = 9.0
-OCTI_MIN_EDGE_PX = 1.5
-OCTI_MIN_EDGE_SMALL_PX = 3.0
-SMALL_MAX_VERTS = 14
+SMALL_CONTOUR_EPS_FRAC = 0.0025
+MIN_OUTER_AREA = 80
+MIN_HOLE_AREA = 80
+# Collapse near-collinear runs without inventing new angles.
+COLLINEAR_COS = math.cos(math.radians(2.5))
+MIN_EDGE_PX = 1.25
+SMALL_MAX_VERTS = 28
 
 
 def extract_land(img: np.ndarray) -> np.ndarray:
-    b, g, r = cv2.split(img)
-    white = ((r > 220) & (g > 220) & (b > 220)).astype(np.uint8)
-    num, labels, stats, _ = cv2.connectedComponentsWithStats(white, 8)
-    border = np.zeros_like(white)
+    """Land is near-white; water is saturated blue. Soft AA edges bias to land."""
+    b, g, r = cv2.split(img.astype(np.float32))
+    gray = (r + g + b) / 3.0
+    # Prefer luminance over a hard RGB gate so soft coast AA stays with land.
+    land = ((gray > 198) & ((r + g) > (b + 55))).astype(np.uint8) * 255
+    num, labels, stats, _ = cv2.connectedComponentsWithStats(land, 8)
+    border = np.zeros_like(land)
     border[0, :] = border[-1, :] = border[:, 0] = border[:, -1] = 1
     frame = {
         int(labels[y, x])
-        for y, x in zip(*np.where(border.astype(bool) & white.astype(bool)))
+        for y, x in zip(*np.where((border > 0) & (land > 0)))
     }
-    land = np.zeros(white.shape, np.uint8)
+    cleaned = np.zeros_like(land)
     for lab in range(1, num):
-        if lab in frame or stats[lab, cv2.CC_STAT_AREA] < 40:
+        if lab in frame or stats[lab, cv2.CC_STAT_AREA] < 30:
             continue
-        land[labels == lab] = 255
-    land = cv2.morphologyEx(land, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
-    return land
+        cleaned[labels == lab] = 255
+    # Tiny close fills 1px AA notches without bloating continents.
+    cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8))
+    return cleaned
 
 
 def land_bbox(land: np.ndarray) -> tuple[int, int, int, int]:
@@ -83,118 +82,48 @@ def open_ring(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
     return list(points)
 
 
-def octilinear_ring(
+def merge_collinear(
     points: list[tuple[float, float]],
     *,
-    guard_px: float = OCTI_GUARD_PX,
-    min_edge_px: float = OCTI_MIN_EDGE_PX,
-) -> list[tuple[float, float]] | None:
-    """Snap a closed ring to the eight directions in pixel space."""
-    ring = open_ring([(float(x), float(y)) for x, y in points])
+    min_edge_px: float = MIN_EDGE_PX,
+) -> list[tuple[float, float]]:
+    """Drop vertices that barely bend the coast; keep authored angles intact."""
+    ring = open_ring(points)
     if len(ring) < 3:
-        return None
+        return ring
 
-    step = math.pi / 4
-    runs: list[dict] = []
-    for index in range(len(ring)):
-        start = ring[index]
-        end = ring[(index + 1) % len(ring)]
-        length = math.hypot(end[0] - start[0], end[1] - start[1])
-        if length < 1e-9:
-            continue
-        direction = round(math.atan2(end[1] - start[1], end[0] - start[0]) / step) * step
-        midpoint = ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
-        if runs and math.isclose(runs[-1]["direction"], direction, abs_tol=1e-9):
-            previous = runs[-1]
-            total = previous["length"] + length
-            previous["anchor"] = (
-                (previous["anchor"][0] * previous["length"] + midpoint[0] * length) / total,
-                (previous["anchor"][1] * previous["length"] + midpoint[1] * length) / total,
-            )
-            previous["length"] = total
-            previous["corner"] = end
-        else:
-            runs.append({
-                "direction": direction,
-                "anchor": midpoint,
-                "length": length,
-                "corner": end,
-            })
-    if len(runs) >= 2 and math.isclose(runs[0]["direction"], runs[-1]["direction"], abs_tol=1e-9):
-        first, last = runs[0], runs.pop()
-        total = first["length"] + last["length"]
-        first["anchor"] = (
-            (first["anchor"][0] * first["length"] + last["anchor"][0] * last["length"]) / total,
-            (first["anchor"][1] * first["length"] + last["anchor"][1] * last["length"]) / total,
-        )
-        first["length"] = total
-    if len(runs) < 3:
-        return None
-
-    result: list[tuple[float, float]] = []
-    for index, run in enumerate(runs):
-        following = runs[(index + 1) % len(runs)]
-        corner = run["corner"]
-        di = (math.cos(run["direction"]), math.sin(run["direction"]))
-        dj = (math.cos(following["direction"]), math.sin(following["direction"]))
-        determinant = di[0] * dj[1] - di[1] * dj[0]
-        if abs(determinant) < 0.3:
-            result.append(corner)
-            continue
-        ai, aj = run["anchor"], following["anchor"]
-        t = ((aj[0] - ai[0]) * dj[1] - (aj[1] - ai[1]) * dj[0]) / determinant
-        candidate = (ai[0] + di[0] * t, ai[1] + di[1] * t)
-        if math.hypot(candidate[0] - corner[0], candidate[1] - corner[1]) > guard_px:
-            result.append(corner)
-        else:
-            result.append(candidate)
-
-    spike_cos = math.cos(math.radians(35.0))
     changed = True
-    while changed and len(result) > 3:
+    while changed and len(ring) > 3:
         changed = False
-        for index in range(len(result)):
-            previous = result[index - 1]
-            current = result[index]
-            following = result[(index + 1) % len(result)]
+        for index in range(len(ring)):
+            previous = ring[index - 1]
+            current = ring[index]
+            following = ring[(index + 1) % len(ring)]
             into = (current[0] - previous[0], current[1] - previous[1])
             out = (following[0] - current[0], following[1] - current[1])
-            lengths = math.hypot(*into) * math.hypot(*out)
-            if lengths < 1e-12:
-                continue
-            cosine = -(into[0] * out[0] + into[1] * out[1]) / lengths
-            if cosine > spike_cos:
-                del result[index]
+            len_in = math.hypot(*into)
+            len_out = math.hypot(*out)
+            if len_in < min_edge_px or len_out < min_edge_px:
+                del ring[index]
                 changed = True
                 break
-
-    cleaned: list[tuple[float, float]] = []
-    for point in result:
-        if cleaned and math.hypot(
-            point[0] - cleaned[-1][0], point[1] - cleaned[-1][1]
-        ) < min_edge_px:
-            cleaned[-1] = (
-                (cleaned[-1][0] + point[0]) / 2,
-                (cleaned[-1][1] + point[1]) / 2,
-            )
-        else:
-            cleaned.append(point)
-    if len(cleaned) >= 2 and math.hypot(
-        cleaned[0][0] - cleaned[-1][0], cleaned[0][1] - cleaned[-1][1]
-    ) < min_edge_px:
-        cleaned.pop()
-    if len(cleaned) < 3:
-        return None
-    return cleaned
+            cosine = (into[0] * out[0] + into[1] * out[1]) / (len_in * len_out)
+            if cosine >= COLLINEAR_COS:
+                del ring[index]
+                changed = True
+                break
+    return ring
 
 
-def approx_contour(cnt, area: float) -> np.ndarray:
+def approx_contour(cnt, area: float) -> list[tuple[float, float]]:
     peri = cv2.arcLength(cnt, True)
     small = area < SMALL_AREA_PX
     eps_frac = SMALL_CONTOUR_EPS_FRAC if small else CONTOUR_EPS_FRAC
-    ceiling = peri * (0.04 if small else 0.004)
-    epsilon = min(max(1.2, eps_frac * peri), ceiling)
-    return cv2.approxPolyDP(cnt, epsilon, True).reshape(-1, 2)
+    ceiling = peri * (0.03 if small else 0.0028)
+    epsilon = min(max(0.8, eps_frac * peri), ceiling)
+    approx = cv2.approxPolyDP(cnt, epsilon, True).reshape(-1, 2)
+    ring = [(float(x), float(y)) for x, y in approx]
+    return merge_collinear(ring, min_edge_px=2.0 if small else MIN_EDGE_PX)
 
 
 def reduce_small_ring(ring: list[tuple[float, float]]) -> list[tuple[float, float]]:
@@ -228,7 +157,7 @@ def calm_small_islands(land: np.ndarray) -> np.ndarray:
     kernel = np.ones((3, 3), np.uint8)
     for lab in range(1, num):
         area = stats[lab, cv2.CC_STAT_AREA]
-        if area < 40:
+        if area < 30:
             out[labels == lab] = 0
             continue
         if area >= SMALL_AREA_PX:
@@ -259,13 +188,8 @@ def trace_masses(land: np.ndarray) -> list[dict]:
             i = nxt if nxt != -1 else len(contours)
             continue
         small = area < SMALL_AREA_PX
-        outer_pts = approx_contour(contours[i], area)
-        outer = octilinear_ring(
-            [(float(x), float(y)) for x, y in outer_pts],
-            guard_px=OCTI_GUARD_SMALL_PX if small else OCTI_GUARD_PX,
-            min_edge_px=OCTI_MIN_EDGE_SMALL_PX if small else OCTI_MIN_EDGE_PX,
-        )
-        if outer is None or len(outer) < 3:
+        outer = approx_contour(contours[i], area)
+        if len(outer) < 3:
             nxt = hier[i][0]
             i = nxt if nxt != -1 else len(contours)
             continue
@@ -276,11 +200,8 @@ def trace_masses(land: np.ndarray) -> list[dict]:
             child = hier[i][2]
             while child != -1:
                 if cv2.contourArea(contours[child]) >= MIN_HOLE_AREA:
-                    hole_pts = approx_contour(contours[child], area)
-                    hole = octilinear_ring(
-                        [(float(x), float(y)) for x, y in hole_pts]
-                    )
-                    if hole is not None and len(hole) >= 3:
+                    hole = approx_contour(contours[child], area)
+                    if len(hole) >= 3:
                         holes.append(hole)
                 child = hier[child][0]
         masses.append({"outer": outer, "holes": holes, "area": area})
@@ -367,10 +288,10 @@ def main() -> None:
 
     points = sum(len(item["points"]) for item in land_masses)
     board = {
-        "version": 5,
+        "version": 7,
         "source": (
-            f"Authored Mini Metro board art ({args.source.name}); "
-            "high-detail contour + octilinear edge snap; Antarctica omitted"
+            f"Authored board art ({args.source.name}); "
+            "contour-faithful import (no octilinear snap); Antarctica omitted"
         ),
         "landMasses": land_masses,
     }
