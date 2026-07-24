@@ -117,23 +117,18 @@ extension GameMapScene {
     }
 
     /// Close enough to inspect operations, but never to street-map scale.
-    private static let minZoomInRelativeToFit: CGFloat = 0.055
-    /// The strategic surface is a game board; the whole board can be seen.
-    private static let maxZoomOutRelativeToFit: CGFloat = 1.05
+    private static let minZoomInRelativeToFit: CGFloat = 0.05
+    /// Farthest pull-back relative to a board-fitting frame.
+    private static let maxZoomOutRelativeToFit: CGFloat = 0.3
+    /// Opening frame on the live map / first `.world` focus.
+    private static let openingZoomRelativeToFit: CGFloat = 0.1
 
     var maxZoomOutScale: CGFloat {
-        switch cameraFocus {
-        case .route:
-            // Route planning may span the whole network, so its fitted view is
-            // allowed to pull farther back than the strategic live map.
-            return max(0.3, fitScale * 1.05)
-        case .world, .city, .free:
-            return max(0.3, fitScale * Self.maxZoomOutRelativeToFit)
-        }
+        fitScale * Self.maxZoomOutRelativeToFit
     }
 
     var minZoomInScale: CGFloat {
-        max(0.0867, fitScale * Self.minZoomInRelativeToFit)
+        max(0.05, fitScale * Self.minZoomInRelativeToFit)
     }
 
     var cameraScaleRange: ClosedRange<CGFloat> {
@@ -171,7 +166,7 @@ extension GameMapScene {
                 ?? CGPoint(x: worldBounds.midX, y: worldBounds.midY)
             target = (
                 center,
-                (fitScale * 0.28).clamped(to: cameraScaleRange)
+                (fitScale * Self.openingZoomRelativeToFit).clamped(to: cameraScaleRange)
             )
         case .city(let cityID):
             if let city = catalog.city(cityID) {

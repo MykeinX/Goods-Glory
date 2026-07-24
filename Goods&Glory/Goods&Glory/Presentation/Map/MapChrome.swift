@@ -2,8 +2,8 @@
 //  MapChrome.swift
 //  Goods&Glory
 //
-//  Persistent map furniture: the status bar, speed control, bottom chrome
-//  and the fleet chips. Everything that frames the map without being it.
+//  Persistent map furniture: the status bar, speed control and bottom chrome.
+//  Everything that frames the map without being it.
 //
 
 import SwiftUI
@@ -107,7 +107,7 @@ private extension View {
     }
 }
 
-// MARK: - Bottom chrome (popup + fleet summary)
+// MARK: - Bottom chrome (notifications + selection popup)
 
 struct MapBottomChrome: View {
     @Environment(GameSession.self) private var session
@@ -116,19 +116,8 @@ struct MapBottomChrome: View {
     var onOpenDetail: (MapDetailDestination) -> Void
     var onFocusCity: (CityID) -> Void
 
-    /// Both counts from one pass. Computed together because this runs on every
-    /// simulation tick, and the previous per-vehicle `isVehicleIdle` calls
-    /// repeatedly rescanned the route-run list.
-    private var fleetSplit: (onRoute: Int, idle: Int) {
-        guard let state = session.state else { return (0, 0) }
-        let busy = state.busyVehicleIDs()
-        let onRoute = state.vehicles.count { busy.contains($0.id) }
-        return (onRoute, state.vehicles.count - onRoute)
-    }
-
     var body: some View {
-        let fleet = fleetSplit
-        return VStack(spacing: 10) {
+        VStack(spacing: 10) {
             GameNotificationStack(
                 notifications: session.notifications,
                 accent: accent,
@@ -152,61 +141,8 @@ struct MapBottomChrome: View {
                 )
                 .padding(.horizontal, 14)
             }
-
-            HStack(spacing: 8) {
-                MapFleetStatChip(
-                    systemImage: "truck.box.fill",
-                    tint: accent,
-                    count: fleet.onRoute,
-                    label: String(localized: "on route")
-                )
-                MapFleetStatChip(
-                    systemImage: "truck.box",
-                    tint: Theme.textSecondary,
-                    count: fleet.idle,
-                    label: String(localized: "idle")
-                )
-            }
-            .padding(.horizontal, 14)
         }
-        // Sit the fleet chips closer to the tab bar (was floating too high).
         .padding(.bottom, Layout.tabBarClearance - 12)
-    }
-}
-
-// MARK: - Session notifications (log-backed toasts)
-
-struct MapFleetStatChip: View {
-    let systemImage: String
-    let tint: Color
-    let count: Int
-    let label: String
-
-    var body: some View {
-        HStack(spacing: 7) {
-            Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(tint)
-            HStack(spacing: 4) {
-                Text("\(count)")
-                    .font(.gg(14, .heavy))
-                    .foregroundStyle(Theme.textPrimary)
-                    .monospacedDigit()
-                Text(label)
-                    .font(.gg(11.5, .bold))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 11)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Theme.surfaceGlass)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Theme.stroke, lineWidth: 1)
-        )
     }
 }
 

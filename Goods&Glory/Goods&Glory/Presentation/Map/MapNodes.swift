@@ -68,7 +68,7 @@ final class MapPlannedVisitNode: SKNode {
         deliveryBadge.fillColor = MapPalette.mint
         deliveryBadge.strokeColor = MapPalette.water
         pickupIcon.color = MapPalette.onBrand
-        deliveryIcon.color = MapPalette.water
+        deliveryIcon.color = MapPalette.onBrand
 
         let visibleBadges = [pickupBadge, deliveryBadge].filter { !$0.isHidden }
         if visibleBadges.count == 1 {
@@ -109,15 +109,27 @@ final class MapPlannedVisitNode: SKNode {
 
 @MainActor
 final class MapCityNode: SKNode {
+    /// Pin radius in local points — label gap is measured from this edge.
+    private static let pinRadius: CGFloat = 9
+    /// Air between pin edge and city name (keeps them from kissing).
+    private static let labelGap: CGFloat = 6
+
     private let markerContainer = SKNode()
-    private let marker = SKShapeNode(circleOfRadius: 7)
+    /// Outer disc (lighter, thin band). Inner sits flush — band ≈ 18% of radius.
+    private let markerRing = SKShapeNode(circleOfRadius: pinRadius)
+    /// Inner disc (darker). Same center, no gap to the ring band.
+    private let marker = SKShapeNode(circleOfRadius: pinRadius * 0.82)
     /// Design 1b HQ pin: rounded square filled with the company brand color.
     private let hqMarker = SKShapeNode(
-        rect: CGRect(x: -8, y: -8, width: 16, height: 16),
+        rect: CGRect(x: -9, y: -9, width: 18, height: 18),
         cornerRadius: 5
     )
-    private let halo = SKShapeNode(circleOfRadius: 12)
-    private let selectionRing = SKShapeNode(circleOfRadius: 10)
+    private let hqCore = SKShapeNode(
+        rect: CGRect(x: -7.2, y: -7.2, width: 14.4, height: 14.4),
+        cornerRadius: 4
+    )
+    private let halo = SKShapeNode(circleOfRadius: 14)
+    private let selectionRing = SKShapeNode(circleOfRadius: 12.5)
     private let labelRow = SKNode()
     private let label = SKLabelNode(fontNamed: "AvenirNext-DemiBold")
     private let fleetBadge = SKShapeNode(circleOfRadius: 7)
@@ -140,43 +152,60 @@ final class MapCityNode: SKNode {
         markerContainer.zPosition = 2
         addChild(markerContainer)
 
-        // Metro-station pin: a crisp white disc with a bold dark ring, legible
-        // over grey land and blue sea alike.
+        // Two flush discs: lighter outer + darker inner. No stroke gap, no glyph.
+        markerRing.fillColor = MapPalette.stationRing
+        markerRing.strokeColor = .clear
+        markerRing.lineWidth = 0
+        markerRing.glowWidth = 0
+        markerRing.isAntialiased = true
+        markerRing.zPosition = 2
+        markerContainer.addChild(markerRing)
+
         marker.fillColor = MapPalette.station
-        marker.strokeColor = MapPalette.city
-        marker.lineWidth = 2.2
-        marker.zPosition = 2
+        marker.strokeColor = .clear
+        marker.lineWidth = 0
+        marker.glowWidth = 0
+        marker.isAntialiased = true
+        marker.zPosition = 3
         markerContainer.addChild(marker)
 
-        hqMarker.fillColor = MapPalette.gold
-        hqMarker.strokeColor = MapPalette.water
-        hqMarker.lineWidth = 1.5
+        hqMarker.fillColor = MapPalette.stationRing
+        hqMarker.strokeColor = .clear
+        hqMarker.lineWidth = 0
         hqMarker.zPosition = 3
         hqMarker.isHidden = true
         markerContainer.addChild(hqMarker)
 
-        halo.strokeColor = MapPalette.city
-        halo.lineWidth = 1.5
+        hqCore.fillColor = MapPalette.station
+        hqCore.strokeColor = .clear
+        hqCore.lineWidth = 0
+        hqCore.zPosition = 4
+        hqCore.isHidden = true
+        markerContainer.addChild(hqCore)
+
+        halo.strokeColor = MapPalette.gold.withAlphaComponent(0.55)
+        halo.lineWidth = 1.35
         halo.fillColor = .clear
         halo.zPosition = 0
         halo.isHidden = true
         markerContainer.addChild(halo)
 
-        selectionRing.strokeColor = .white
-        selectionRing.lineWidth = 2
+        selectionRing.strokeColor = MapPalette.gold
+        selectionRing.lineWidth = 1.8
         selectionRing.fillColor = .clear
         selectionRing.zPosition = 1
         selectionRing.isHidden = true
         markerContainer.addChild(selectionRing)
 
+        // Name sits above the pin with a deliberate gap.
         labelRow.zPosition = 4
-        labelRow.position = CGPoint(x: 0, y: 11)
+        labelRow.position = CGPoint(x: 0, y: Self.pinRadius + Self.labelGap)
         addChild(labelRow)
 
         label.text = city.name
         label.fontSize = 11
         label.fontColor = MapPalette.cityLabel
-        label.verticalAlignmentMode = .center
+        label.verticalAlignmentMode = .bottom
         label.horizontalAlignmentMode = .left
         labelRow.addChild(label)
 
@@ -290,16 +319,21 @@ final class MapCityNode: SKNode {
 
         configureFacilityStrip(facilities, accent: accent)
         configureAttentionBadge(attention, isHQ: isHQ)
+        markerRing.isHidden = isHQ
         marker.isHidden = isHQ
         hqMarker.isHidden = !isHQ
+        hqCore.isHidden = !isHQ
         if isHQ {
+            // Dual-tone square: brand outer, dark inner core (flush, no gap).
             hqMarker.fillColor = accent
-            hqMarker.strokeColor = MapPalette.water
-            halo.strokeColor = accent
+            hqCore.fillColor = MapPalette.station
+            halo.strokeColor = accent.withAlphaComponent(0.65)
         } else {
-            marker.fillColor = isStarter ? MapPalette.gold : MapPalette.station
-            marker.strokeColor = MapPalette.city
-            halo.strokeColor = isStarter ? MapPalette.gold : accent
+            markerRing.fillColor = isStarter
+                ? MapPalette.gold.withAlphaComponent(0.85)
+                : MapPalette.stationRing
+            marker.fillColor = MapPalette.station
+            halo.strokeColor = MapPalette.gold.withAlphaComponent(0.55)
         }
         halo.isHidden = !(isHQ || isStarter)
         selectionRing.isHidden = !isSelected
@@ -385,22 +419,20 @@ final class MapCityNode: SKNode {
     func setSemanticZoom(markerScale: CGFloat, markerAlpha: CGFloat, labelAlpha: CGFloat) {
         markerContainer.setScale(markerScale)
         markerContainer.alpha = markerAlpha
-        labelRow.position.y = 8 + 7 * markerScale
-        labelRow.setScale(max(0.55, 0.55 + 0.45 * labelAlpha))
-        labelRow.alpha = labelAlpha
-        labelRow.isHidden = labelAlpha < 0.02
-        facilityRow.position.y = -8 - 6 * markerScale
+        // Gap stays readable: pin rim + fixed air, then name.
+        labelRow.position.y = Self.pinRadius * markerScale + Self.labelGap
+        labelRow.setScale(max(0.7, 0.7 + 0.3 * labelAlpha))
+        label.alpha = labelAlpha
+        if !attentionBadge.isHidden || !fleetBadge.isHidden {
+            labelRow.isHidden = false
+            labelRow.alpha = max(labelAlpha, 0.95)
+        } else {
+            labelRow.alpha = labelAlpha
+            labelRow.isHidden = labelAlpha < 0.02
+        }
+        facilityRow.position.y = -(Self.pinRadius * markerScale + Self.labelGap + 2)
         facilityRow.setScale(markerScale)
         facilityRow.alpha = markerAlpha
-        // The attention badge is the one thing that must survive zoom-out: it
-        // is the signal the player cannot afford to miss.
-        if !attentionBadge.isHidden {
-            labelRow.isHidden = false
-            labelRow.alpha = max(labelAlpha, 0.9)
-            label.alpha = labelAlpha
-        } else {
-            label.alpha = 1
-        }
     }
 
     private func layoutLabelRow() {

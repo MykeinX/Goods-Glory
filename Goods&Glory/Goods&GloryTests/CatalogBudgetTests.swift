@@ -34,7 +34,7 @@ struct CatalogBudgetTests {
     static let roadEdgeBudget = 2_000
     /// Guards the other direction too: a catalog that lost its content should
     /// fail loudly rather than quietly shipping an empty world.
-    static let minimumCities = 9
+    static let minimumCities = 19
 
     @MainActor
     @Test("Bundled map geography stays inside its vertex budget")

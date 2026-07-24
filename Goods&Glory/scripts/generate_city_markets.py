@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate deterministic supply and demand weights for catalog cities.
 
-The nine-city foundation has a small curated industry profile per city.
+The catalog ships a curated industry profile per city when one exists.
 Future cities can be added without changing the algorithm: an absent profile
 uses the shared population/access model until a recognizable local identity is
 authored.
@@ -49,6 +49,33 @@ CITY_INDUSTRIES: dict[str, dict[str, float]] = {
         "consumer_goods": 1.8,
         "paper_packaging": 1.4,
     },
+    "us_seattle": {
+        "fresh_produce": 2.0,
+        "consumer_electronics": 2.2,
+        "paper_packaging": 1.6,
+        "refrigerated_goods": 1.5,
+    },
+    "us_denver": {
+        "construction_materials": 2.0,
+        "industrial_machinery": 1.6,
+        "beverages": 1.5,
+    },
+    "us_houston": {
+        "industrial_chemicals": 2.8,
+        "construction_materials": 1.8,
+        "industrial_machinery": 1.6,
+    },
+    "us_miami": {
+        "fresh_produce": 2.4,
+        "refrigerated_goods": 2.2,
+        "apparel": 1.6,
+        "beverages": 1.5,
+    },
+    "us_detroit": {
+        "automotive_parts": 3.0,
+        "industrial_machinery": 2.0,
+        "consumer_electronics": 1.4,
+    },
     "eu_london": {
         "pharmaceuticals": 2.0,
         "consumer_goods": 1.8,
@@ -72,6 +99,36 @@ CITY_INDUSTRIES: dict[str, dict[str, float]] = {
         "furniture": 1.8,
         "automotive_parts": 1.8,
         "consumer_goods": 1.6,
+    },
+    "eu_madrid": {
+        "fresh_produce": 2.2,
+        "apparel": 1.8,
+        "beverages": 1.8,
+        "construction_materials": 1.4,
+    },
+    "eu_milan": {
+        "apparel": 2.4,
+        "furniture": 2.0,
+        "automotive_parts": 1.8,
+        "pharmaceuticals": 1.5,
+    },
+    "eu_berlin": {
+        "industrial_machinery": 2.0,
+        "consumer_electronics": 1.8,
+        "paper_packaging": 1.6,
+        "pharmaceuticals": 1.5,
+    },
+    "eu_warsaw": {
+        "furniture": 2.2,
+        "processed_food": 1.8,
+        "construction_materials": 1.6,
+        "automotive_parts": 1.5,
+    },
+    "eu_rome": {
+        "apparel": 2.0,
+        "beverages": 2.0,
+        "fresh_produce": 1.8,
+        "furniture": 1.5,
     },
 }
 

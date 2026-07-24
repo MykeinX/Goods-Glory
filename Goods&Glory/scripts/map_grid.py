@@ -41,8 +41,8 @@ SHORT_RUN_KM = 180.0
 # Cap on how far one expansion may run. Long enough to cross a continent leg.
 MAXIMUM_RUN_CELLS = 48
 # A city that shares a row, column or diagonal with a neighbour lets the
-# corridor pass straight through. Worth moving this far (in km) to get.
-ALIGNMENT_BONUS_KM = 2.4 * STEP_KM
+# corridor pass without a bend. Keep this mild so authored geography wins.
+ALIGNMENT_BONUS_KM = 0.55 * STEP_KM
 # Roads drift inland instead of tracing the coastline pixel by pixel.
 COAST_MARGIN_KM = STEP_KM * 2.6
 COAST_PENALTY = 2.6

@@ -27,20 +27,30 @@ struct GameCatalogTests {
         #expect(!catalog.vehicleTypes.isEmpty)
         #expect(!catalog.products.isEmpty)
         #expect(catalog.cityMarkets.count == catalog.cities.count)
-        #expect(catalog.cities.count == 9)
+        #expect(catalog.cities.count == 19)
         // One road node per city — no invisible junctions.
         #expect(catalog.networkNodes.count == catalog.cities.count)
-        #expect(catalog.roads.count == 10)
+        #expect(catalog.roads.count == 21)
         let expectedCityIDs: Set<CityID> = [
             CityID("us_los_angeles"),
             CityID("us_dallas"),
             CityID("us_chicago"),
             CityID("us_atlanta"),
             CityID("us_new_york"),
+            CityID("us_seattle"),
+            CityID("us_denver"),
+            CityID("us_houston"),
+            CityID("us_miami"),
+            CityID("us_detroit"),
             CityID("eu_london"),
             CityID("eu_paris"),
             CityID("eu_frankfurt"),
-            CityID("eu_istanbul")
+            CityID("eu_istanbul"),
+            CityID("eu_madrid"),
+            CityID("eu_milan"),
+            CityID("eu_berlin"),
+            CityID("eu_warsaw"),
+            CityID("eu_rome")
         ]
         #expect(Set(catalog.cities.map(\.id)) == expectedCityIDs)
         #expect(catalog.cities.allSatisfy {

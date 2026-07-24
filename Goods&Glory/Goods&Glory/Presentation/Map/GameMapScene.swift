@@ -69,12 +69,13 @@ final class GameMapScene: SKScene {
         static let idleDelay: TimeInterval = 1.4
     }
 
-    /// Identity of the last city-detail pass. Geography and city detail stay
-    /// stable while zooming; only selection and ownership change it.
+    /// Identity of the last city-detail pass. Zoom buckets refresh pin size /
+    /// label fade without rewriting colours every pan pixel.
     struct SemanticZoomKey: Equatable {
         let selected: CityID?
         let hq: CityID?
         let highlightsStarters: Bool
+        let zoomBucket: Int
     }
 
     var lastSemanticZoomKey: SemanticZoomKey?

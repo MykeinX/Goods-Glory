@@ -53,3 +53,26 @@ Two knobs matter when the board changes:
 - `WATER_CROSSINGS` lists the roads allowed to leave land, with a km budget.
   London is an island on this board, so London–Paris is a declared fixed link.
   The generator fails rather than silently routing a road across water.
+
+## City placement
+
+`cities.json` coordinates are board-space, not raw WGS84. They are authored to
+match recognizable board landmarks while keeping real relative order:
+
+| City | Board landmark |
+|---|---|
+| Los Angeles | Pacific west coast |
+| Seattle | Pacific NW, north of Los Angeles |
+| New York | Atlantic east tip |
+| Miami | SE peninsula tip |
+| Chicago / Detroit | Great Lakes inlet |
+| Dallas / Houston / Denver | interior Sun Belt / Rockies relative to LA–Chicago |
+| London | SE of the UK island |
+| Madrid | Iberian interior, west of Paris |
+| Paris / Frankfurt / Berlin | central Europe north–south stack |
+| Milan / Rome | Italian peninsula |
+| Warsaw | east of Berlin, west of Istanbul |
+| Istanbul | SW tip of the Black Sea hole (Anatolia / Bosphorus) |
+
+After editing city hints, re-run `generate_trade_network.py` so pins snap onto
+the shared lattice and road geometry is rebuilt.

@@ -385,14 +385,14 @@ struct MapFoundationTests {
         #expect(Set(clear.values) == [0])
     }
 
-    @MainActor @Test func routePreviewClosesTheLoopAndGroupsRepeatedCityMarkers() throws {
+    @MainActor @Test func routePreviewFollowsVisitOrderWithoutInventingAReturnLeg() throws {
         let catalog = try GameCatalog.load(from: .main)
         let cities = try #require(catalog.cities.count >= 3 ? Array(catalog.cities.prefix(3)) : nil)
         let cityA = cities[0].id
         let cityB = cities[1].id
         let cityC = cities[2].id
         let laneID = LaneID("preview")
-        let route = Route(
+        let openRoute = Route(
             id: RouteID(rawValue: 92),
             name: "Preview",
             stops: [
@@ -400,6 +400,14 @@ struct MapFoundationTests {
                 RouteStop(id: 2, cityID: cityB, task: .pickupLane(laneID)),
                 RouteStop(id: 3, cityID: cityB, task: .deliverLane(laneID, .destination)),
                 RouteStop(id: 4, cityID: cityC, task: .travel),
+            ],
+            vehicleIDs: [],
+            isRunning: false
+        )
+        let closedRoute = Route(
+            id: RouteID(rawValue: 93),
+            name: "Preview Closed",
+            stops: openRoute.stops + [
                 RouteStop(id: 5, cityID: cityA, task: .deliverLane(laneID, .destination))
             ],
             vehicleIDs: [],
@@ -414,24 +422,52 @@ struct MapFoundationTests {
             economy: catalog.economy
         )
         let projection = MapProjection()
+        let corridors = MapCorridorCache()
 
-        let snapshot = MapSceneAdapter.snapshot(
+        let openSnapshot = MapSceneAdapter.snapshot(
             state: state,
             catalog: catalog,
             projection: projection,
-            previewRoute: route,
-            corridors: MapCorridorCache()
+            previewRoute: openRoute,
+            corridors: corridors
         )
-        let planned = snapshot.routes.filter { $0.kind == .planned }
-        let markerA = try #require(snapshot.plannedVisits.first { $0.id == cityA })
-        let markerB = try #require(snapshot.plannedVisits.first { $0.id == cityB })
+        let closedSnapshot = MapSceneAdapter.snapshot(
+            state: state,
+            catalog: catalog,
+            projection: projection,
+            previewRoute: closedRoute,
+            corridors: corridors
+        )
+        let openPlanned = openSnapshot.routes.filter { $0.kind == .planned }
+        let closedPlanned = closedSnapshot.routes.filter { $0.kind == .planned }
+        let markerA = try #require(closedSnapshot.plannedVisits.first { $0.id == cityA })
+        let markerB = try #require(closedSnapshot.plannedVisits.first { $0.id == cityB })
 
-        // Closed lap is drawn as the unique RoadID union (each track once), not
-        // a continuous out-and-back polyline.
-        #expect(!planned.isEmpty)
-        #expect(Set(planned.map(\.id)).count == planned.count)
-        #expect(planned.allSatisfy { $0.anchors.count >= 2 })
-        #expect(snapshot.plannedVisits.count == 3)
+        // Open draft: A→B→C only. Closing back to A is the author's job (or
+        // the running network), not an automatic preview invention.
+        let returnRoads = Set(
+            corridors.roadIDs(
+                from: cityC,
+                to: cityA,
+                catalog: catalog,
+                projection: projection
+            )
+        )
+        let openRoadIDs = Set(
+            openPlanned.compactMap { overlay -> RoadID? in
+                let prefix = "preview-\(openRoute.id.rawValue)-"
+                guard overlay.id.hasPrefix(prefix) else { return nil }
+                return RoadID(String(overlay.id.dropFirst(prefix.count)))
+            }
+        )
+        #expect(!openPlanned.isEmpty)
+        #expect(openRoadIDs.isDisjoint(with: returnRoads))
+
+        // Authored return visit still draws the closing roads, once each.
+        #expect(!closedPlanned.isEmpty)
+        #expect(Set(closedPlanned.map(\.id)).count == closedPlanned.count)
+        #expect(closedPlanned.allSatisfy { $0.anchors.count >= 2 })
+        #expect(closedSnapshot.plannedVisits.count == 3)
         #expect(markerA.stepNumbers == [1, 4])
         #expect(markerA.hasDelivery)
         #expect(!markerA.hasPickup)

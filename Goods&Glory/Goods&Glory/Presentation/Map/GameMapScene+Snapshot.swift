@@ -185,14 +185,24 @@ extension GameMapScene {
         updateSemanticZoom()
     }
 
-    /// City hierarchy is stable at every zoom. Zooming changes framing, not the
-    /// amount of map data, which keeps the surface game-like instead of turning
-    /// it into a progressively revealed navigation map.
+    /// City pins are camera-counter-scaled (constant screen family) and then
+    /// eased from night-dot to full stop as the player zooms in.
     func updateSemanticZoom() {
+        let zoomOut = zoomOutAmount
+        let shrink = smoothstep(zoomOut.clamped(to: 0...1))
+        // Stay near night-dot size through most of the pull-back; swell later.
+        let closeScale: CGFloat = 1.15
+        let farScale: CGFloat = 0.178
+        let growth = pow(1.0 - shrink, 2.1)
+        let markerScale = farScale + (closeScale - farScale) * growth
+        // Names stay readable into mid zoom-out; only near max pull-back they go.
+        let labelVisibility = 1.0 - smoothstep(((zoomOut - 0.38) / 0.50).clamped(to: 0...1))
+
         let key = SemanticZoomKey(
             selected: selectedCityID,
             hq: hqCityID,
-            highlightsStarters: highlightsStarterCities
+            highlightsStarters: highlightsStarterCities,
+            zoomBucket: Int((zoomOut * 40).rounded())
         )
         guard key != lastSemanticZoomKey else { return }
         lastSemanticZoomKey = key
@@ -212,23 +222,28 @@ extension GameMapScene {
             let hasGameplayState = idleFleetByCity[city.id, default: 0] > 0
                 || facilitiesByCity[city.id] != nil
                 || attentionByCity[city.id] != nil
-            let scale: CGFloat
+
             let showsLabelByImportance: Bool
             switch importance {
             case .major:
-                scale = 0.72
                 showsLabelByImportance = true
             case .regional:
-                scale = 0.56
-                showsLabelByImportance = false
+                showsLabelByImportance = zoomOut < 0.72
             case .local:
-                scale = 0.44
-                showsLabelByImportance = false
+                showsLabelByImportance = zoomOut < 0.48
             }
+
+            let labelAlpha: CGFloat
+            if isEmphasized || hasGameplayState || showsLabelByImportance {
+                labelAlpha = labelVisibility
+            } else {
+                labelAlpha = 0
+            }
+
             cityNodes[city.id]?.setSemanticZoom(
-                markerScale: isEmphasized ? 1 : scale,
+                markerScale: markerScale,
                 markerAlpha: 1,
-                labelAlpha: isEmphasized || showsLabelByImportance || hasGameplayState ? 1 : 0
+                labelAlpha: labelAlpha
             )
         }
     }

@@ -45,20 +45,33 @@ REGION_CONTINENTS = {
 # Keep each region sparse and cyclic — not a complete graph.
 CORRIDORS = {
     "us": {
-        # Southern belt: LA–Dallas–Atlanta reads as one trunk on the board.
+        # Pacific spine.
+        "west_coast": [
+            "us_seattle",
+            "us_los_angeles",
+        ],
+        # Southern belt across the Sun Belt into Florida.
         "southern": [
             "us_los_angeles",
             "us_dallas",
             "us_atlanta",
+            "us_miami",
         ],
-        # Texas into the Midwest.
-        "south_central": [
+        # Gulf port off the Texas hub.
+        "gulf": [
             "us_dallas",
+            "us_houston",
+        ],
+        # Rockies / plains bridge into the Midwest.
+        "rockies": [
+            "us_dallas",
+            "us_denver",
             "us_chicago",
         ],
-        # Great Lakes / Northeast approach.
-        "midwest_east": [
+        # Great Lakes into the Northeast.
+        "lakes": [
             "us_chicago",
+            "us_detroit",
             "us_new_york",
         ],
         # Atlantic seaboard.
@@ -82,13 +95,33 @@ CORRIDORS = {
             "eu_paris",
             "eu_frankfurt",
         ],
-        "central_east": [
+        "iberia": [
+            "eu_paris",
+            "eu_madrid",
+        ],
+        "alpine": [
+            "eu_paris",
+            "eu_milan",
+            "eu_rome",
+        ],
+        # Alps into the Rhine hub — without this, eastern Europe can only
+        # reach Milan by backtracking through Paris.
+        "alpine_central": [
             "eu_frankfurt",
+            "eu_milan",
+        ],
+        "north": [
+            "eu_frankfurt",
+            "eu_berlin",
+            "eu_warsaw",
+        ],
+        "east": [
+            "eu_warsaw",
             "eu_istanbul",
         ],
-        # Land alternative so Europe is not a single path.
-        "southeast": [
-            "eu_paris",
+        # Relief so Europe stays cyclic without a single choke point.
+        "central_east": [
+            "eu_frankfurt",
             "eu_istanbul",
         ],
     },

@@ -117,7 +117,8 @@ extension GameMapScene {
     enum TerrainShadowStyle {
         // A filled duplicate is both cheaper and more reliable than stroked or
         // shader-blurred coastlines: those produce wedges at tight corners.
-        static let alpha: CGFloat = 0.24
+        // Night board: a touch stronger so continents lift off the navy sea.
+        static let alpha: CGFloat = 0.42
         static let screenOffsetY: CGFloat = -5
     }
 
@@ -127,8 +128,8 @@ extension GameMapScene {
             projection: projection
         )
 
-        // One flat sea quad, exactly the reference tone. It is oversized to
-        // cover every legal camera position and portrait overscan.
+        // One flat night-sea quad (MapPalette.water). Oversized to cover every
+        // legal camera position and portrait overscan.
         let water = SKSpriteNode(
             color: MapPalette.water,
             size: CGSize(
@@ -140,9 +141,9 @@ extension GameMapScene {
         water.zPosition = 0
         terrainLayer.addChild(water)
 
-        // A slightly lowered copy of the filled silhouette supplies the blue
-        // lift from the reference. The land covers its interior, leaving one
-        // clean edge without stroke joins, glow shaders or effect textures.
+        // A slightly lowered silhouette copy supplies depth under the land.
+        // The fill covers its interior, leaving one clean edge without stroke
+        // joins, glow shaders or effect textures.
         landShadowNode.path = landPath
         landShadowNode.fillColor = MapPalette.landShadow.withAlphaComponent(
             TerrainShadowStyle.alpha

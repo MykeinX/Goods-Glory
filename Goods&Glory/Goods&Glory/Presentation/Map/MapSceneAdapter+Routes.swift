@@ -78,9 +78,11 @@ extension MapSceneAdapter {
     }
 
     /// Consecutive tasks in one city form one visit. Markers group repeated
-    /// physical cities (`1·4`). The drawn preview is the union of `RoadID`s on
-    /// the closed lap — each track once, Mini Metro style — never an out-and-
-    /// back polyline that double-strokes the Channel on the return leg.
+    /// physical cities (`1·4`). The builder preview follows the authored visit
+    /// order only — it does not invent a return leg to the first city. The
+    /// engine still prices that implicit lap close in estimates; running
+    /// routes draw the closed network via `activeNetworkOverlays`. Each
+    /// `RoadID` is stroked once (Mini Metro), never as an out-and-back polyline.
     static func routePreview(
         route: Route,
         catalog: GameCatalog,
@@ -142,10 +144,7 @@ extension MapSceneAdapter {
             )
         }
 
-        var cityIDs = visits.map(\.cityID)
-        if cityIDs.count > 1, let first = cityIDs.first, cityIDs.last != first {
-            cityIDs.append(first)
-        }
+        let cityIDs = visits.map(\.cityID)
 
         var roadIDs = Set<RoadID>()
         for index in 0..<max(0, cityIDs.count - 1) {
