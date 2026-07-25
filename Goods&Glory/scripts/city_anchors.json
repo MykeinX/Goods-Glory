@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "note": "Authored city positions, in real WGS84. This file is the source of truth for where a city is; cities.json only carries the snapped lattice coordinate the generator writes. Never edit latitude/longitude in cities.json — edit here and re-run generate_trade_network.py. The board is built from the same real coastline (build_board.py), so a real coordinate needs no correction to land on the right coast.",
+  "cities": {
+    "us_atlanta": { "latitude": 33.749, "longitude": -84.388 },
+    "us_chicago": { "latitude": 41.878, "longitude": -87.629 },
+    "us_dallas": { "latitude": 32.777, "longitude": -96.797 },
+    "us_denver": { "latitude": 39.739, "longitude": -104.99 },
+    "us_detroit": { "latitude": 42.331, "longitude": -83.046 },
+    "us_houston": { "latitude": 29.76, "longitude": -95.369 },
+    "us_los_angeles": { "latitude": 34.052, "longitude": -118.244 },
+    "us_miami": { "latitude": 25.762, "longitude": -80.192 },
+    "us_new_york": { "latitude": 40.713, "longitude": -74.006 },
+    "us_seattle": { "latitude": 47.606, "longitude": -122.332 },
+    "eu_berlin": { "latitude": 52.52, "longitude": 13.405 },
+    "eu_frankfurt": { "latitude": 50.11, "longitude": 8.682 },
+    "eu_istanbul": { "latitude": 41.008, "longitude": 28.978 },
+    "eu_london": { "latitude": 51.507, "longitude": -0.128 },
+    "eu_madrid": { "latitude": 40.417, "longitude": -3.703 },
+    "eu_milan": { "latitude": 45.464, "longitude": 9.19 },
+    "eu_paris": { "latitude": 48.857, "longitude": 2.352 },
+    "eu_rome": { "latitude": 41.903, "longitude": 12.496 },
+    "eu_warsaw": { "latitude": 52.23, "longitude": 21.012 }
+  }
+}

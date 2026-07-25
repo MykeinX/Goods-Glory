@@ -7,6 +7,7 @@
 
 import CoreGraphics
 import Foundation
+import SpriteKit
 import Testing
 @testable import Goods_Glory
 
@@ -53,8 +54,12 @@ struct MapFoundationTests {
         let holes = board.landMasses.filter { $0.id.contains("_hole_") }
         #expect(!holes.isEmpty)
 
+        // Shoelace over the *closed* ring. Dropping the edge back to the first
+        // point leaves an open fan whose sign a thin ring can flip outright,
+        // which is not a winding failure but an arithmetic one.
         func signedArea(_ points: [GeoCoordinate]) -> Double {
-            zip(points, points.dropFirst()).reduce(0) { area, edge in
+            guard let first = points.first else { return 0 }
+            return zip(points, points.dropFirst() + [first]).reduce(0) { area, edge in
                 area + edge.0.longitude * edge.1.latitude
                     - edge.1.longitude * edge.0.latitude
             } / 2
@@ -476,27 +481,151 @@ struct MapFoundationTests {
         #expect(markerB.hasDelivery)
     }
 
-    @Test func pathSimplifierKeepsEndpointsAndDropsColinearPoints() {
-        let points = [
-            CGPoint(x: 0, y: 0),
-            CGPoint(x: 10, y: 0),
-            CGPoint(x: 20, y: 0),
-            CGPoint(x: 30, y: 0)
-        ]
-        let simplified = MapPathSimplifier.simplify(points, tolerance: 4)
-        #expect(simplified.first == points.first)
-        #expect(simplified.last == points.last)
-        #expect(simplified.count == 2)
+    /// The fleet has to batch, and only sprites off one texture page do.
+    ///
+    /// SpriteKit draws every SKShapeNode on its own, and an SKCropNode opens an
+    /// offscreen pass. Built that way a vehicle cost eleven nodes and eight
+    /// draw calls, so a few hundred of them could not hold a frame. This is the
+    /// property that made it cheap, so it is asserted rather than remembered.
+    @MainActor @Test func vehicleNodeIsBuiltOnlyFromBatchableSprites() {
+        let node = MapVehicleNode()
+
+        var pending: [SKNode] = [node]
+        var offenders: [String] = []
+        var sprites = 0
+        var total = 0
+        while let current = pending.popLast() {
+            total += 1
+            switch current {
+            case is SKSpriteNode:
+                sprites += 1
+            case is SKShapeNode, is SKCropNode, is SKEffectNode:
+                offenders.append(String(describing: type(of: current)))
+            default:
+                break
+            }
+            pending.append(contentsOf: current.children)
+        }
+
+        #expect(
+            offenders.isEmpty,
+            "vehicle draws with un-batchable nodes: \(offenders.joined(separator: ", "))"
+        )
+        #expect(sprites >= 5, "expected the vehicle parts to be sprites")
+        #expect(total <= 10, "vehicle grew to \(total) nodes; every one is per-vehicle cost")
     }
 
-    @Test func pathSimplifierKeepsSignificantDetours() {
-        let points = [
-            CGPoint(x: 0, y: 0),
-            CGPoint(x: 50, y: 40),
-            CGPoint(x: 100, y: 0)
-        ]
-        let simplified = MapPathSimplifier.simplify(points, tolerance: 4)
-        #expect(simplified.count == 3)
-        #expect(simplified[1] == points[1])
+    /// The per-tick cost of a large fleet, measured rather than assumed.
+    ///
+    /// `snapshot` runs once a second for the whole fleet and is where anything
+    /// accidentally quadratic would land — a `first { }` lookup per vehicle, a
+    /// re-projection per leg. The budget is deliberately loose: this is here to
+    /// catch a change of *shape*, not to police milliseconds on a busy machine.
+    /// Measured at under 6 ms for 400 vehicles; the budget is 15 ms, and the
+    /// tick it has to fit inside is 1000 ms.
+    @MainActor @Test func snapshotStaysCheapForALargeFleet() throws {
+        let catalog = try GameCatalog.load(from: .main)
+        let projection = MapProjection()
+        let corridors = MapCorridorCache()
+        let fleet = 400
+
+        let origin = try #require(catalog.cities.first { !catalog.reachableCities(from: $0.id).isEmpty })
+        let destinations = catalog.reachableCities(from: origin.id)
+        let vehicleType = try #require(catalog.vehicleTypes.first)
+
+        var state = GameState.newCampaign(
+            config: CampaignConfig(
+                seed: 7,
+                identity: CompanyIdentity(name: "Load", colorHex: "#FFFFFF", emblemSymbol: "star"),
+                hqCity: origin.id
+            ),
+            economy: catalog.economy
+        )
+        state.clock = .start + 30
+
+        for index in 0..<fleet {
+            let vehicleID = VehicleID(rawValue: index + 1)
+            let routeID = RouteID(rawValue: index + 1)
+            let destination = destinations[index % destinations.count]
+            state.vehicles.append(
+                Vehicle(id: vehicleID, typeID: vehicleType.id, cityID: origin.id, odometerKm: 0)
+            )
+            state.routes.append(
+                Route(
+                    id: routeID,
+                    name: "R\(index)",
+                    stops: [RouteStop(id: 1, cityID: destination, task: .travel)],
+                    vehicleIDs: [vehicleID],
+                    isRunning: true
+                )
+            )
+            state.routeRuns.append(
+                RouteRun(
+                    id: index + 1,
+                    routeID: routeID,
+                    vehicleID: vehicleID,
+                    stopIndex: 0,
+                    phase: .traveling,
+                    phaseStartedAt: .start,
+                    phaseEndsAt: .start + 100,
+                    legOriginCityID: origin.id,
+                    legDistanceKm: 400,
+                    lapStartedAt: .start,
+                    claimedShipmentIDs: [],
+                    isWindingDown: false
+                )
+            )
+        }
+
+        // Warm the corridor atlas, which is built once per session, not per tick.
+        _ = MapSceneAdapter.snapshot(
+            state: state, catalog: catalog, projection: projection, corridors: corridors
+        )
+
+        let started = Date()
+        let rounds = 10
+        var produced = 0
+        for _ in 0..<rounds {
+            produced = MapSceneAdapter.snapshot(
+                state: state, catalog: catalog, projection: projection, corridors: corridors
+            ).vehicles.count
+        }
+        let perTick = Date().timeIntervalSince(started) / Double(rounds)
+
+        #expect(produced == fleet, "expected \(fleet) markers, got \(produced)")
+        #expect(
+            perTick < 0.015,
+            "snapshot for \(fleet) vehicles took \(Int(perTick * 1000)) ms; the tick budget is 1000 ms and this is the part that grows with the fleet"
+        )
+    }
+
+    /// Plate stacking runs on every camera frame, so it must not walk the whole
+    /// fleet for each vehicle. Two clusters far apart pin the behaviour: a
+    /// quadratic scan and a bucketed one agree here, but only one stays cheap.
+    @MainActor @Test func labelStackingScalesWithoutComparingEveryPair() {
+        var positions: [(id: VehicleID, position: CGPoint)] = []
+        for index in 0..<200 {
+            positions.append((
+                id: VehicleID(rawValue: index + 1),
+                position: CGPoint(x: index < 100 ? 0 : 10_000, y: 0)
+            ))
+        }
+
+        let stacks = MapSceneAdapter.VehicleLabelStacking.indices(
+            positions: positions,
+            nodeScale: 1
+        )
+
+        #expect(stacks.count == positions.count)
+        let cap = MapSceneAdapter.VehicleLabelStacking.maximumVisibleStack
+        let suppressed = MapSceneAdapter.VehicleLabelStacking.suppressed
+        for pile in [positions.prefix(100), positions.suffix(100)] {
+            let assigned = pile.compactMap { stacks[$0.id] }
+            // Each pile lifts a few plates and drops the rest — a hundred
+            // stacked plates is a tower into the sea, not a legible label.
+            #expect(Set(assigned.filter { $0 != suppressed }) == Set(0...cap))
+            #expect(assigned.filter { $0 == suppressed }.count == 100 - (cap + 1))
+        }
+        // Neither pile can see the other, so both cap independently.
     }
 }

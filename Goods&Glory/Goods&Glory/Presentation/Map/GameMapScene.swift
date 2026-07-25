@@ -28,6 +28,10 @@ final class GameMapScene: SKScene {
 
     let activeRouteHaloNode = SKShapeNode()
     let activeRouteNode = SKShapeNode()
+    /// Thin bright line down the middle of the active stroke. A flat band of
+    /// colour reads as a sticker; a casing, a body and a highlight read as a
+    /// drawn line with weight to it.
+    let activeRouteCoreNode = SKShapeNode()
     let plannedRouteNode = SKShapeNode()
     let landNode = SKShapeNode()
     let landShadowNode = SKShapeNode()
@@ -39,10 +43,12 @@ final class GameMapScene: SKScene {
         static let waterCoast: CGFloat = 1
         /// Thin white casing under the coloured metro stroke. Just enough to
         /// keep the line readable on land and water without reading as a
-        /// thick highway.
-        static let activeRouteHalo: CGFloat = 4.5
-        static let activeRoute: CGFloat = 2.75
-        static let plannedRoute: CGFloat = 2.25
+        /// thick highway. A metro line is drawn with a pen, not a marker: the
+        /// earlier weights read as motorways and buried the board under them.
+        static let activeRouteHalo: CGFloat = 3.2
+        static let activeRoute: CGFloat = 1.7
+        static let activeRouteCore: CGFloat = 0.5
+        static let plannedRoute: CGFloat = 1.5
     }
 
     var cityNodes: [CityID: MapCityNode] = [:]
@@ -210,7 +216,11 @@ final class GameMapScene: SKScene {
         self.cameraFocus = cameraFocus
         self.accentColor = UIColor(hex: accentColorHex)
         activeRouteNode.strokeColor = accentColor
-        activeRouteHaloNode.strokeColor = accentColor.withAlphaComponent(0.18)
+        // The casing stays the board's own dark, not a tint of the accent.
+        // Tinting it made the line glow faintly into the land instead of
+        // sitting on it, and quietly undid what Terrain had set.
+        activeRouteHaloNode.strokeColor = MapPalette.routeCasing
+        activeRouteCoreNode.strokeColor = UIColor.white.withAlphaComponent(0.34)
         plannedRouteNode.strokeColor = accentColor.withAlphaComponent(0.78)
         updateCityStyles()
         updateVehicleStyles()

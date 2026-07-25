@@ -3,126 +3,126 @@
     "id": "eu_road_city_berlin_to_city_frankfurt",
     "from": "eu_city_frankfurt",
     "to": "eu_city_berlin",
-    "distanceKm": 303.18
+    "distanceKm": 491.21
   },
   {
     "id": "eu_road_city_berlin_to_city_warsaw",
     "from": "eu_city_berlin",
     "to": "eu_city_warsaw",
-    "distanceKm": 813.72
+    "distanceKm": 599.21
   },
   {
     "id": "eu_road_city_frankfurt_to_city_istanbul",
     "from": "eu_city_frankfurt",
     "to": "eu_city_istanbul",
-    "distanceKm": 1808.4
+    "distanceKm": 2144.22
   },
   {
     "id": "eu_road_city_frankfurt_to_city_milan",
     "from": "eu_city_frankfurt",
     "to": "eu_city_milan",
-    "distanceKm": 566.65
+    "distanceKm": 607.35
   },
   {
     "id": "eu_road_city_frankfurt_to_city_paris",
     "from": "eu_city_paris",
     "to": "eu_city_frankfurt",
-    "distanceKm": 846.41
+    "distanceKm": 569.29
   },
   {
     "id": "eu_road_city_istanbul_to_city_warsaw",
     "from": "eu_city_warsaw",
     "to": "eu_city_istanbul",
-    "distanceKm": 1822.18
+    "distanceKm": 1587.75
   },
   {
     "id": "eu_road_city_london_to_city_paris",
     "from": "eu_city_london",
     "to": "eu_city_paris",
-    "distanceKm": 901.67
+    "distanceKm": 394.8
   },
   {
     "id": "eu_road_city_madrid_to_city_paris",
     "from": "eu_city_paris",
     "to": "eu_city_madrid",
-    "distanceKm": 1125.72
+    "distanceKm": 1195.16
   },
   {
     "id": "eu_road_city_milan_to_city_paris",
     "from": "eu_city_paris",
     "to": "eu_city_milan",
-    "distanceKm": 594.02
+    "distanceKm": 728.34
   },
   {
     "id": "eu_road_city_milan_to_city_rome",
     "from": "eu_city_milan",
     "to": "eu_city_rome",
-    "distanceKm": 510.12
+    "distanceKm": 565.4
   },
   {
     "id": "us_road_city_atlanta_to_city_chicago",
     "from": "us_city_chicago",
     "to": "us_city_atlanta",
-    "distanceKm": 1136.92
+    "distanceKm": 1110.07
   },
   {
     "id": "us_road_city_atlanta_to_city_dallas",
     "from": "us_city_dallas",
     "to": "us_city_atlanta",
-    "distanceKm": 1629.93
+    "distanceKm": 1344.75
   },
   {
     "id": "us_road_city_atlanta_to_city_miami",
     "from": "us_city_atlanta",
     "to": "us_city_miami",
-    "distanceKm": 1738.9
+    "distanceKm": 1117.2
   },
   {
     "id": "us_road_city_atlanta_to_city_new_york",
     "from": "us_city_atlanta",
     "to": "us_city_new_york",
-    "distanceKm": 3326.63
+    "distanceKm": 1402.81
   },
   {
     "id": "us_road_city_chicago_to_city_denver",
     "from": "us_city_denver",
     "to": "us_city_chicago",
-    "distanceKm": 1694.27
+    "distanceKm": 1697.55
   },
   {
     "id": "us_road_city_chicago_to_city_detroit",
     "from": "us_city_chicago",
     "to": "us_city_detroit",
-    "distanceKm": 1160.21
+    "distanceKm": 423.56
   },
   {
     "id": "us_road_city_dallas_to_city_denver",
     "from": "us_city_dallas",
     "to": "us_city_denver",
-    "distanceKm": 970.73
+    "distanceKm": 1232.24
   },
   {
     "id": "us_road_city_dallas_to_city_houston",
     "from": "us_city_dallas",
     "to": "us_city_houston",
-    "distanceKm": 580.64
+    "distanceKm": 418.13
   },
   {
     "id": "us_road_city_dallas_to_city_los_angeles",
     "from": "us_city_los_angeles",
     "to": "us_city_dallas",
-    "distanceKm": 3584.21
+    "distanceKm": 2289.26
   },
   {
     "id": "us_road_city_detroit_to_city_new_york",
     "from": "us_city_detroit",
     "to": "us_city_new_york",
-    "distanceKm": 1860.95
+    "distanceKm": 909.81
   },
   {
     "id": "us_road_city_los_angeles_to_city_seattle",
     "from": "us_city_seattle",
     "to": "us_city_los_angeles",
-    "distanceKm": 1351.25
+    "distanceKm": 1786.04
   }
 ]

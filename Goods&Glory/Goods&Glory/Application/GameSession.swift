@@ -228,6 +228,19 @@ final class GameSession {
         return engine.storageCapacity(of: facility, state: state)
     }
 
+    #if DEBUG
+    /// The one door the map load test writes through.
+    ///
+    /// `state` stays `private(set)` in production: the UI sends commands and
+    /// the engine owns the result. The load test deliberately sits outside that
+    /// — it fabricates a fleet no campaign would have paid for — so it gets an
+    /// explicit, named, debug-only hatch rather than the setter being opened
+    /// for everyone. See `GameSession+LoadTest`.
+    func replaceStateForLoadTest(_ value: GameState) {
+        state = value
+    }
+    #endif
+
     /// Balancing instrument: wipes the recorded window so the next session
     /// reads clean. Never touches simulation state.
     func clearDebugLedger() {

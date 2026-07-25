@@ -81,6 +81,13 @@ struct MapCorridorContractTests {
     /// Being octilinear is not enough to read as a line: a two-cell diagonal
     /// between two long straights is a wobble, not a bend. Short runs are only
     /// allowed where a corridor genuinely starts or ends.
+    /// A wobble is a staircase, not a step.
+    ///
+    /// A lone short run is how any metro map corrects a one-cell offset, and
+    /// banning it outright was worse than the wobble: Berlin and Warsaw sit one
+    /// lattice row apart, and forbidding that single diagonal cell bought a
+    /// 225 km plunge south and back. What must not appear is two short runs in
+    /// a row, which is where a line stops reading as a deliberate bend.
     @MainActor @Test func corridorsBendInReadableRunsRatherThanWobbling() throws {
         let catalog = try GameCatalog.load(from: .main)
         let projection = MapProjection()
@@ -98,12 +105,15 @@ struct MapCorridorContractTests {
                 guard points.count > 3 else { continue }
 
                 let interior = zip(points, points.dropFirst()).dropFirst().dropLast()
+                var previousWasShort = false
                 for (start, end) in interior {
                     let length = hypot(end.x - start.x, end.y - start.y)
+                    let isShort = length < shortestInteriorRun - 1
                     #expect(
-                        length >= shortestInteriorRun - 1,
-                        "\(origin.id)->\(destinationID) wobbles: \(Int(length)) km run"
+                        !(isShort && previousWasShort),
+                        "\(origin.id)->\(destinationID) staircases: \(Int(length)) km run follows another short one"
                     )
+                    previousWasShort = isShort
                 }
             }
         }

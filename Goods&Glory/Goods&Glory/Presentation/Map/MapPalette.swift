@@ -30,6 +30,28 @@ enum MapPalette {
     static let city = cityLabel
     /// Soft dark casing under route ink so accent strokes cut cleanly at night.
     static let routeCasing = UIColor(red: 0.039, green: 0.071, blue: 0.125, alpha: 0.88)
+    /// Body of a vehicle running empty: opaque, so an outlined truck still
+    /// hides the line it is driving on. Only used if the accent cannot be read.
+    static let emptyVehicleBody = UIColor(red: 0.071, green: 0.118, blue: 0.196, alpha: 1)
+
+    /// The unfilled part of a vehicle capsule: the company's own colour, taken
+    /// down in brightness. Painting it the board's navy instead made the
+    /// capsule read as a battery cell rather than as a truck carrying less
+    /// than a full load — the vehicle stopped looking like one object.
+    static func unfilledVehicleBody(for accent: UIColor) -> UIColor {
+        var hue: CGFloat = 0
+        var saturation: CGFloat = 0
+        var brightness: CGFloat = 0
+        var alpha: CGFloat = 0
+        guard accent.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        else { return emptyVehicleBody }
+        return UIColor(
+            hue: hue,
+            saturation: saturation * 0.92,
+            brightness: brightness * 0.36,
+            alpha: alpha
+        )
+    }
     static let vehicleOutline = UIColor(red: 0.039, green: 0.071, blue: 0.125, alpha: 0.92)
     static let gold = UIColor(red: 1.0, green: 0.690, blue: 0.216, alpha: 1)         // #FFB037
     static let deadhead = UIColor(red: 1.0, green: 0.420, blue: 0.369, alpha: 0.85)  // #FF6B5E coral

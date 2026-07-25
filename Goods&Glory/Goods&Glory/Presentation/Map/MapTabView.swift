@@ -94,10 +94,15 @@ struct MapTabView: View {
                     .ignoresSafeArea()
 
                 if showsPerformanceHUD {
-                    PerformanceOverlay(state: state)
-                        .padding(.leading, 12)
-                        .padding(.top, 96)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    VStack(alignment: .leading, spacing: 8) {
+                        PerformanceOverlay(state: state)
+                        #if DEBUG
+                        MapLoadTestControls(session: session)
+                        #endif
+                    }
+                    .padding(.leading, 12)
+                    .padding(.top, 96)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
 
                 VStack(spacing: 0) {

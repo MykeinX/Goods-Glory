@@ -5,6 +5,12 @@ The graph is a logistics board, not a navigation database. Cities connect
 directly; there are no invisible junction nodes. Real freight corridors only
 inspire which city pairs get an edge.
 
+City positions are authored in scripts/city_anchors.json as real WGS84 and
+used as-is: the board is built from the same real coastline (build_board.py),
+so there is nothing to convert. cities.json carries only the snapped result:
+it is an output of this script, never a place to author a coordinate. Editing
+a pin there is lost on the next run.
+
 Map geometry is baked here rather than synthesised at render time. Every city
 snaps onto one shared octilinear lattice (scripts/map_grid.py), and each road's
 drawn polyline is an A* path over that lattice through land only. That makes
@@ -25,9 +31,10 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from pathlib import Path
 
-from map_grid import BoardGrid, corners, haversine_km
+from map_grid import MAXIMUM_DETOUR, BoardGrid, corners, haversine_km
 
 # Adjacent cities follow corridor geography. This modest factor turns
 # great-circle distance into a plausible strategic road distance without making
@@ -135,6 +142,31 @@ WATER_CROSSINGS = {
 }
 
 
+def apply_anchors(cities: dict[str, dict], anchors_path: Path) -> dict[str, dict]:
+    """Seed every city with its authored WGS84 coordinate.
+
+    Snapping then moves it to the nearest free land cell, and the final write
+    replaces the seed with that cell. The authored intent survives in
+    city_anchors.json, which is the whole point: a pin nudged in cities.json
+    used to be the only record of where a city was meant to be, and the next
+    run silently overwrote it.
+    """
+    anchors = json.loads(anchors_path.read_text())["cities"]
+    missing = sorted(set(cities) - set(anchors))
+    if missing:
+        raise SystemExit(
+            f"cities without an anchor: {missing}. Add their real WGS84 "
+            f"coordinate to {anchors_path.name}."
+        )
+    unknown = sorted(set(anchors) - set(cities))
+    assert not unknown, f"anchors for cities that do not exist: {unknown}"
+
+    for city_id, anchor in anchors.items():
+        cities[city_id]["latitude"] = anchor["latitude"]
+        cities[city_id]["longitude"] = anchor["longitude"]
+    return anchors
+
+
 def node_id(city: dict) -> str:
     return city["roadNodeID"]
 
@@ -225,21 +257,62 @@ def bake_geometry(
     nodes: list[dict],
     roads: list[dict],
     anchors: dict[str, tuple[int, int]],
-) -> None:
-    """Attach the drawn octilinear polyline and the routing distance to each road."""
+) -> float:
+    """Attach the drawn octilinear polyline and the routing distance to each road.
+
+    Roads are baked longest first and each one leaves its cells behind for the
+    next, which is what bundles the network. Baking them independently gave
+    every road its own line: two corridors heading the same way ran a cell
+    apart for hundreds of km, and a short road joining a long one met it at an
+    angle instead of merging into it.
+
+    The order is by span then id, so the result stays deterministic.
+
+    Returns the share of drawn cells carrying more than one road — the number
+    that says whether the network reads as a metro map or as loose strokes.
+    """
     coordinates = {node["id"]: node["coordinate"] for node in nodes}
-    for road in roads:
+    bundled: set[tuple[int, int]] = set()
+    usage: Counter[tuple[int, int]] = Counter()
+
+    def span(road: dict) -> int:
+        start, end = anchors[road["from"]], anchors[road["to"]]
+        return max(abs(start[0] - end[0]), abs(start[1] - end[1]))
+
+    for road in sorted(roads, key=lambda road: (-span(road), road["id"])):
         budget = WATER_CROSSINGS.get(road["id"])
+        crosses = budget is not None
+
+        start, goal = anchors[road["from"]], anchors[road["to"]]
+
+        # Try the straight-line ceiling first. Most roads have open terrain and
+        # clear it, which settles them in one search. The ceiling is stricter
+        # than the real rule, so a path found here always satisfies it.
         cells = grid.path(
-            anchors[road["from"]],
-            anchors[road["to"]],
-            may_cross_water=budget is not None,
+            start,
+            goal,
+            may_cross_water=crosses,
+            bundled=bundled,
+            budget=MAXIMUM_DETOUR * grid.straight_km(start, goal),
         )
         if cells is None:
-            raise SystemExit(
-                f"{road['id']}: no land path between its endpoints. Move a "
-                f"city, or declare the road in WATER_CROSSINGS."
-            )
+            # Terrain forces a detour, so measure what this road costs alone
+            # and hold the bundled attempt to that instead. A ceiling measured
+            # against the straight line would outlaw honest detours like
+            # Chicago–Detroit rounding the Great Lakes.
+            solo = grid.path(start, goal, may_cross_water=crosses)
+            if solo is None:
+                raise SystemExit(
+                    f"{road['id']}: no land path between its endpoints. Move a "
+                    f"city, or declare the road in WATER_CROSSINGS."
+                )
+            cells = grid.path(
+                start,
+                goal,
+                may_cross_water=crosses,
+                bundled=bundled,
+                budget=MAXIMUM_DETOUR * grid.length_km(solo),
+            ) or solo
         water = grid.water_km(cells)
         if budget is None:
             assert water == 0, road["id"]
@@ -262,6 +335,11 @@ def bake_geometry(
             2,
         )
         road["waterKm"] = water
+        bundled.update(cells)
+        usage.update(cells)
+
+    shared = sum(1 for count in usage.values() if count > 1)
+    return shared / max(1, len(usage))
 
 
 def network_components(nodes: list[dict], roads: list[dict]) -> list[set[str]]:
@@ -370,6 +448,7 @@ def main() -> None:
     catalog_dir = scripts_dir.parent / "Goods&Glory" / "Resources" / "Catalog"
     city_records = json.loads((catalog_dir / "cities.json").read_text())
     cities = {city["id"]: city for city in city_records}
+    apply_anchors(cities, scripts_dir / "city_anchors.json")
 
     grid = BoardGrid(catalog_dir / "map_board_silhouette.json")
 
@@ -382,7 +461,7 @@ def main() -> None:
         roads.extend(region_roads)
 
     anchors = snap_nodes(grid, nodes, roads)
-    bake_geometry(grid, nodes, roads, anchors)
+    shared_share = bake_geometry(grid, nodes, roads, anchors)
 
     # A city pin and its road node are the same lattice cell, so the pin sits
     # exactly where its roads meet instead of a short off-grid stub away.
@@ -433,6 +512,7 @@ def main() -> None:
         f"Wrote {len(nodes)} city nodes and {len(roads)} roads\n"
         f"  lattice   {grid.rows}x{grid.columns} @ {grid.step_km:.0f} km\n"
         f"  bends     avg {sum(bends)/len(bends):.2f}, max {max(bends)}\n"
+        f"  bundled   {shared_share:.0%} of drawn cells shared\n"
         f"  snap      max {report[0][0]:.0f} km ({report[0][1]})\n"
         f"  crossings {[f'{k}: {v:.0f} km' for k, v in water.items() if v] or 'none'}"
     )

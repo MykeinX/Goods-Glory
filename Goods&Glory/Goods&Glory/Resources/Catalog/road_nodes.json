@@ -1,115 +1,115 @@
 [
   {
     "id": "eu_city_berlin",
-    "coordinate": { "latitude": 39.2823, "longitude": 15.504 },
+    "coordinate": { "latitude": 52.6187, "longitude": 13.4828 },
     "kind": "city",
     "cityID": "eu_berlin"
   },
   {
     "id": "eu_city_frankfurt",
-    "coordinate": { "latitude": 36.9114, "longitude": 15.504 },
+    "coordinate": { "latitude": 50.2478, "longitude": 8.6319 },
     "kind": "city",
     "cityID": "eu_frankfurt"
   },
   {
     "id": "eu_city_istanbul",
-    "coordinate": { "latitude": 26.8349, "longitude": 27.227 },
+    "coordinate": { "latitude": 41.0605, "longitude": 28.844 },
     "kind": "city",
     "cityID": "eu_istanbul"
   },
   {
     "id": "eu_city_london",
-    "coordinate": { "latitude": 39.2823, "longitude": -0.2615 },
+    "coordinate": { "latitude": 51.4332, "longitude": -0.2615 },
     "kind": "city",
     "cityID": "eu_london"
   },
   {
     "id": "eu_city_madrid",
-    "coordinate": { "latitude": 33.9477, "longitude": -3.0912 },
+    "coordinate": { "latitude": 40.4677, "longitude": -3.8996 },
     "kind": "city",
     "cityID": "eu_madrid"
   },
   {
     "id": "eu_city_milan",
-    "coordinate": { "latitude": 33.355, "longitude": 12.27 },
+    "coordinate": { "latitude": 45.5059, "longitude": 9.0361 },
     "kind": "city",
     "cityID": "eu_milan"
   },
   {
     "id": "eu_city_paris",
-    "coordinate": { "latitude": 35.7259, "longitude": 7.4191 },
+    "coordinate": { "latitude": 48.766, "longitude": 2.164 },
     "kind": "city",
     "cityID": "eu_paris"
   },
   {
     "id": "eu_city_rome",
-    "coordinate": { "latitude": 29.5022, "longitude": 13.4828 },
+    "coordinate": { "latitude": 41.9496, "longitude": 12.6743 },
     "kind": "city",
     "cityID": "eu_rome"
   },
   {
     "id": "eu_city_warsaw",
-    "coordinate": { "latitude": 40.7641, "longitude": 23.5888 },
+    "coordinate": { "latitude": 52.3223, "longitude": 21.1634 },
     "kind": "city",
     "cityID": "eu_warsaw"
   },
   {
     "id": "us_city_atlanta",
-    "coordinate": { "latitude": 32.4659, "longitude": -88.3862 },
+    "coordinate": { "latitude": 33.6513, "longitude": -84.3438 },
     "kind": "city",
     "cityID": "us_atlanta"
   },
   {
     "id": "us_city_chicago",
-    "coordinate": { "latitude": 41.3568, "longitude": -88.3862 },
+    "coordinate": { "latitude": 41.9496, "longitude": -87.5777 },
     "kind": "city",
     "cityID": "us_chicago"
   },
   {
     "id": "us_city_dallas",
-    "coordinate": { "latitude": 31.2804, "longitude": -103.3431 },
+    "coordinate": { "latitude": 32.7622, "longitude": -96.8753 },
     "kind": "city",
     "cityID": "us_dallas"
   },
   {
     "id": "us_city_denver",
-    "coordinate": { "latitude": 38.6895, "longitude": -105.3644 },
+    "coordinate": { "latitude": 39.875, "longitude": -104.9601 },
     "kind": "city",
     "cityID": "us_denver"
   },
   {
     "id": "us_city_detroit",
-    "coordinate": { "latitude": 41.9496, "longitude": -76.2589 },
+    "coordinate": { "latitude": 42.2459, "longitude": -83.131 },
     "kind": "city",
     "cityID": "us_detroit"
   },
   {
     "id": "us_city_houston",
-    "coordinate": { "latitude": 28.0204, "longitude": -99.705 },
+    "coordinate": { "latitude": 29.7986, "longitude": -95.2583 },
     "kind": "city",
     "cityID": "us_houston"
   },
   {
     "id": "us_city_los_angeles",
-    "coordinate": { "latitude": 32.7622, "longitude": -136.491 },
+    "coordinate": { "latitude": 33.9477, "longitude": -118.3001 },
     "kind": "city",
     "cityID": "us_los_angeles"
   },
   {
     "id": "us_city_miami",
-    "coordinate": { "latitude": 30.3913, "longitude": -72.6208 },
+    "coordinate": { "latitude": 25.6495, "longitude": -80.3014 },
     "kind": "city",
     "cityID": "us_miami"
   },
   {
     "id": "us_city_new_york",
-    "coordinate": { "latitude": 39.5786, "longitude": -57.2596 },
+    "coordinate": { "latitude": 40.7641, "longitude": -73.8335 },
     "kind": "city",
     "cityID": "us_new_york"
   },
   {
     "id": "us_city_seattle",
-    "coordinate": { "latitude": 42.8387, "longitude": -140.5334 },
+    "coordinate": { "latitude": 47.5805, "longitude": -122.3425 },
     "kind": "city",
     "cityID": "us_seattle"
   }

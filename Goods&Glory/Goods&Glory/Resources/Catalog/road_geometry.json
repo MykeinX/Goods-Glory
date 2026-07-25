@@ -5,169 +5,169 @@
     {
       "id": "eu_road_city_berlin_to_city_frankfurt",
       "points": [
-        { "latitude": 36.9114, "longitude": 15.504 },
-        { "latitude": 39.2823, "longitude": 15.504 }
+        { "latitude": 50.2478, "longitude": 8.6319 },
+        { "latitude": 50.2478, "longitude": 10.2488 },
+        { "latitude": 52.6187, "longitude": 13.4828 }
       ]
     },
     {
       "id": "eu_road_city_berlin_to_city_warsaw",
       "points": [
-        { "latitude": 39.2823, "longitude": 15.504 },
-        { "latitude": 39.2823, "longitude": 21.5676 },
-        { "latitude": 40.7641, "longitude": 23.5888 }
+        { "latitude": 52.6187, "longitude": 13.4828 },
+        { "latitude": 52.6187, "longitude": 20.7591 },
+        { "latitude": 52.3223, "longitude": 21.1634 }
       ]
     },
     {
       "id": "eu_road_city_frankfurt_to_city_istanbul",
       "points": [
-        { "latitude": 36.9114, "longitude": 15.504 },
-        { "latitude": 35.4295, "longitude": 15.504 },
-        { "latitude": 26.8349, "longitude": 27.227 }
+        { "latitude": 50.2478, "longitude": 8.6319 },
+        { "latitude": 50.2478, "longitude": 16.3125 },
+        { "latitude": 41.0605, "longitude": 28.844 }
       ]
     },
     {
       "id": "eu_road_city_frankfurt_to_city_milan",
       "points": [
-        { "latitude": 36.9114, "longitude": 15.504 },
-        { "latitude": 34.5404, "longitude": 12.27 },
-        { "latitude": 33.355, "longitude": 12.27 }
+        { "latitude": 50.2478, "longitude": 8.6319 },
+        { "latitude": 49.9514, "longitude": 9.0361 },
+        { "latitude": 45.5059, "longitude": 9.0361 }
       ]
     },
     {
       "id": "eu_road_city_frankfurt_to_city_paris",
       "points": [
-        { "latitude": 35.7259, "longitude": 7.4191 },
-        { "latitude": 36.9114, "longitude": 9.0361 },
-        { "latitude": 36.9114, "longitude": 15.504 }
+        { "latitude": 48.766, "longitude": 2.164 },
+        { "latitude": 50.2478, "longitude": 4.1852 },
+        { "latitude": 50.2478, "longitude": 8.6319 }
       ]
     },
     {
       "id": "eu_road_city_istanbul_to_city_warsaw",
       "points": [
-        { "latitude": 40.7641, "longitude": 23.5888 },
-        { "latitude": 29.5022, "longitude": 23.5888 },
-        { "latitude": 26.8349, "longitude": 27.227 }
+        { "latitude": 52.3223, "longitude": 21.1634 },
+        { "latitude": 46.6914, "longitude": 21.1634 },
+        { "latitude": 41.0605, "longitude": 28.844 }
       ]
     },
     {
       "id": "eu_road_city_london_to_city_paris",
       "points": [
-        { "latitude": 39.2823, "longitude": -0.2615 },
-        { "latitude": 35.7259, "longitude": 4.5894 },
-        { "latitude": 35.7259, "longitude": 7.4191 }
+        { "latitude": 51.4332, "longitude": -0.2615 },
+        { "latitude": 49.6551, "longitude": 2.164 },
+        { "latitude": 48.766, "longitude": 2.164 }
       ]
     },
     {
       "id": "eu_road_city_madrid_to_city_paris",
       "points": [
-        { "latitude": 35.7259, "longitude": 7.4191 },
-        { "latitude": 33.9477, "longitude": 4.9937 },
-        { "latitude": 33.9477, "longitude": -3.0912 }
+        { "latitude": 48.766, "longitude": 2.164 },
+        { "latitude": 44.9132, "longitude": 2.164 },
+        { "latitude": 40.4677, "longitude": -3.8996 }
       ]
     },
     {
       "id": "eu_road_city_milan_to_city_paris",
       "points": [
-        { "latitude": 35.7259, "longitude": 7.4191 },
-        { "latitude": 33.355, "longitude": 10.6531 },
-        { "latitude": 33.355, "longitude": 12.27 }
+        { "latitude": 48.766, "longitude": 2.164 },
+        { "latitude": 45.5059, "longitude": 6.6107 },
+        { "latitude": 45.5059, "longitude": 9.0361 }
       ]
     },
     {
       "id": "eu_road_city_milan_to_city_rome",
       "points": [
-        { "latitude": 33.355, "longitude": 12.27 },
-        { "latitude": 32.4659, "longitude": 13.4828 },
-        { "latitude": 29.5022, "longitude": 13.4828 }
+        { "latitude": 45.5059, "longitude": 9.0361 },
+        { "latitude": 42.8387, "longitude": 12.6743 },
+        { "latitude": 41.9496, "longitude": 12.6743 }
       ]
     },
     {
       "id": "us_road_city_atlanta_to_city_chicago",
       "points": [
-        { "latitude": 41.3568, "longitude": -88.3862 },
-        { "latitude": 32.4659, "longitude": -88.3862 }
+        { "latitude": 41.9496, "longitude": -87.5777 },
+        { "latitude": 39.5786, "longitude": -84.3438 },
+        { "latitude": 33.6513, "longitude": -84.3438 }
       ]
     },
     {
       "id": "us_road_city_atlanta_to_city_dallas",
       "points": [
-        { "latitude": 31.2804, "longitude": -103.3431 },
-        { "latitude": 32.4659, "longitude": -101.7262 },
-        { "latitude": 32.4659, "longitude": -88.3862 }
+        { "latitude": 32.7622, "longitude": -96.8753 },
+        { "latitude": 33.6513, "longitude": -95.6625 },
+        { "latitude": 33.6513, "longitude": -84.3438 }
       ]
     },
     {
       "id": "us_road_city_atlanta_to_city_miami",
       "points": [
-        { "latitude": 32.4659, "longitude": -88.3862 },
-        { "latitude": 32.4659, "longitude": -75.4505 },
-        { "latitude": 30.3913, "longitude": -72.6208 }
+        { "latitude": 33.6513, "longitude": -84.3438 },
+        { "latitude": 28.6131, "longitude": -84.3438 },
+        { "latitude": 25.6495, "longitude": -80.3014 }
       ]
     },
     {
       "id": "us_road_city_atlanta_to_city_new_york",
       "points": [
-        { "latitude": 32.4659, "longitude": -88.3862 },
-        { "latitude": 39.5786, "longitude": -78.6844 },
-        { "latitude": 39.5786, "longitude": -57.2596 }
+        { "latitude": 33.6513, "longitude": -84.3438 },
+        { "latitude": 40.7641, "longitude": -74.642 },
+        { "latitude": 40.7641, "longitude": -73.8335 }
       ]
     },
     {
       "id": "us_road_city_chicago_to_city_denver",
       "points": [
-        { "latitude": 38.6895, "longitude": -105.3644 },
-        { "latitude": 38.6895, "longitude": -92.0244 },
-        { "latitude": 41.3568, "longitude": -88.3862 }
+        { "latitude": 39.875, "longitude": -104.9601 },
+        { "latitude": 41.9496, "longitude": -102.1304 },
+        { "latitude": 41.9496, "longitude": -87.5777 }
       ]
     },
     {
       "id": "us_road_city_chicago_to_city_detroit",
       "points": [
-        { "latitude": 41.3568, "longitude": -88.3862 },
-        { "latitude": 39.2823, "longitude": -85.5565 },
-        { "latitude": 39.2823, "longitude": -79.8971 },
-        { "latitude": 41.9496, "longitude": -76.2589 }
+        { "latitude": 41.9496, "longitude": -87.5777 },
+        { "latitude": 41.9496, "longitude": -83.5353 },
+        { "latitude": 42.2459, "longitude": -83.131 }
       ]
     },
     {
       "id": "us_road_city_dallas_to_city_denver",
       "points": [
-        { "latitude": 31.2804, "longitude": -103.3431 },
-        { "latitude": 32.7622, "longitude": -105.3644 },
-        { "latitude": 38.6895, "longitude": -105.3644 }
+        { "latitude": 32.7622, "longitude": -96.8753 },
+        { "latitude": 38.6895, "longitude": -104.9601 },
+        { "latitude": 39.875, "longitude": -104.9601 }
       ]
     },
     {
       "id": "us_road_city_dallas_to_city_houston",
       "points": [
-        { "latitude": 31.2804, "longitude": -103.3431 },
-        { "latitude": 31.2804, "longitude": -101.7262 },
-        { "latitude": 29.7986, "longitude": -99.705 },
-        { "latitude": 28.0204, "longitude": -99.705 }
+        { "latitude": 32.7622, "longitude": -96.8753 },
+        { "latitude": 31.5768, "longitude": -95.2583 },
+        { "latitude": 29.7986, "longitude": -95.2583 }
       ]
     },
     {
       "id": "us_road_city_dallas_to_city_los_angeles",
       "points": [
-        { "latitude": 32.7622, "longitude": -136.491 },
-        { "latitude": 32.7622, "longitude": -105.3644 },
-        { "latitude": 31.2804, "longitude": -103.3431 }
+        { "latitude": 33.9477, "longitude": -118.3001 },
+        { "latitude": 33.9477, "longitude": -98.4922 },
+        { "latitude": 32.7622, "longitude": -96.8753 }
       ]
     },
     {
       "id": "us_road_city_detroit_to_city_new_york",
       "points": [
-        { "latitude": 41.9496, "longitude": -76.2589 },
-        { "latitude": 39.5786, "longitude": -73.025 },
-        { "latitude": 39.5786, "longitude": -57.2596 }
+        { "latitude": 42.2459, "longitude": -83.131 },
+        { "latitude": 40.7641, "longitude": -81.1098 },
+        { "latitude": 40.7641, "longitude": -73.8335 }
       ]
     },
     {
       "id": "us_road_city_los_angeles_to_city_seattle",
       "points": [
-        { "latitude": 42.8387, "longitude": -140.5334 },
-        { "latitude": 39.875, "longitude": -136.491 },
-        { "latitude": 32.7622, "longitude": -136.491 }
+        { "latitude": 47.5805, "longitude": -122.3425 },
+        { "latitude": 44.6168, "longitude": -118.3001 },
+        { "latitude": 33.9477, "longitude": -118.3001 }
       ]
     }
   ]

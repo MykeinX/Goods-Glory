@@ -30,6 +30,7 @@ extension GameMapScene {
         }
         activeRouteHaloNode.path = active
         activeRouteNode.path = active
+        activeRouteCoreNode.path = active
         plannedRouteNode.path = planned
     }
 
@@ -68,6 +69,7 @@ extension GameMapScene {
         }
 
         for marker in markers {
+            let previous = vehicleMarkers[marker.id]
             let node: MapVehicleNode
             if let existing = vehicleNodes[marker.id] {
                 node = existing
@@ -85,9 +87,24 @@ extension GameMapScene {
                 cameraScale: cameraNode.xScale
             )
             let target = displayPosition(for: marker)
-            if animateMotion, marker.isMoving, node.parent != nil, node.position != .zero {
-                // Match the simulation tick window so motion fills the whole
-                // second instead of a short burst followed by a visible pause.
+            // Ride the corridor rather than cutting to the next point. A tick
+            // covers ten game minutes at 1x and sixty at 6x, so a straight
+            // interpolation that is invisible at 1x drives visibly through the
+            // land at 6x, corner by corner.
+            if animateMotion, marker.isMoving, node.parent != nil, node.position != .zero,
+               let corridor = marker.corridor,
+               let previous, previous.corridor == corridor, previous.progress <= marker.progress {
+                let from = previous.progress
+                let span = marker.progress - from
+                let duration = SimulationSpeed.clockTickSeconds
+                let follow = SKAction.customAction(withDuration: duration) { node, elapsed in
+                    let t = min(1, CGFloat(elapsed) / CGFloat(duration))
+                    node.position = corridor.position(at: from + span * t)
+                }
+                node.run(follow, withKey: "movement")
+            } else if animateMotion, marker.isMoving, node.parent != nil, node.position != .zero {
+                // No shared corridor to follow — a vehicle that just changed
+                // leg. Match the tick window so motion still fills the second.
                 let move = SKAction.move(
                     to: target,
                     duration: SimulationSpeed.clockTickSeconds
@@ -135,6 +152,9 @@ extension GameMapScene {
             return
         }
         let zoom = vehicleSemanticZoom(zoomOut: zoomOutAmount)
+        // Nothing to lift apart while the plates are faded out, and this is
+        // called on every camera frame — so a pinch out stops paying for it.
+        guard zoom.label >= 0.02 else { return }
         let nodeScale = cameraNode.xScale * zoom.scale
         let positions = vehicleMarkers.map {
             (id: $0.key, position: displayPosition(for: $0.value))
@@ -156,9 +176,11 @@ extension GameMapScene {
             position: marker.position,
             headingRadians: marker.headingRadians,
             isMoving: marker.isMoving,
-            isLoaded: marker.isLoaded,
+            loadFraction: marker.loadFraction,
             serviceProgress: marker.serviceProgress,
-            labelStackIndex: stack
+            labelStackIndex: stack,
+            corridor: marker.corridor,
+            progress: marker.progress
         )
         vehicleMarkers[id] = updated
         guard let node = vehicleNodes[id] else { return }
@@ -187,6 +209,12 @@ extension GameMapScene {
 
     /// City pins are camera-counter-scaled (constant screen family) and then
     /// eased from night-dot to full stop as the player zooms in.
+    ///
+    /// Size and name visibility are applied separately on purpose. Size is a
+    /// smooth function of the camera and is written every time it changes;
+    /// running it through the zoom bucket below made pins step between sizes
+    /// during a pinch. Which names to show depends on city importance and is
+    /// far more expensive, so that part still refreshes per bucket.
     func updateSemanticZoom() {
         let zoomOut = zoomOutAmount
         let shrink = smoothstep(zoomOut.clamped(to: 0...1))
@@ -195,6 +223,10 @@ extension GameMapScene {
         let farScale: CGFloat = 0.178
         let growth = pow(1.0 - shrink, 2.1)
         let markerScale = farScale + (closeScale - farScale) * growth
+        for node in cityNodes.values {
+            node.setMarkerScale(markerScale)
+        }
+
         // Names stay readable into mid zoom-out; only near max pull-back they go.
         let labelVisibility = 1.0 - smoothstep(((zoomOut - 0.38) / 0.50).clamped(to: 0...1))
 
@@ -240,11 +272,7 @@ extension GameMapScene {
                 labelAlpha = 0
             }
 
-            cityNodes[city.id]?.setSemanticZoom(
-                markerScale: markerScale,
-                markerAlpha: 1,
-                labelAlpha: labelAlpha
-            )
+            cityNodes[city.id]?.setLabelVisibility(labelAlpha)
         }
     }
 

@@ -37,21 +37,28 @@ extension GameMapScene {
         // slight bevel so sharp 45°/90° hinges stay crisp like Mini Metro.
         activeRouteHaloNode.strokeColor = MapPalette.routeCasing
         activeRouteHaloNode.lineCap = .round
-        activeRouteHaloNode.lineJoin = .bevel
+        activeRouteHaloNode.lineJoin = .round
         activeRouteHaloNode.lineWidth = StrokeWidth.activeRouteHalo
         activeRouteHaloNode.zPosition = 1
         routeLayer.addChild(activeRouteHaloNode)
 
         activeRouteNode.strokeColor = accentColor
         activeRouteNode.lineCap = .round
-        activeRouteNode.lineJoin = .bevel
+        activeRouteNode.lineJoin = .round
         activeRouteNode.lineWidth = StrokeWidth.activeRoute
         activeRouteNode.zPosition = 2
         routeLayer.addChild(activeRouteNode)
 
+        activeRouteCoreNode.strokeColor = UIColor.white.withAlphaComponent(0.34)
+        activeRouteCoreNode.lineCap = .round
+        activeRouteCoreNode.lineJoin = .round
+        activeRouteCoreNode.lineWidth = StrokeWidth.activeRouteCore
+        activeRouteCoreNode.zPosition = 3
+        routeLayer.addChild(activeRouteCoreNode)
+
         plannedRouteNode.strokeColor = accentColor.withAlphaComponent(0.78)
         plannedRouteNode.lineCap = .round
-        plannedRouteNode.lineJoin = .bevel
+        plannedRouteNode.lineJoin = .round
         plannedRouteNode.lineWidth = StrokeWidth.plannedRoute
         plannedRouteNode.glowWidth = 0
         plannedRouteLayer.addChild(plannedRouteNode)
@@ -69,11 +76,11 @@ extension GameMapScene {
     enum TerrainPaths {
         static let cache = Cache()
 
-        /// The silhouette ships as contour-faithful authored board art
-        /// (import_board_art.py). This is the single "iOS box-radius" knob:
-        /// how far a coast corner is rounded, in world units (≈ km). Soft
-        /// enough to match the reference's eased transitions without melting
-        /// continents into blobs.
+        /// The silhouette ships as octilinear rings built from real coastline
+        /// (build_board.py), so every corner here is a 45° or 90° turn. This
+        /// is the single "iOS box-radius" knob: how far such a corner is
+        /// rounded, in world units (≈ km). Soft enough to match the reference
+        /// art's eased transitions without melting continents into blobs.
         static let coastCornerRadiusKm: CGFloat = 320
 
         final class Cache {

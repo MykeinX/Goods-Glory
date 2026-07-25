@@ -78,14 +78,41 @@ struct MapVehicleMarker: Identifiable, Equatable {
     let position: CGPoint
     let headingRadians: CGFloat
     let isMoving: Bool
-    /// Cargo state belongs on the vehicle, not on a duplicate route stroke.
-    let isLoaded: Bool
+    /// How full the vehicle is, 0…1, against the binding constraint of its own
+    /// capacity. Drawn as a fill inside the capsule, so a chain of trucks shows
+    /// how much of the fleet is actually earning rather than just how many of
+    /// them there are.
+    let loadFraction: CGFloat
     /// Visual capsule fill 0…1 while loading/unloading (`nil` when traveling).
     /// Loading rises 0→1; unloading falls 1→0.
     let serviceProgress: CGFloat?
     /// Same map spot or overlapping name plates: 0 = lowest label, 1+ = stacked
     /// higher. Assigned by the scene from live camera scale (not the snapshot).
     let labelStackIndex: Int
+    /// The line this vehicle is riding, and how far along it is.
+    ///
+    /// The scene needs both to move the sprite *along* the corridor between
+    /// ticks. Interpolating straight to the next position instead is invisible
+    /// at 1x, where a tick advances a few km, and cuts visibly across every
+    /// bend at 6x, where it advances sixty minutes of driving.
+    let corridor: MapCorridor?
+    let progress: CGFloat
+
+    /// Compared without the corridor: baked geometry never changes within a
+    /// session, and `position` plus `progress` already say everything that
+    /// moved. Comparing the point arrays of a large fleet every tick would
+    /// cost more than the comparison saves.
+    static func == (lhs: MapVehicleMarker, rhs: MapVehicleMarker) -> Bool {
+        lhs.id == rhs.id
+            && lhs.position == rhs.position
+            && lhs.progress == rhs.progress
+            && lhs.headingRadians == rhs.headingRadians
+            && lhs.isMoving == rhs.isMoving
+            && lhs.loadFraction == rhs.loadFraction
+            && lhs.serviceProgress == rhs.serviceProgress
+            && lhs.labelStackIndex == rhs.labelStackIndex
+            && lhs.displayCode == rhs.displayCode
+    }
 }
 
 enum MapRouteKind: Hashable {
@@ -160,8 +187,8 @@ enum MapSceneAdapter {
     private struct Index {
         let runByVehicle: [VehicleID: RouteRun]
         let routesByID: [RouteID: Route]
-        /// Vehicles currently carrying at least one shipment.
-        let loadedVehicleIDs: Set<VehicleID>
+        /// What each vehicle is carrying right now, summed over its shipments.
+        let loadByVehicle: [VehicleID: LoadSize]
 
         init(state: GameState) {
             // First-wins, matching the `first { }` lookups these replace. A
@@ -179,14 +206,18 @@ enum MapSceneAdapter {
                 routesByID[route.id] = route
             }
 
-            var loaded: Set<VehicleID> = []
+            var loadByVehicle: [VehicleID: LoadSize] = [:]
             for shipment in state.shipments {
-                if let vehicleID = shipment.loadedVehicleID { loaded.insert(vehicleID) }
+                guard let vehicleID = shipment.loadedVehicleID else { continue }
+                var carried = loadByVehicle[vehicleID] ?? LoadSize(massKg: 0, volumeM3: 0)
+                carried.massKg += shipment.offer.load.massKg
+                carried.volumeM3 += shipment.offer.load.volumeM3
+                loadByVehicle[vehicleID] = carried
             }
 
             self.runByVehicle = runByVehicle
             self.routesByID = routesByID
-            self.loadedVehicleIDs = loaded
+            self.loadByVehicle = loadByVehicle
         }
     }
 
@@ -232,8 +263,15 @@ enum MapSceneAdapter {
 
         // Sorted by ID for stable iteration order.
         for vehicle in state.vehicles.sorted(by: { $0.id.rawValue < $1.id.rawValue }) {
-            let typeName = catalog.vehicleType(vehicle.typeID)?.name ?? "VEH"
-            let code = Format.vehicleCode(typeName: typeName, id: vehicle.id)
+            let vehicleType = catalog.vehicleType(vehicle.typeID)
+            let code = Format.vehicleCode(typeName: vehicleType?.name ?? "VEH", id: vehicle.id)
+            // Domain owns the ratio (LoadSize.fillRatio); the view only draws it.
+            let loadFraction = CGFloat(
+                vehicleType.map { type in
+                    (index.loadByVehicle[vehicle.id] ?? LoadSize(massKg: 0, volumeM3: 0))
+                        .fillRatio(in: type.capacity)
+                } ?? 0
+            )
             if let run = index.runByVehicle[vehicle.id] {
                 if let marker = routeRunMarker(
                     run: run,
@@ -241,6 +279,7 @@ enum MapSceneAdapter {
                     code: code,
                     state: state,
                     index: index,
+                    loadFraction: loadFraction,
                     point: point,
                     leg: leg
                 ) {
@@ -342,6 +381,7 @@ enum MapSceneAdapter {
         code: String,
         state: GameState,
         index: Index,
+        loadFraction: CGFloat,
         point: (CityID) -> CGPoint,
         leg: (CityID, CityID) -> MapCorridor
     ) -> MapVehicleMarker? {
@@ -357,7 +397,6 @@ enum MapSceneAdapter {
         case .traveling:
             let originPt = point(run.legOriginCityID)
             guard originPt != stopPt else { return nil }
-            let loaded = index.loadedVehicleIDs.contains(vehicle.id)
             let corridor = leg(run.legOriginCityID, stopCity)
             let progress = fraction(started: run.phaseStartedAt, ends: run.phaseEndsAt, clock: state.clock)
             return MapVehicleMarker(
@@ -366,9 +405,11 @@ enum MapSceneAdapter {
                 position: corridor.position(at: progress),
                 headingRadians: corridor.heading(at: progress),
                 isMoving: true,
-                isLoaded: loaded,
+                loadFraction: loadFraction,
                 serviceProgress: nil,
-                labelStackIndex: 0
+                labelStackIndex: 0,
+                corridor: corridor,
+                progress: progress
             )
 
         case .servicing:
@@ -384,9 +425,11 @@ enum MapSceneAdapter {
                 position: stopPt,
                 headingRadians: 0,
                 isMoving: false,
-                isLoaded: index.loadedVehicleIDs.contains(vehicle.id),
+                loadFraction: loadFraction,
                 serviceProgress: isPickup ? progress : 1 - progress,
-                labelStackIndex: 0
+                labelStackIndex: 0,
+                corridor: nil,
+                progress: 0
             )
         }
     }
@@ -400,6 +443,35 @@ enum MapSceneAdapter {
         static let plateLocalHeight: CGFloat = 12
         /// Start stacking once plates are this far into each other (0.18 ≈ 18%).
         static let overlapStart: CGFloat = 0.18
+
+        /// How many plates a pile may lift before the rest are simply dropped.
+        ///
+        /// Lifting was unbounded, which is fine at three vehicles and absurd at
+        /// three hundred: a corridor carrying a full fleet threw a tower of
+        /// plates hundreds of units into the sea. Past a few, no plate in the
+        /// pile is readable anyway, so the honest answer is to stop drawing
+        /// them and let the player zoom in or tap.
+        static let maximumVisibleStack = 2
+
+        /// Stack index meaning "do not draw this plate at all".
+        static let suppressed = -1
+
+        /// One plate-sized bucket of the world, used to find neighbours in
+        /// constant time instead of by scanning the whole fleet.
+        fileprivate struct Cell: Hashable {
+            let column: Int
+            let row: Int
+
+            init(column: Int, row: Int) {
+                self.column = column
+                self.row = row
+            }
+
+            init(_ point: CGPoint, _ width: CGFloat, _ height: CGFloat) {
+                column = Int((point.x / width).rounded(.down))
+                row = Int((point.y / height).rounded(.down))
+            }
+        }
 
         static func indices(
             positions: [(id: VehicleID, position: CGPoint)],
@@ -420,6 +492,17 @@ enum MapSceneAdapter {
             var assigned = Set<Int>()
             assigned.reserveCapacity(positions.count)
 
+            // Bucket by plate-sized cells first. Scanning every vehicle for
+            // every cluster member is quadratic, and this runs on each camera
+            // frame — at a few hundred vehicles a pinch spent longer stacking
+            // name plates than drawing the map. Neighbours can only be in the
+            // nine cells around a plate, so that is all we look at.
+            var grid: [Cell: [Int]] = [:]
+            grid.reserveCapacity(positions.count)
+            for index in positions.indices {
+                grid[Cell(positions[index].position, maxDx, maxDy), default: []].append(index)
+            }
+
             for start in positions.indices {
                 guard !assigned.contains(start) else { continue }
                 var cluster = [start]
@@ -428,15 +511,22 @@ enum MapSceneAdapter {
                 var cursor = 0
                 while cursor < cluster.count {
                     let anchor = positions[cluster[cursor]].position
-                    for candidate in positions.indices where !assigned.contains(candidate) {
-                        let other = positions[candidate].position
-                        let dx = abs(anchor.x - other.x)
-                        let dy = abs(anchor.y - other.y)
-                        // Axis-aligned plate test — corridor traffic mostly
-                        // shares one axis, so a circle under-detects nesting.
-                        guard dx < maxDx, dy < maxDy else { continue }
-                        cluster.append(candidate)
-                        assigned.insert(candidate)
+                    let home = Cell(anchor, maxDx, maxDy)
+                    for column in (home.column - 1)...(home.column + 1) {
+                        for row in (home.row - 1)...(home.row + 1) {
+                            for candidate in grid[Cell(column: column, row: row)] ?? [] {
+                                guard !assigned.contains(candidate) else { continue }
+                                let other = positions[candidate].position
+                                let dx = abs(anchor.x - other.x)
+                                let dy = abs(anchor.y - other.y)
+                                // Axis-aligned plate test — corridor traffic
+                                // mostly shares one axis, so a circle
+                                // under-detects nesting.
+                                guard dx < maxDx, dy < maxDy else { continue }
+                                cluster.append(candidate)
+                                assigned.insert(candidate)
+                            }
+                        }
                     }
                     cursor += 1
                 }
@@ -448,7 +538,9 @@ enum MapSceneAdapter {
                     result[positions[ordered[0]].id] = 0
                 } else {
                     for (stack, index) in ordered.enumerated() {
-                        result[positions[index].id] = stack
+                        result[positions[index].id] = stack <= maximumVisibleStack
+                            ? stack
+                            : suppressed
                     }
                 }
             }

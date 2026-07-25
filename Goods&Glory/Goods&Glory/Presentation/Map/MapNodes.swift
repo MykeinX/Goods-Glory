@@ -2,9 +2,9 @@
 //  MapNodes.swift
 //  Goods&Glory
 //
-//  The SpriteKit nodes the map draws: planned-visit markers, city pins with
-//  their label/badge chrome, and vehicle sprites. Presentation only — they
-//  render a snapshot and never read game state.
+//  The SpriteKit nodes the map draws at a city: planned-visit markers and city
+//  pins with their label/badge chrome. Vehicles live in MapVehicleNode.swift.
+//  Presentation only — they render a snapshot and never read game state.
 //
 
 import SpriteKit
@@ -130,7 +130,12 @@ final class MapCityNode: SKNode {
     )
     private let halo = SKShapeNode(circleOfRadius: 14)
     private let selectionRing = SKShapeNode(circleOfRadius: 12.5)
+    /// Scaled by zoom. Carries no centering offset of its own: scaling happens
+    /// about a node's own origin, so an offset here would slide the name
+    /// sideways every time the zoom-driven scale changed.
     private let labelRow = SKNode()
+    /// Holds the centering offset instead, inside the scaled row.
+    private let labelContent = SKNode()
     private let label = SKLabelNode(fontNamed: "AvenirNext-DemiBold")
     private let fleetBadge = SKShapeNode(circleOfRadius: 7)
     private let fleetCount = SKLabelNode(fontNamed: "AvenirNext-Bold")
@@ -201,20 +206,21 @@ final class MapCityNode: SKNode {
         labelRow.zPosition = 4
         labelRow.position = CGPoint(x: 0, y: Self.pinRadius + Self.labelGap)
         addChild(labelRow)
+        labelRow.addChild(labelContent)
 
         label.text = city.name
         label.fontSize = 11
         label.fontColor = MapPalette.cityLabel
         label.verticalAlignmentMode = .bottom
         label.horizontalAlignmentMode = .left
-        labelRow.addChild(label)
+        labelContent.addChild(label)
 
         fleetBadge.fillColor = MapPalette.gold
         fleetBadge.strokeColor = MapPalette.water
         fleetBadge.lineWidth = 1.2
         fleetBadge.zPosition = 1
         fleetBadge.isHidden = true
-        labelRow.addChild(fleetBadge)
+        labelContent.addChild(fleetBadge)
 
         // Baseline + left: frame ortası dairenin (0,0) noktasına taşınır (optik ortalama).
         fleetCount.fontSize = 9
@@ -228,7 +234,7 @@ final class MapCityNode: SKNode {
         attentionBadge.lineWidth = 1.2
         attentionBadge.zPosition = 1
         attentionBadge.isHidden = true
-        labelRow.addChild(attentionBadge)
+        labelContent.addChild(attentionBadge)
 
         attentionCount.fontSize = 9
         attentionCount.verticalAlignmentMode = .baseline
@@ -295,6 +301,7 @@ final class MapCityNode: SKNode {
 
     private var appearance: Appearance?
     private var isPulseSuspended = false
+    private var markerScale: CGFloat = 1
 
     func configure(
         isHQ: Bool,
@@ -416,11 +423,22 @@ final class MapCityNode: SKNode {
         ])), withKey: "pulse")
     }
 
-    func setSemanticZoom(markerScale: CGFloat, markerAlpha: CGFloat, labelAlpha: CGFloat) {
-        markerContainer.setScale(markerScale)
-        markerContainer.alpha = markerAlpha
+    /// Pin size only. Cheap enough to run on every pinch frame, which is the
+    /// point: quantising it made the pin jump between sizes mid-gesture.
+    func setMarkerScale(_ scale: CGFloat) {
+        guard markerScale != scale else { return }
+        markerScale = scale
+        markerContainer.setScale(scale)
+        facilityRow.setScale(scale)
         // Gap stays readable: pin rim + fixed air, then name.
-        labelRow.position.y = Self.pinRadius * markerScale + Self.labelGap
+        labelRow.position.y = Self.pinRadius * scale + Self.labelGap
+        facilityRow.position.y = -(Self.pinRadius * scale + Self.labelGap + 2)
+    }
+
+    /// Name fade and the slight shrink that goes with it. Depends on which
+    /// cities matter at this zoom, so it is refreshed per zoom step rather
+    /// than per frame.
+    func setLabelVisibility(_ labelAlpha: CGFloat) {
         labelRow.setScale(max(0.7, 0.7 + 0.3 * labelAlpha))
         label.alpha = labelAlpha
         if !attentionBadge.isHidden || !fleetBadge.isHidden {
@@ -430,19 +448,17 @@ final class MapCityNode: SKNode {
             labelRow.alpha = labelAlpha
             labelRow.isHidden = labelAlpha < 0.02
         }
-        facilityRow.position.y = -(Self.pinRadius * markerScale + Self.labelGap + 2)
-        facilityRow.setScale(markerScale)
-        facilityRow.alpha = markerAlpha
     }
 
     private func layoutLabelRow() {
         label.position = .zero
-        // Gerçek glif kutusu: isim işaret altında ortalı kalsın.
+        // Gerçek glif kutusu: isim işaret altında ortalı kalsın. Ofset ölçeklenen
+        // satırın *içinde* durur, yoksa zoom ölçeği ismi yana kaydırır.
         let nameFrame = label.frame
         if nameFrame.width > 1 {
-            labelRow.position.x = -nameFrame.midX
+            labelContent.position.x = -nameFrame.midX
         } else {
-            labelRow.position.x = -(CGFloat(cityName.count) * 6.2) / 2
+            labelContent.position.x = -(CGFloat(cityName.count) * 6.2) / 2
         }
         guard !fleetBadge.isHidden || !attentionBadge.isHidden else { return }
 
@@ -472,211 +488,6 @@ final class MapCityNode: SKNode {
                 counter.position = CGPoint(x: -digitFrame.midX, y: -digitFrame.midY)
             }
         }
-    }
-}
-
-final class MapVehicleNode: SKNode {
-    private static let bodyRect = CGRect(x: -5.5, y: -3.5, width: 11, height: 7)
-    private static let bodyCorner: CGFloat = 2.4
-
-    private let selectionRing = SKShapeNode(circleOfRadius: 9)
-    private let chassis = SKNode()
-    /// Dim full capsule (empty / traveling base).
-    private let body = SKShapeNode(
-        rect: MapVehicleNode.bodyRect,
-        cornerRadius: MapVehicleNode.bodyCorner
-    )
-    /// Loading/unloading fill that grows left → right inside the capsule.
-    private let fillCrop = SKCropNode()
-    private let fillBody = SKShapeNode(
-        rect: MapVehicleNode.bodyRect,
-        cornerRadius: MapVehicleNode.bodyCorner
-    )
-    private let fillMask = SKSpriteNode(color: .white, size: CGSize(width: 11, height: 7))
-    private let outline = SKShapeNode(
-        rect: MapVehicleNode.bodyRect,
-        cornerRadius: MapVehicleNode.bodyCorner
-    )
-    private let labelBackground = SKShapeNode()
-    private let label = SKLabelNode(fontNamed: "AvenirNext-Bold")
-    /// What a vehicle becomes when the camera pulls back far enough that a
-    /// truck silhouette is smaller than the ink it is drawn with: a point of
-    /// light. Pulling back then reads as watching traffic move across a
-    /// continent rather than losing sight of it.
-    private let spark = SKShapeNode(circleOfRadius: 2.6)
-    private let sparkGlow = SKShapeNode(circleOfRadius: 6)
-
-    override init() {
-        super.init()
-        selectionRing.fillColor = .clear
-        selectionRing.lineWidth = 1.4
-        selectionRing.alpha = 0
-        selectionRing.zPosition = 0
-        addChild(selectionRing)
-
-        chassis.zPosition = 1
-        addChild(chassis)
-
-        body.fillColor = .white
-        body.strokeColor = .clear
-        body.lineWidth = 0
-        body.zPosition = 0
-        chassis.addChild(body)
-
-        fillBody.fillColor = .white
-        fillBody.strokeColor = .clear
-        fillBody.lineWidth = 0
-        fillCrop.addChild(fillBody)
-        fillMask.anchorPoint = CGPoint(x: 0, y: 0.5)
-        fillMask.position = CGPoint(x: Self.bodyRect.minX, y: 0)
-        fillCrop.maskNode = fillMask
-        fillCrop.zPosition = 1
-        fillCrop.isHidden = true
-        chassis.addChild(fillCrop)
-
-        outline.fillColor = .clear
-        outline.strokeColor = MapPalette.vehicleOutline
-        outline.lineWidth = 1
-        outline.zPosition = 2
-        chassis.addChild(outline)
-
-        labelBackground.fillColor = UIColor(red: 0.039, green: 0.071, blue: 0.125, alpha: 0.85)
-        labelBackground.strokeColor = .clear
-        labelBackground.zPosition = 2
-        labelBackground.position = CGPoint(x: 0, y: 14)
-        addChild(labelBackground)
-
-        label.fontSize = 7.5
-        label.fontColor = MapPalette.label.withAlphaComponent(0.92)
-        label.verticalAlignmentMode = .center
-        label.horizontalAlignmentMode = .center
-        label.zPosition = 3
-        labelBackground.addChild(label)
-
-        sparkGlow.strokeColor = .clear
-        sparkGlow.zPosition = 0
-        sparkGlow.alpha = 0
-        addChild(sparkGlow)
-
-        spark.strokeColor = .clear
-        spark.zPosition = 1
-        spark.alpha = 0
-        addChild(spark)
-    }
-
-    /// Zoom-driven appearance: shrink, then hand over from the truck body to a
-    /// point of light. The two never both carry the frame — as one fades the
-    /// other takes over — so there is no moment where the vehicle reads as a
-    /// smudge caught between two shapes.
-    /// - Parameters:
-    ///   - cameraScale: the camera's own scale, which counter-scales the node
-    ///     so world geometry does not stretch it.
-    ///   - semanticScale: how much smaller the vehicle should read at this
-    ///     zoom, 1 when close and well under 1 when pulled back.
-    func setSemanticZoom(
-        cameraScale: CGFloat,
-        semanticScale: CGFloat,
-        chassisAlpha: CGFloat,
-        sparkAlpha: CGFloat,
-        labelAlpha: CGFloat
-    ) {
-        setScale(cameraScale * semanticScale)
-        chassis.alpha = chassisAlpha
-        chassis.isHidden = chassisAlpha < 0.02
-        selectionRing.isHidden = chassisAlpha < 0.02 && selectionRing.alpha < 0.02
-        labelBackground.alpha = labelAlpha
-        labelBackground.isHidden = labelAlpha < 0.02
-
-        spark.alpha = sparkAlpha
-        spark.isHidden = sparkAlpha < 0.02
-        sparkGlow.alpha = sparkAlpha * 0.42
-        sparkGlow.isHidden = spark.isHidden
-        // Undo only the semantic shrink, not the camera scale: the spark then
-        // holds a constant on-screen size while the truck around it shrinks
-        // away. A star does not get smaller — it becomes the only thing left.
-        let counter = semanticScale > 0.001 ? 1 / semanticScale : 1
-        spark.setScale(counter)
-        sparkGlow.setScale(counter)
-    }
-
-    func setSparkColor(_ color: UIColor) {
-        spark.fillColor = color
-        sparkGlow.fillColor = color
-    }
-
-    @available(*, unavailable)
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    func apply(
-        marker: MapVehicleMarker,
-        accent: UIColor,
-        isSelected: Bool,
-        cameraScale: CGFloat
-    ) {
-        _ = cameraScale
-        let heading = Self.stabilizedHeading(marker.headingRadians)
-        if marker.isMoving {
-            chassis.run(
-                .rotate(
-                    toAngle: heading,
-                    duration: SimulationSpeed.clockTickSeconds,
-                    shortestUnitArc: true
-                ),
-                withKey: "heading"
-            )
-        } else {
-            chassis.removeAction(forKey: "heading")
-            chassis.zRotation = heading
-        }
-
-        if let progress = marker.serviceProgress {
-            let clamped = max(0, min(1, progress))
-            body.fillColor = accent
-            body.alpha = 0.18
-            fillCrop.isHidden = false
-            fillBody.fillColor = accent
-            fillMask.size = CGSize(
-                width: max(0.35, Self.bodyRect.width * CGFloat(clamped)),
-                height: Self.bodyRect.height
-            )
-            outline.strokeColor = accent
-        } else {
-            fillCrop.isHidden = true
-            body.fillColor = accent
-            body.alpha = marker.isMoving ? 1 : 0.85
-            outline.strokeColor = MapPalette.vehicleOutline
-        }
-
-        label.text = marker.displayCode
-        label.fontColor = isSelected ? accent : MapPalette.label.withAlphaComponent(0.85)
-        let textWidth = max(28, CGFloat(marker.displayCode.count) * 5.2 + 12)
-        labelBackground.path = CGPath(
-            roundedRect: CGRect(x: -textWidth / 2, y: -5.5, width: textWidth, height: 11),
-            cornerWidth: 5.5,
-            cornerHeight: 5.5,
-            transform: nil
-        )
-        // Şehirde işlem: isim şehir adının üstünde. Rota üzerinde üst üste
-        // binen araçlarda da aynı dikey istif — kodlar birbirini örtmesin.
-        let baseY: CGFloat = marker.serviceProgress != nil ? 28 : 14
-        let stackStep: CGFloat = 13
-        labelBackground.position = CGPoint(
-            x: 0,
-            y: baseY + CGFloat(marker.labelStackIndex) * stackStep
-        )
-
-        selectionRing.strokeColor = accent
-        selectionRing.alpha = isSelected ? 0.7 : 0
-    }
-
-    /// Keep heading in (-π, π] so shortest-arc rotates stay smooth across the ±π wrap.
-    private static func stabilizedHeading(_ radians: CGFloat) -> CGFloat {
-        var value = radians
-        while value <= -.pi { value += 2 * .pi }
-        while value > .pi { value -= 2 * .pi }
-        return value
     }
 }
 
